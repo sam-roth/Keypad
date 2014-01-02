@@ -21,14 +21,14 @@ curs = buffer_.Cursor(buf)
 curs3 = buffer_.Cursor(buf)
 
 curs.move_to(3, 0)
-curs.insert('''    std::cout << "Hello, world!\\n";''')
+curs.insert('''    std::cout << \n        "Hello, world!\\n";''')
 
 buf.dump()
 
 curs.move_to(2, 1)
 
 curs2 = buffer_.Cursor(buf)
-curs2.move_to(4, 13)
+curs2.move_to(5, -1)
 
 curs.remove_until(curs2)
 

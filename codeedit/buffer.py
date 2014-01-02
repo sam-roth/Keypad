@@ -1,16 +1,6 @@
 
 from . import util
 
-
-#class Block(object):
-#    def __init__(self, text='', attrs={}):
-#        self._text = text
-#        self.attrs = attrs
-#
-#    @property
-#    def text(self):
-#        return self._text
-    
 class Line(object):
     def __init__(self, text=''):
         #self._blocks = []
@@ -23,22 +13,9 @@ class Line(object):
     @property
     def text(self):
         return self._text
-
-#    @property
-#    def blocks(self):
-#        return util.ImmutableListView(self._blocks)
-#
-#    def block(self, index):
-#        accum = 0
-#        for i, block in enumerate(self._blocks):
-#            start = accum
-#            accum += len(block.text)
-#            if accum >= index:
-#                return i, block, start, accum
     
     def __len__(self):
         return len(self._text)
-        #return sum(len(region.text) for region in self._regions)
 
 class Buffer(object):
     def __init__(self):
@@ -55,7 +32,6 @@ class Buffer(object):
         self._lines = list(map(Line, text.splitlines()))
         return self
         
-
     def dump(self):
         print(70*'=')
         for i, line in enumerate(self._lines):
@@ -91,11 +67,33 @@ class Cursor(object):
         self._check_valid()
         return self._col
 
-    def move_to(self, line=0, col=0):
-        if line != self._line and (line < 0 or line >= len(self.buffer._lines)):
+
+    def _move_to_pos(self, line, col):
+        if line < 0:
+            raise IndexError('line %d' % line)
+        if col < 0:
+            raise IndexError('col %d' % col)
+
+        self.move_to(line, col)
+
+    def move_to(self, line=None, col=None):
+        if line is None:
+            line = self.line
+        
+        if col is None:
+            col = self.col
+
+        if line < 0:
+            line += len(self.buffer._lines)
+
+        if col < 0:
+            col += len(self.buffer._lines[line]) + 1
+
+
+        if line != self._line and line >= len(self.buffer._lines):
             raise IndexError('line %d' % line)
         
-        if col != self._col and (col < 0 or col > len(self.buffer._lines[line])):
+        if col != self._col and col > len(self.buffer._lines[line]):
             raise IndexError('col %d' % col)
         
         self._line = line
@@ -104,9 +102,40 @@ class Cursor(object):
         self._mark_valid()
 
     def move_by(self, down=0, right=0):
-        self.move_to(self.line + down, self.col + right)
+        self._move_to_pos(self.line + down, self.col + right)
 
+    
     def insert(self, text):
+        lines = text.splitlines()
+        if len(lines) == 0:
+            return
+        elif len(lines) == 1:
+            self._insert_in_line(lines[0])
+        else:
+            first, *rest = lines
+            rest_of_first = self.buffer._lines[self.line]._text[self.col:]
+            
+            end_of_first = self.clone()
+            end_of_first.move_to(col=len(self.buffer._lines[self.line]._text))
+            self.remove_until(end_of_first)
+
+            self._insert_in_line(first)
+
+            
+            for line in rest:
+                self.buffer._lines.insert(self.line + 1, Line(line))
+
+                self.move_to(col=0)
+                self.move_by(down=1)
+
+            self._insert_in_line(rest_of_first)
+
+            self._mark_all_invalid()
+            self._mark_valid()
+
+            
+
+    def _insert_in_line(self, text):
         # TODO: handle line breaks
         line = self.buffer._lines[self._line]
            
