@@ -9,7 +9,6 @@ class Line(object):
     def _did_change_text(self, index, delta):
         pass
 
-
     @property
     def text(self):
         return self._text
@@ -21,6 +20,18 @@ class Buffer(object):
     def __init__(self):
         self._lines = []
         self._cursor_serial = 0
+        self.persistent_cursors = []
+        self._canonical_cursor = None
+
+    @property
+    def canonical_cursor(self):
+        return self._canonical_cursor
+
+    @canonical_cursor.setter
+    def canonical_cursor(self, value):
+        if value not in self.persistent_cursors:
+            self.persistent_cursors.append(value)
+        self._canonical_cursor = value
 
     @property
     def lines(self):
@@ -34,8 +45,38 @@ class Buffer(object):
         
     def dump(self):
         print(70*'=')
+        cc = self.canonical_cursor
         for i, line in enumerate(self._lines):
-            print('\x1b[36m{: 4}\x1b[0m {}'.format(i + 1, line.text.replace(' ', '\x1b[36m.\x1b[0m')))
+            text = line.text
+            if cc is not None and cc.line == i:
+                if cc.col < len(text):
+                    left = text[:cc.col]
+                    center = text[cc.col:cc.col+1]
+                    right = text[cc.col+2:]
+                    text = left + '\x1b[7m' + center + '\x1b[0m' + right
+                else:
+                    text += '\x1b[36m\x1b[7m$\x1b[0m'
+
+            print('\x1b[36m{: 4}\x1b[0m {}'.format(i, text.replace(' ',  '\x1b[36m.\x1b[0m')))
+
+    def _did_change_lines(self, curs, index, delta):
+        for cursor in self.persistent_cursors:
+            if cursor._line >= index and cursor is not curs:
+                cursor._line += delta
+            cursor._mark_valid()
+        
+    def _did_change_text(self, curs, line, index, delta):
+        self._lines[line]._did_change_text(index, delta)
+        for cursor in self.persistent_cursors:
+            if cursor._line == line and cursor._col >= index and cursor is not curs:
+                cursor._col += delta
+            cursor._mark_valid()
+
+
+    def cursor(self, line=0, col=0):
+        result = Cursor(self)
+        result.move_to(line, col)
+        return result
 
 
 class Cursor(object):
@@ -59,12 +100,12 @@ class Cursor(object):
     
     @property
     def line(self):
-        self._check_valid()
+        #self._check_valid()
         return self._line
 
     @property
     def col(self):
-        self._check_valid()
+        #self._check_valid()
         return self._col
 
 
@@ -106,7 +147,7 @@ class Cursor(object):
 
     
     def insert(self, text):
-        lines = text.splitlines()
+        lines = text.split('\n')
         if len(lines) == 0:
             return
         elif len(lines) == 1:
@@ -124,10 +165,12 @@ class Cursor(object):
             
             for line in rest:
                 self.buffer._lines.insert(self.line + 1, Line(line))
+                self.buffer._did_change_lines(self, self.line + 1, 1)
 
                 self.move_to(col=0)
                 self.move_by(down=1)
 
+            self.move_to(col=-1)
             self._insert_in_line(rest_of_first)
 
             self._mark_all_invalid()
@@ -137,15 +180,15 @@ class Cursor(object):
 
     def _insert_in_line(self, text):
         # TODO: handle line breaks
-        line = self.buffer._lines[self._line]
+        line = self.buffer._lines[self.line]
            
-        left  = line._text[:self._col]
-        right = line._text[self._col:]
+        left  = line._text[:self.col]
+        right = line._text[self.col:]
     
         line._text = left + text + right
-        line._did_change_text(self._col, len(text))
-
         self._mark_all_invalid()
+        self.buffer._did_change_text(self, self.line, self.col, len(text))
+
         self._mark_valid()
 
         self.move_by(right=len(text))
@@ -167,22 +210,27 @@ class Cursor(object):
 
         if self.line != other_line:
             del self.buffer._lines[self.line + 1:other_line]
+            self.buffer._did_change_lines(self, self.line + 1, -(other_line - self.line - 1))
+
             other_line = self.line + 1
             
             first_line = self.buffer._lines[self.line]
             first_line_last_index = len(first_line._text) - 1
             first_line._text = first_line._text[:self.col]
-            first_line._did_change_text(first_line_last_index, self.col - first_line_last_index - 1)
+            self.buffer._did_change_text(self, self.line, self.col, self.col - first_line_last_index - 1)
 
             last_line_text = self.buffer._lines[other_line]._text[other_col:]
+
             del self.buffer._lines[other_line]
+            self.buffer._did_change_lines(self, other_line, -1)
+
             self.insert(last_line_text)
         else:
             line = self.buffer._lines[self.line]
             left  = line._text[:self.col]
             right = line._text[other_col+1:]
             line._text = left + right
-            line._did_change_text(other_col, self.col - other_col - 1)
+            self.buffer._did_change_text(self, self.line, self.col, self.col - other_col - 1)
        
         self._mark_all_invalid()
         self._mark_valid()
