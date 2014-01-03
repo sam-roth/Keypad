@@ -24,7 +24,8 @@ class TextView(QWidget):
         self.setAttribute(Qt.WA_TranslucentBackground)
         font = QFont('Menlo', 12)
         self.setFont(font)
-        self.plane = []
+
+        self.lines = []
         self._margins = QMargins(4, 4, 4, 4)
         self.update_plane_size()
 
@@ -43,21 +44,21 @@ class TextView(QWidget):
         width_chars   = size.width() // metrics.width('m')
         height_chars  = size.height() // metrics.height()
 
-
-        plane_len = len(self.plane)
-        if plane_len < height_chars:
-            self.plane += [[' ' for _ in range(width_chars)] 
-                    for _ in range(height_chars-plane_len)]
-        elif plane_len > height_chars:
-            del self.plane[height_chars:]
-
-        for row in self.plane:
-            row_len = len(row)
-            if row_len < width_chars:
-                row += [' ' for _ in range(width_chars-plane_len)]
-            elif row_len > width_chars:
-                del row[width_chars:]
-
+#
+#        plane_len = len(self.plane)
+#        if plane_len < height_chars:
+#            self.plane += [[' ' for _ in range(width_chars)] 
+#                    for _ in range(height_chars-plane_len)]
+#        elif plane_len > height_chars:
+#            del self.plane[height_chars:]
+#
+#        for row in self.plane:
+#            row_len = len(row)
+#            if row_len < width_chars:
+#                row += [' ' for _ in range(width_chars-plane_len)]
+#            elif row_len > width_chars:
+#                del row[width_chars:]
+#
         self.plane_size_changed(width_chars, height_chars)
     
     def resizeEvent(self, event):
@@ -81,17 +82,20 @@ class TextView(QWidget):
             fm = QFontMetrics(self.font())
             y = fm.height() + self._margins.top()
             height = fm.height()
-            for i, row in enumerate(self.plane):
-                painter.drawText(QPoint(x, y), ''.join(row))
+            for i, row in enumerate(self.lines):
+                painter.drawText(QPoint(x, y), row)
                 y += height
 
 
-    def put_text(self, line, col, text):
-        remain = len(self.plane[line]) - col
-        if remain < len(text):
-            raise IndexError('Line too long: %d / %d characters remain.' % (len(text), remain))
-
-        self.plane[line][col:col+len(text)] = text
+#    def put_text(self, line, col, text):
+#        if line >= len(self.lines):
+#            self.lines += ['' for _ in range(line - len(self.lines) + 1)]
+#
+#        remain = len(self.lines[line]) - col
+#        if remain < len(text):
+#            raise IndexError('Line too long: %d / %d characters remain.' % (len(text), remain))
+#
+#        self.plane[line][col:col+len(text)] = text
 
     
 
@@ -108,6 +112,7 @@ if __name__ == '__main__':
     win.setLayout(layout)
 
     tv = TextView(win)
+    tv.lines.append('Hello, world')
     layout.addWidget(tv)
 
     
@@ -115,7 +120,7 @@ if __name__ == '__main__':
     def on_plane_size_change(width, height):
         print('New plane size: {}x{}'.format(width, height))
 
-        tv.put_text(0, 0, 'Hello, world!')
+        #tv.put_text(0, 0, 'Hello, world!')
 
     
 
@@ -123,9 +128,6 @@ if __name__ == '__main__':
     win.resize(640, 480)
     win.raise_()
 
-    text = 'Hello, world!'
-    tv.plane[0][:len(text)] = text
-    tv.update()
     
     app.exec_()
 
