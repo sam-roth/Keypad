@@ -88,6 +88,7 @@ class Cursor(object):
         self._line = 0
         self._col  = 0
         self._mark_valid()
+        self.col_affinity = None
     
     def _mark_valid(self):
         self._serial = self.buffer._cursor_serial
@@ -109,20 +110,33 @@ class Cursor(object):
         return self._col
 
 
-    def _move_to_pos(self, line, col):
-        if line < 0:
-            raise IndexError('line %d' % line)
-        if col < 0:
-            raise IndexError('col %d' % col)
+    def _move_to_pos(self, line, col, exact=True):
+        if line is not None and line < 0:
+            if exact:
+                raise IndexError('line %d' % line)
+            else:
+                line = 0
+        if col is not None and col < 0:
+            if exact:
+                raise IndexError('col %d' % col)
+            else:
+                col = 0
 
-        self.move_to(line, col)
+        self.move_to(line, col, exact)
 
-    def move_to(self, line=None, col=None):
+    def move_to(self, line=None, col=None, exact=True):
         if line is None:
             line = self.line
         
         if col is None:
-            col = self.col
+            if self.col_affinity is not None:
+                col = self.col_affinity
+                self.col_affinity = None
+            else:
+                col = self.col
+        else:
+            self.col_affinity = None
+
 
         if line < 0:
             line += len(self.buffer._lines)
@@ -130,22 +144,52 @@ class Cursor(object):
         if col < 0:
             col += len(self.buffer._lines[line]) + 1
 
-
-        if line != self._line and line >= len(self.buffer._lines):
-            raise IndexError('line %d' % line)
         
-        if col != self._col and col > len(self.buffer._lines[line]):
-            raise IndexError('col %d' % col)
+        if line >= len(self.buffer._lines):
+            if exact:
+                raise IndexError('line %d' % line)
+            else:
+                line = len(self.buffer._lines) - 1
+        
+        if col > len(self.buffer._lines[line]):
+            if exact:
+                raise IndexError('col %d' % col)
+            else:
+                self.col_affinity = col
+                col = len(self.buffer._lines[line])
         
         self._line = line
         self._col = col
 
         self._mark_valid()
 
-    def move_by(self, down=0, right=0):
-        self._move_to_pos(self.line + down, self.col + right)
+    def move_by(self, down=0, right=0, exact=True):
+        self._move_to_pos(self.line + down if down != 0 else None, self.col + right if right != 0 else None, exact)
 
-    
+    def go(self, down=0, right=0):
+        self.move_by(down, right, exact=False)
+
+    def go_to(self, line=None, col=None):
+        self._move_to_pos(line, col, exact=False)
+
+    def go_to_end(self):
+        self.move_to(col=-1, exact=False)
+
+    def go_to_home(self):
+        self.move_to(col=0, exact=False)
+
+    def backspace(self):
+        try:
+            self.move_by(right=-1)
+        except IndexError:
+            other = self.clone()
+            self.go(down=-1)
+            self.go_to_end()
+            self.remove_until(other)
+        else:
+            self.remove_until(self)
+        
+
     def insert(self, text):
         lines = text.split('\n')
         if len(lines) == 0:
@@ -170,8 +214,10 @@ class Cursor(object):
                 self.move_to(col=0)
                 self.move_by(down=1)
 
+            orig_col = self.col
             self.move_to(col=-1)
             self._insert_in_line(rest_of_first)
+            self.move_to(col=orig_col)
 
             self._mark_all_invalid()
             self._mark_valid()
@@ -197,7 +243,7 @@ class Cursor(object):
     def remove_until(self, other):
         '''
         Remove the text between this cursor and the other. The character under
-        the other cursor will not be removed. The other cursor's position will
+        the other cursor will be removed. The other cursor's position will
         be updated.
 
         :type other: codeedit.buffer.Cursor
@@ -225,6 +271,7 @@ class Cursor(object):
             self.buffer._did_change_lines(self, other_line, -1)
 
             self.insert(last_line_text)
+            self.move_by(right=-len(last_line_text))
         else:
             line = self.buffer._lines[self.line]
             left  = line._text[:self.col]

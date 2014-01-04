@@ -100,8 +100,13 @@ class AttributedString(object):
     def __init__(self, text):
         self._text = text
         self._attributes = defaultdict(RangeDict)
+        self.caches = {}
+
+    def invalidate(self):
+        self.caches = {}
     
     def set_attribute(self, begin, end, key, value):
+        self.invalidate()
         attr = self._attributes[key]
         if attr.length != len(self._text):
             attr.length = len(self._text)
@@ -115,12 +120,39 @@ class AttributedString(object):
         # TODO make this more efficient
         for idx, ch in enumerate(self._text):
             yield ch, self.attributes(idx)
+
+
+    def find_deltas(self):
+        deltas = defaultdict(dict)
+        for key, attr in self._attributes.items():
+            for idx, value in attr._data:
+                deltas[idx][key] = value
+        
+        return deltas
+
+    def iterchunks(self):
+        last_idx = 0
+        last_attrs = {}
+        for delta_idx, delta_attrs in sorted(self.find_deltas().items(), key=lambda x: x[0]):
+            if last_idx != delta_idx:
+                yield self.text[last_idx:delta_idx], last_attrs
+            last_attrs, last_idx = delta_attrs, delta_idx
+        
+        if last_idx < len(self.text):
+            yield self.text[last_idx:], last_attrs
             
     @property
     def text(self):
         return self._text
 
+    @text.setter
+    def text(self, value):
+        self.invalidate()
+        self._text = value
+        self._attributes.clear()
+
     def insert(self, index, text):
+        self.invalidate()
         left = self._text[:index]
         right = self._text[index:]
         self._text = left + text + right
@@ -155,6 +187,21 @@ def ansi_color(astr):
 
     yield '\x1b[0m'
 
+def chunk_ansi_color(astr):
+    unchanged = object()
+    def gen():
+        yield '\x1b[0m'
+        
+        for s, delta in astr.iterchunks():
+            color = delta.get('color', unchanged)
+            if color is None:
+                yield '\x1b[0m'
+            elif color is not unchanged:
+                yield '\x1b[3{}m'.format(ansi_codes[color])
+            yield s
+        yield '\x1b[0m'
+
+    return ''.join(gen())
 
 def attrstring_test():
 
@@ -170,6 +217,10 @@ def attrstring_test():
 
 
     print(''.join(ansi_color(astr)))  
+
+    print(list(astr.iterchunks()))
+    
+    print(chunk_ansi_color(astr))
 
 def main():
 
