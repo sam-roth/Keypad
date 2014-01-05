@@ -95,6 +95,8 @@ class RangeDict(object):
             
         self.length += delta
 
+    def __repr__(self):
+        return repr(self._data)
 
 class AttributedString(object):
     def __init__(self, text):
@@ -160,6 +162,7 @@ class AttributedString(object):
         text_len = len(text)
         for attr in self._attributes.values():
             attr.splice(index, text_len)
+
 
     
 

@@ -78,6 +78,7 @@ def draw_attr_text(painter, point, text):
                     cache_painter.setCompositionMode(QPainter.CompositionMode_Source)
                     cache_painter.fillRect(pixmap_cache.rect(), QColor(0, 0, 0, int(255*0.9)))
 
+                last_bgcolor = None
                 for string, deltas in text.iterchunks():
                     
                     color = deltas.get('color', unchanged)
@@ -91,13 +92,18 @@ def draw_attr_text(painter, point, text):
                         if bgcolor is None:
                             cache_painter.setBrush(orig_brush)
                         elif bgcolor is not unchanged:
+                            last_bgcolor = bgcolor
+                        else:
+                            bgcolor = last_bgcolor
+
+                        if bgcolor is not None:
                             cache_painter.setBrush(QColor(bgcolor))
                             cache_painter.setPen(Qt.transparent)
-                            
                             cache_painter.drawRect(QRectF(
                                 QPointF(dx, 0),
                                 QSizeF(cwidth * len(string), fm.lineSpacing()+1)
                             ))
+
                             
                             #cache_painter.drawRect(fm.boundingRect('M'*len(string)).translated(pos))
 

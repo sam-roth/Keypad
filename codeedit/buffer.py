@@ -22,6 +22,7 @@ class Buffer(object):
         self._cursor_serial = 0
         self.persistent_cursors = []
         self._canonical_cursor = None
+        self._anchor_cursor = None
 
     @property
     def canonical_cursor(self):
@@ -32,6 +33,17 @@ class Buffer(object):
         if value not in self.persistent_cursors:
             self.persistent_cursors.append(value)
         self._canonical_cursor = value
+
+
+    @property
+    def anchor_cursor(self):
+        return self._anchor_cursor
+
+    @anchor_cursor.setter
+    def anchor_cursor(self, value):
+        if value not in self.persistent_cursors:
+            self.persistent_cursors.append(value)
+        self._anchor_cursor = value
 
     @property
     def lines(self):
