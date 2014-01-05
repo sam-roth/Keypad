@@ -99,20 +99,37 @@ class RangeDict(object):
         return repr(self._data)
 
 class AttributedString(object):
-    def __init__(self, text):
+    def __init__(self, text='', **attrs):
         self._text = text
         self._attributes = defaultdict(RangeDict)
         self.caches = {}
 
+        for attr, val in attrs.items():
+            self.set_attribute(attr, val)
+
     def invalidate(self):
         self.caches = {}
     
-    def set_attribute(self, begin, end, key, value):
+    def set_attribute_range(self, begin, end, key, value):
         self.invalidate()
         attr = self._attributes[key]
         if attr.length != len(self._text):
             attr.length = len(self._text)
         attr[begin:end] = value
+
+    def set_attribute(self, *args, **kw):
+        try:
+            def signature1(begin, end, key, value):
+                pass
+            signature1(*args, **kw)
+        except TypeError:
+            def signature2(key, value):
+                return key, value
+            key, value = signature2(*args, **kw)
+            self.set_attribute_range(0, None, key, value)
+        else:
+            self.set_attribute_range(*args, **kw)
+
 
     def attributes(self, index):
         for key, attr in self._attributes.items():
@@ -154,19 +171,79 @@ class AttributedString(object):
         self._attributes.clear()
 
     def insert(self, index, text):
+
+        if isinstance(text, AttributedString):
+            astr = text
+            text = astr.text
+        else:
+            astr = None
+
         self.invalidate()
         left = self._text[:index]
-        right = self._text[index:]
+        right = self._text[index:] if index is not None else ''
         self._text = left + text + right
 
         text_len = len(text)
+        if index is not None:
+            for attr in self._attributes.values():
+                attr.splice(index, text_len)
+        else:
+            for attr in self._attributes.values():
+                attr.length = len(self._text)
+
+
+        if astr is not None:
+            offset = index
+
+            if offset is None:
+                offset = len(self._text) - len(text)
+            elif offset < 0:
+                offset += len(self._text) - len(text)
+
+            for chunk, attrs in astr.iterchunks():
+                for attr, value in attrs.items():
+                    self.set_attribute(offset, offset + len(chunk), attr, value)
+                offset += len(chunk)
+
+    def append(self, text):
+        self.insert(None, text)
+
+                
+    
+    def remove(self, start, stop):
+        self.invalidate()
+        left = self._text[:start]
+        right = self._text[stop:]
+        self._text = left + right
+        
+        text_len = stop - start
         for attr in self._attributes.values():
-            attr.splice(index, text_len)
+            attr.splice(start, -text_len)
+
+    
+    
+    @classmethod
+    def join(cls, sep_or_strings, strings=None):
+        if strings is None:
+            sep, strings = '', sep_or_strings
+        else:
+            sep, strings = sep_or_strings, strings
+
+        # TODO improve efficiency
+        result = AttributedString('')
+        first = True
+        for string in strings:
+            if first:
+                first = False
+            else:
+                result.append(sep)
+            result.append(string)
+        return result
 
 
     
 
-ansi_codes = {
+ansi_escape_codes = {
     'black': 0,
     'red': 1,
     'green': 2,
@@ -185,7 +262,7 @@ def ansi_color(astr):
         if color is None:
             yield '\x1b[0m'
         else:
-            yield '\x1b[3{}m'.format(ansi_codes[color])
+            yield '\x1b[3{}m'.format(ansi_escape_codes[color])
         yield ch
 
     yield '\x1b[0m'
@@ -193,14 +270,24 @@ def ansi_color(astr):
 def chunk_ansi_color(astr):
     unchanged = object()
     def gen():
-        yield '\x1b[0m'
-        
+        reset = '\x1b[0m'
+        yield reset
+
+
         for s, delta in astr.iterchunks():
             color = delta.get('color', unchanged)
+
             if color is None:
-                yield '\x1b[0m'
+                yield '\x1b[39m'
             elif color is not unchanged:
-                yield '\x1b[3{}m'.format(ansi_codes[color])
+                yield '\x1b[3{}m'.format(ansi_escape_codes[color])
+
+            underline = delta.get('underline', unchanged)
+            if underline is not unchanged:
+                if underline:
+                    yield '\x1b[4m'
+                else:
+                    yield '\x1b[24m'
             yield s
         yield '\x1b[0m'
 
@@ -224,6 +311,37 @@ def attrstring_test():
     print(list(astr.iterchunks()))
     
     print(chunk_ansi_color(astr))
+
+    astr.append('abcd')
+    print(chunk_ansi_color(astr))
+    print(list(astr.iterchunks()))
+
+    astr2 = AttributedString('efgh')
+    astr2.set_attribute(0, -1, 'color', None)
+    astr.append(astr2)
+
+    print(chunk_ansi_color(astr))
+
+
+def attrstring_test_2():
+
+    def gen():
+        for colorname in ansi_escape_codes.keys():
+            result = AttributedString(colorname)
+            result.set_attribute('color', colorname)
+            yield result
+
+    
+
+    print()
+    print(chunk_ansi_color(AttributedString.join(AttributedString(', ', color=None), gen())))
+    print(chunk_ansi_color(AttributedString.join(
+        AttributedString(', ', color=None, underline=False), [
+            AttributedString('underlined', underline=True),
+            AttributedString('not underlined', underline=False),
+            AttributedString('underlined and red', underline=True, color='red')
+    ])))
+    print()
 
 def main():
 
@@ -276,4 +394,4 @@ def main():
     print(rd._data)
 
 if __name__ == '__main__':
-    attrstring_test()
+    attrstring_test_2()
