@@ -30,6 +30,16 @@ def set_attribute(lines, attribute, value, start_line, start_col, end_line, end_
         lines[end_line].set_attribute(0, end_col, attribute, value)
 
 
+def line_syntax_c(line):
+    import re
+    for match in re.finditer(r'int|char|void', line.text):
+        line.set_attribute(match.start(), match.end(), 'color', '#5FF967')
+
+    for match in re.finditer(r'return', line.text):
+        line.set_attribute(match.start(), match.end(), 'color', '#FEFB67')
+
+    for match in re.finditer(r'\d+', line.text):
+        line.set_attribute(match.start(), match.end(), 'color', '#FF76FF')
 
 class BufferPresenter(object):
     def __init__(self, view, buff):
@@ -39,22 +49,46 @@ class BufferPresenter(object):
         '''
         self.view = view
         self.buffer = buff
+        self.view.lines = self.buffer.lines
+        self.view.keep = self
+
+        self.view.scrolled.connect(self.view_scrolled)
+
+    def __del__(self):
+        print('deleted buffer presenter')
+
+    def view_scrolled(self, start_line):
+        print('view scrolled')
+        self.view.start_line = start_line
+
         
     def refresh_view(self):
-        self.view.lines = []
+        #self.view.lines = []
+        
+        #for line in self.buffer.lines:
+        #    self.view.lines.append(AttributedString(line.text))
         
         for line in self.buffer.lines:
-            self.view.lines.append(AttributedString(line.text))
+            line.set_attribute('color', None)
+            line.set_attribute('bgcolor', None)
+            line.set_attribute('cursor_after', False)
+
+            line_syntax_c(line)
 
         curs = self.buffer.canonical_cursor
         curs_line = self.view.lines[curs.line]
+        self.view.cursor_pos = curs.line, curs.col
         
         # draw cursor
-        if curs.col == len(curs_line.text):
-            curs_line.insert(curs.col, ' ')
+        #if curs.col == len(curs_line.text):
+        #    curs_line.insert(curs.col, ' ')
 
-        curs_line.set_attribute(curs.col, curs.col+1, 'bgcolor', '#FFF')
-        curs_line.set_attribute(curs.col, curs.col+1, 'color',   '#000')
+        #if curs.col == len(curs_line):
+        #    curs_line.set_attribute(len(curs_line)-1, len(curs_line), 'cursor_after', True)
+
+        #curs_line.set_attribute(curs.col-1, curs.col, 'cursor_after', True)
+        #curs_line.set_attribute(curs.col, curs.col+1, 'bgcolor', '#FFF')
+        #curs_line.set_attribute(curs.col, curs.col+1, 'color',   '#000')
         
         # draw selection
         anchor = self.buffer.anchor_cursor
@@ -69,7 +103,9 @@ class BufferPresenter(object):
         
         print(list(curs_line.iterchunks()))
         
-        self.view.repaint()
+        self.view.update_plane_size()
+        self.view.viewport().update()
+
 
 class BufferEffector(QObject):
     def __init__(self, view, buff, pres):
@@ -87,14 +123,35 @@ class BufferEffector(QObject):
         
         self.view.installEventFilter(self)
 
+        self.view.mouse_down_char.connect(self.mouse_down_char)
+        self.view.mouse_move_char.connect(self.mouse_move_char)
+
+    def mouse_move_char(self, buttons, line, col):
+        if buttons & TextView.MouseButtons.Left:
+            if self.buff.anchor_cursor is None:
+                self.buff.anchor_cursor = self.buff.canonical_cursor.clone()
+
+            self.buff.canonical_cursor.go_to(line=line, col=col)
+            self.pres.refresh_view()
+
+    def mouse_down_char(self, line, col):
+        self.buff.anchor_cursor = None
+        curs = self.buff.canonical_cursor
+        curs.go_to(line=line, col=col)
+        self.pres.refresh_view()
+
+    
+
     def eventFilter(self, obj, event):
         if obj == self.view:
             if event.type() == QEvent.KeyPress:
                 assert isinstance(event, QKeyEvent)
+                old_anchor = None
                 if event.modifiers() & Qt.ShiftModifier:
                     if self.buff.anchor_cursor is None:
                         self.buff.anchor_cursor = self.buff.canonical_cursor.clone()
                 else:
+                    old_anchor = self.buff.anchor_cursor
                     self.buff.anchor_cursor = None
                 curs = self.buff.canonical_cursor
                 k = event.key()
@@ -111,7 +168,11 @@ class BufferEffector(QObject):
                 elif k == Qt.Key_End:
                     curs.go_to_end()
                 elif k == Qt.Key_Backspace:
-                    curs.backspace()
+                    if old_anchor is None:
+                        curs.backspace()
+                    else:
+                        #curs.go(right=-1)
+                        old_anchor.remove_until(curs)
                 elif event.text():
                     curs.insert(event.text().replace('\r', '\n'))
                 else:
@@ -127,7 +188,10 @@ class BufferEffector(QObject):
 
 
     
+import weakref
+
 def main():
+    global presref
 
     buf = Buffer.from_text(
 '''\
@@ -148,6 +212,7 @@ int main(int argc, char **argv)
     tv.raise_()
 
     pres = BufferPresenter(tv, buf)
+    presref = weakref.ref(pres, lambda x: print('***WILL DELETE', x))
     pres.refresh_view()
 
     eff = BufferEffector(tv, buf, pres)

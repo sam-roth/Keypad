@@ -30,9 +30,9 @@ curs.insert('''    std::cout << \n        "Hello, world!\\n";''')
 
 buf.dump()
 
-curs.move_by(right=-6)
 buf.dump()
 curs.move_by(right=6)
+curs.move_by(right=-6)
 buf.dump()
 
 #print(curs3.line, curs3.col)
@@ -41,6 +41,8 @@ curs.move_to(2, 1)
 buf.dump()
 curs.remove_until(buf.cursor(5, -1)) 
 
+
+curs.insert('\n    return 0;')
 
 
 buf.dump()

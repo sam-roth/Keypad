@@ -107,6 +107,9 @@ class AttributedString(object):
         for attr, val in attrs.items():
             self.set_attribute(attr, val)
 
+    def __len__(self):
+        return len(self._text)
+
     def invalidate(self):
         self.caches = {}
     
@@ -134,6 +137,11 @@ class AttributedString(object):
     def attributes(self, index):
         for key, attr in self._attributes.items():
             yield key, attr[index]
+
+
+    @property
+    def keys(self):
+        return self._attributes.keys()
 
     def iterchars(self):
         # TODO make this more efficient
@@ -164,12 +172,12 @@ class AttributedString(object):
     def text(self):
         return self._text
 
-    @text.setter
-    def text(self, value):
-        self.invalidate()
-        self._text = value
-        self._attributes.clear()
-
+#    @text.setter
+#    def text(self, value):
+#        self.invalidate()
+#        self._text = value
+#        self._attributes.clear()
+#
     def insert(self, index, text):
 
         if isinstance(text, AttributedString):
@@ -211,6 +219,8 @@ class AttributedString(object):
                 
     
     def remove(self, start, stop):
+        start, stop, _ = slice(start, stop).indices(len(self))
+
         self.invalidate()
         left = self._text[:start]
         right = self._text[stop:]
@@ -238,6 +248,11 @@ class AttributedString(object):
             else:
                 result.append(sep)
             result.append(string)
+        return result
+
+    def clone(self):
+        result = AttributedString()
+        result.append(self)
         return result
 
 

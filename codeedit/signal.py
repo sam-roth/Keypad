@@ -4,25 +4,57 @@ import weakref
 import functools
 import traceback
 import types
+import functools
+
+class WeakMethodProxy(object):
+    def __init__(self, bound_method):
+        self.instance = weakref.ref(bound_method.__self__)
+        self.function = weakref.ref(bound_method.__func__)
+ 
+    def __hash__(self):
+        return hash((self.instance, self.function))
+    
+    def __eq__(self, other):
+        self.instance == other.instance
+        self.function == other.function
+    
+    def __call__(self):
+        inst = self.instance()
+        if inst is not None:
+            return functools.partial(self.function(), inst)
+        else:
+            return None
+
+
 
 
 def makeInstanceSignal(proto_func):
     class InstanceSignal(object):
         def __init__(self):
-            self._observers = weakref.WeakSet()
+            self._observers = set()
 
         def connect(self, observer):
-            self._observers.add(observer)
+            if isinstance(observer, types.MethodType):
+                self._observers.add(WeakMethodProxy(observer))
+            else:
+                self._observers.add(weakref.ref(observer))
+
             return observer
 
         def disconnect(self, observer):
-            self._observers.remove(observer)
+            if isinstance(observer, types.MethodType):
+                self._observers.remove(WeakMethodProxy(observer))
+            else:
+                self._observers.remove(weakref.ref(observer))
+
     
         @functools.wraps(proto_func)
         def __call__(self, *args, **kw):
             for observer in self._observers:
                 try:
-                    observer(*args, **kw)
+                    real_obs = observer()
+                    if real_obs is not None:
+                        real_obs(*args, **kw)
                 except RuntimeError:
                     traceback.print_exc()
     return InstanceSignal()
