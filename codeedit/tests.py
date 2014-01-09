@@ -134,3 +134,19 @@ class TestBufferAndCursorWithTwoLines(unittest.TestCase):
         assert self.buff.to_plain_text() == 'abcgh'
 
 
+class TestBufferAndCursorWithSeveralLines(unittest.TestCase):
+
+    def setUp(self):
+        self.buff = buffer_.Buffer.from_text('abcd\n\n\nefgh')
+
+
+    def test_advance_line4(self):
+        curs = self.buff.cursor(3, 0)
+        curs.advance(-1)
+        assert curs.pos == (2, 0)
+
+    def test_backspace_line4(self):
+        curs = self.buff.cursor(3, 0)
+        curs.backspace()
+        assert curs.pos == (2, 0)
+        assert self.buff.to_plain_text() == 'abcd\n\nefgh'

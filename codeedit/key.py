@@ -6,6 +6,8 @@ class Modifiers:
     Ctrl  = 0x04000000
     Alt   = 0x08000000
     Meta  = 0x10000000
+
+    All   = Shift | Ctrl | Alt | Meta
     
     values = {
         'Shift': Shift,
@@ -23,7 +25,7 @@ class Modifiers:
 
 class SimpleKeySequence(object):
     def __init__(self, modifiers, keycode, optional_modifiers=0):
-        self._modifiers = modifiers
+        self._modifiers = int(modifiers) & Modifiers.All
         self._keycode = keycode
         self._optional_modifiers = optional_modifiers
 
@@ -56,7 +58,7 @@ class SimpleKeySequence(object):
         def gen():
             global _key_names
             yield from self._generate_modifier_names(self.modifiers)
-            yield _key_names[self.keycode].capitalize()
+            yield _key_names.get(self.keycode, '<?>').capitalize()
 
         return '+'.join(gen())
 

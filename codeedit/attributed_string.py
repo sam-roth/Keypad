@@ -33,8 +33,12 @@ def upper_bound(coll, value, key=identity):
     'Find the first element in `coll` greater than `value`.'
     return bound(coll, value, compare=lambda x, y: y >= x, key=key)
     
+from collections import namedtuple
 
 class RangeDict(object):
+
+    SpanInfo = namedtuple('SpanInfo', 'start end value')
+
     def __init__(self, length=0):
         self._data = []
         self._length = length
@@ -48,6 +52,14 @@ class RangeDict(object):
         if value < self.length:
             del self._data[value:]
         self._length = value
+
+
+    def span_info(self, idx):
+        data_index = upper_bound(self._data, (idx, None), key=lambda x: x[0]) - 1
+        if idx >= 0 and idx < len(self._data):
+            return RangeDict.SpanInfo(start=self._data[idx][0],
+                                      end=self._data[idx+1][0] if idx + 1 < len(self._data) else self.length,
+                                      value=self._data[idx][1])
 
     def __getitem__(self, key):
         idx = upper_bound(self._data, (key, None), key=lambda x: x[0]) - 1
@@ -114,11 +126,18 @@ class AttributedString(object):
         self.caches = {}
     
     def set_attribute_range(self, begin, end, key, value):
-        self.invalidate()
         attr = self._attributes[key]
-        if attr.length != len(self._text):
-            attr.length = len(self._text)
-        attr[begin:end] = value
+        span_info = attr.span_info(begin)
+        
+        numeric_end = end if end is not None else len(self)
+        if span_info is None or (span_info.start, span_info.end, span_info.value) != (begin, numeric_end, value):
+            self.invalidate()
+            if attr.length != len(self._text):
+                attr.length = len(self._text)
+            attr[begin:end] = value
+        else:
+            print('did not invalidate')
+
 
     def set_attribute(self, *args, **kw):
         try:

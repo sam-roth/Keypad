@@ -228,7 +228,7 @@ class Cursor(object):
                         break
                     self.go(up=1)
                     self.go_to_end()
-                    chars += self.col
+                    chars += self.col if self.line_length > 0 else 1
                 else:
                     self.go(left=-chars)
                     break
@@ -253,6 +253,8 @@ class Cursor(object):
         
 
     def insert(self, text):
+        if not text:
+            return
         lines = text.split('\n')
         if len(lines) == 0:
             return
@@ -287,6 +289,8 @@ class Cursor(object):
             
 
     def _insert_in_line(self, text):
+        if not text:
+            return
 
         line = self.buffer._lines[self.line]
 
@@ -337,8 +341,9 @@ class Cursor(object):
             del self.buffer._lines[other_line]
             self.buffer._did_change_lines(self, other_line, -1)
 
+            orig_col = self.col
             self.insert(last_line_text)
-            self.move_by(right=-len(last_line_text))
+            self.move_to(col=orig_col)
         else:
             line = self.buffer._lines[self.line]
             line.remove(self.col, other.col)
