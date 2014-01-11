@@ -373,7 +373,7 @@ class TextView(QAbstractScrollArea):
         self.update_plane_size()
 
     def _viewport_paint(self, event):
-        print('paint partial=', self._partial_redraw_ok)
+        #print('paint partial=', self._partial_redraw_ok)
         painter = QPainter(self.viewport())
         area_size = self.viewport().size()
         self.verticalScrollBar().setPageStep(area_size.height())
@@ -409,7 +409,7 @@ class TextView(QAbstractScrollArea):
 
     
     def scrollContentsBy(self, dx, dy):
-        print('scrollContentsBy')
+        #print('scrollContentsBy')
         self.scrolled(self.verticalScrollBar().value())
         self.viewport().update()
     
@@ -465,9 +465,9 @@ class TextView(QAbstractScrollArea):
             if y < self.height():
                 painter.setCompositionMode(QPainter.CompositionMode_Source)
                 painter.fillRect(QRect(QPoint(x, y), QSize(self.width() - x, self.height() - y)), self.settings.q_bgcolor)
-            if self._partial_redraw_ok:
-                print('redrew', lines_drawn, 'lines')
-            print('updated', lines_updated, 'lines')
+            #if self._partial_redraw_ok:
+            #    print('redrew', lines_drawn, 'lines')
+            #print('updated', lines_updated, 'lines')
             self._partial_redraw_ok = False
             self._last_cursor_line = cursor_line
             
@@ -520,7 +520,8 @@ def main():
     
     @tv.plane_size_changed.connect
     def on_plane_size_change(width, height):
-        print('New plane size: {}x{}'.format(width, height))
+        pass
+        #print('New plane size: {}x{}'.format(width, height))
 
         #tv.put_text(0, 0, 'Hello, world!')
 

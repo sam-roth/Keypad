@@ -131,7 +131,7 @@ class EditAction(object):
         erased = False
         if eff.buff.anchor_cursor is not None:
             erased = eff.buff.anchor_cursor.pos != eff.buff.canonical_cursor.pos
-            eff.buff.anchor_cursor.remove_until(eff.buff.canonical_cursor)
+            eff.buff.canonical_cursor.remove_until(eff.buff.anchor_cursor)
             eff.buff.anchor_cursor = None
         curs = eff.buff.canonical_cursor
         self.edit_func(eff, evt, curs, erased)
@@ -154,6 +154,8 @@ def delete_action(eff, evt, curs, erased):
 @EditAction
 def insert_action(eff, evt, curs, erased):
     curs.insert(evt.text)
+
+
 
 
 
@@ -184,10 +186,34 @@ class BufferEffector(QObject):
         def page_move(c, n):
             _, height = self.view.plane_size
             c.go(down=n * height)
-            print('scrolling to', c.line)
+            #print('scrolling to', c.line)
             self.view.scroll_to_line(c.line)
             self.view.full_redraw()
 
+
+        def undo(eff, evt):
+            self.buff.history.undo()
+            self.pres.refresh_view()
+
+        def redo(eff, evt):
+            self.buff.history.redo()
+            self.pres.refresh_view()
+
+
+        def find_word(direction):
+            def result(c):
+                while True:
+                    st = c.select(forwards=direction).text 
+                    if not st or st in (' ', '\t', '\n'):
+                        c.advance(direction)
+                        break
+                    c.advance(direction)
+
+            return result
+
+
+
+        
 
         self.keybindings = KeySequenceDict(
 			(key.left      .optional(shift),       CursorMoveAction(lambda c: c.go(left=1))),
@@ -202,6 +228,10 @@ class BufferEffector(QObject):
 			(meta.l        .optional(shift),       CursorMoveAction(lambda c: c.advance(1))),
 			(key.pagedown  .optional(shift),       CursorMoveAction(lambda c: page_move(c, 1))),
 			(key.pageup    .optional(shift),       CursorMoveAction(lambda c: page_move(c, -1))),
+			(ctrl.z,                               undo),
+			(ctrl.shift.z,                         redo),
+			(alt.right     .optional(shift),       CursorMoveAction(find_word(1))),
+			(alt.left      .optional(shift),       CursorMoveAction(find_word(-1))),
     
 		)
         self.keybindings[ctrl.left.optional(shift)] = self.keybindings[key.home]
@@ -223,7 +253,6 @@ class BufferEffector(QObject):
         self.pres.refresh_view()
 
     def key_press(self, event):
-        Keys = self.view.Keys
         curs = self.buff.canonical_cursor
         binding = self.keybindings.get(event.key, insert_action)
 
@@ -300,7 +329,6 @@ class BufferEffector(QObject):
 import weakref
 
 def main():
-    global presref
 
     buf = Buffer.from_text(open('/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.9.sdk/usr/include/stdio.h', 'r').read())
 #'''\
@@ -315,18 +343,28 @@ def main():
     buf.anchor_cursor = buf.cursor(0, 0)
 
     import sys
+    import logging
+
+    logging.basicConfig(level=logging.DEBUG)
+
+    #with codeedit.console.view.Application() as app:
+
     app = QApplication(sys.argv)
+    #tv = codeedit.console.view.TextView(app.stdscr)
     tv = TextView()
     tv.show()
     tv.raise_()
+    #app.keystroke.connect(tv.key_press)
 
     pres = BufferPresenter(tv, buf)
-    presref = weakref.ref(pres, lambda x: print('***WILL DELETE', x))
+    #presref = weakref.ref(pres, lambda x: print('***WILL DELETE', x))
     pres.refresh_view()
 
     eff = BufferEffector(tv, buf, pres)
 
     app.exec_()
+
+    #app.run()
 
 
 

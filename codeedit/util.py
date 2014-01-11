@@ -14,3 +14,14 @@ class ImmutableListView(collections.Sequence):
         return self._list[i]
 
 
+
+def dump_object(obj):
+    header = type(obj).__name__ + "{\n    "
+     
+    body = ',\n    '.join('{:<10}{!r}'.format(name + ':', value) 
+                          for (name, value) in vars(obj).items()
+                          if not (name.startswith('__') and name.endswith('__')))
+
+    end = '\n}'
+
+    return header + body + end
