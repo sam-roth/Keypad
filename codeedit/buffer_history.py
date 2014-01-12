@@ -1,5 +1,9 @@
 
 from contextlib import contextmanager
+from . import util, errors
+import warnings
+
+
 
 class BufferHistory(object):
     def __init__(self, buff):
@@ -33,14 +37,18 @@ class BufferHistory(object):
         if self._ignore_changes: return
 
         if self._transaction_changes is None:
-            raise RuntimeError('Buffer modified outside of transaction.')
-        
-        self._transaction_changes.append(change)
+            warnings.warn('Buffer modified outside of transaction.')
+
+            with self.transaction():
+                self._transaction_changes.append(change)
+        else:
+            self._transaction_changes.append(change)
 
     
     def _commit_transaction(self):
-        self._changesets.append(self._transaction_changes)
-        self._changesets_reversed.clear()
+        if self._transaction_changes:
+            self._changesets.append(self._transaction_changes)
+            self._changesets_reversed.clear()
         self._transaction_changes = None
 
     
@@ -56,7 +64,7 @@ class BufferHistory(object):
     
     def undo(self):
         if not self._changesets:
-            raise RuntimeError("Can't undo.")
+            raise errors.CantUndoError("Can't undo.")
 
         cs = self._changesets[-1]
 
@@ -69,7 +77,7 @@ class BufferHistory(object):
 
     def redo(self):
         if not self._changesets_reversed:
-            raise RuntimeError("Can't redo.")
+            raise errors.CantRedoError("Can't redo.")
 
         cs = self._changesets_reversed[-1]
         with self._ignoring():

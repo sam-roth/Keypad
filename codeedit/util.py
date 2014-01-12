@@ -25,3 +25,8 @@ def dump_object(obj):
     end = '\n}'
 
     return header + body + end
+
+
+
+class FatalError(BaseException):
+    pass

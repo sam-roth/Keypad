@@ -12,6 +12,7 @@ class Cursor(object):
         self.buffer.text_modified.connect(self._on_buffer_text_modified)
 
         self.pos = 0, 0
+        self._col_affinity = None
 
         
     def _on_buffer_text_modified(self, change):
@@ -25,14 +26,12 @@ class Cursor(object):
 
 
         if change.insert:
-            if self_y >= chg_y:
-                self_y += end_y - chg_y
 
-            if self_y == end_y:
-                if end_y == chg_y:
-                    self_x += (end_x - chg_x)
-                else:
-                    self_x += end_x
+            if self_y == chg_y and self_x >= chg_x:
+                self_y = end_y
+                self_x = (self_x - chg_x) + end_x
+            elif self_y > chg_y:
+                self_y += end_y - chg_y
 
         if change.remove:
             end_y, end_x = change.inverse.insert_end_pos
@@ -53,14 +52,51 @@ class Cursor(object):
 
         self.pos = self_y, self_x
 
+    @property
+    def pos(self):
+        return self._pos
+
+    @pos.setter
+    def pos(self, value):
+        y, x = value
+        try:
+            line = self.buffer.lines[y]
+        except IndexError:
+            raise IndexError('Line {}/{}'.format(y, len(self.buffer.lines)))
+        else:
+            if x > len(line):
+                raise IndexError('Column {}/{}'.format(x, len(line)))
+            else:
+                self._pos = value
+
     def insert(self, text):        
         self.manip.execute(TextModification(pos=self.pos, insert=text))
+        return self
 
     def text_to(self, other):
-        return self.buffer.span_text(self.pos, end_pos=other.pos)
+        start_pos, end_pos = sorted([self.pos, other.pos])
+        return self.buffer.span_text(start_pos, end_pos=end_pos)
 
     def remove_to(self, other):
-        self.manip.execute(TextModification(pos=self.pos, remove=self.text_to(other)))
+        start_pos = min(self.pos, other.pos)
+        self.manip.execute(TextModification(pos=start_pos, remove=self.text_to(other)))
+        return self
+
+    def set_attribute_to(self, other, key, value):
+        if other.pos < self.pos:
+            self, other = other, self
+
+        self_y, self_x = self.pos
+        other_y, other_x = other.pos
+
+        for y, line in enumerate(self.buffer.lines[self_y:other_y+1], self_y):
+            start_x = self_x   if y == self_y   else 0
+            end_x   = other_x  if y == other_y  else None
+            
+            line.set_attribute(start_x, end_x, key, value)
+        
+        return self
+
 
     def delete(self, n=1):
         start_pos = self.buffer.calculate_pos(self.pos, n)
@@ -73,8 +109,72 @@ class Cursor(object):
         mod = TextModification(pos=start_pos, remove=remove)
         self.manip.execute(mod)
 
+        return self
+
     def backspace(self, n=1):
         self.delete(-n)
+        return self
+
+    def clone(self):
+        return Cursor(self.manip).move(*self.pos)
+        
+    def move(self, line=None, col=None):
+        y, x = self.pos
+
+        if line is not None:
+            y = line
+
+        if col is not None:
+            x = col
+
+        self.pos = y, x
+
+        return self
+    
+    @property
+    def line(self):
+        y, x = self.pos
+        return self.buffer.lines[y]
+
+    
+    def right(self, n=1):
+        y, x = self.pos
+        x = max(0, min(len(self.line), x + n))
+        self.pos = y, x
+    
+        return self
+
+    def left(self, n=1):
+        return self.right(-n)
+
+    def down(self, n=1):
+        y, x = self.pos
+        y = max(0, min(len(self.buffer.lines)-1, y + n))
+        
+        line_length = len(self.buffer.lines[y])
+
+        if self._col_affinity is not None and self._col_affinity < line_length:
+            x = self._col_affinity
+            self._col_affinity = None
+        elif x > line_length:
+            if self._col_affinity is None:
+                self._col_affinity = x
+            x = line_length
+
+        self.pos = y, x
+
+        return self
+
+    def up(self, n=1):
+        return self.down(-n)
+
+    def end(self):
+        return self.move(col=len(self.line))
+
+    def home(self):
+        return self.move(col=0)
+
+
 
 
 def main():
@@ -132,7 +232,8 @@ def main():
     manip.history.undo()
 
 
-    with manip.history.transaction():
+    #with manip.history.transaction():
+    if True:
         curs.pos = 0, 6
         curs.backspace(1)
 

@@ -289,7 +289,10 @@ class TextView(QAbstractScrollArea):
         self._partial_redraw_ok = False
         self._prevent_partial_redraw = False
         self._last_cursor_line = None
+        self.modelines = []
 
+    def beep(self):
+        qApp.beep()
 
     @property
     def tab_width(self): return 8
@@ -309,8 +312,8 @@ class TextView(QAbstractScrollArea):
 
     @property
     def plane_size(self): 
-        w, h = self._plane_size
-        return int(w), int(h)
+        h, w = self._plane_size
+        return int(h), int(w)
 
     @lines.setter
     def lines(self, lines):
@@ -325,13 +328,15 @@ class TextView(QAbstractScrollArea):
         size.setWidth(size.width() - m.left() - m.right())
         size.setHeight(size.height() - m.top() - m.bottom())
         
+
         self.char_width = metrics.width('m')
         self.line_height = metrics.lineSpacing() + 1
 
-        width_chars   = size.width() // metrics.width('m')
-        height_chars  = size.height() // metrics.lineSpacing()
+
+        width_chars   = size.width() / self.char_width
+        height_chars  = size.height() / self.line_height
         
-        new_plane_size = (width_chars, height_chars)
+        new_plane_size = (height_chars, width_chars)
         if new_plane_size != self._plane_size:
             self._plane_size = new_plane_size
             self.plane_size_changed(width_chars, height_chars)
@@ -434,6 +439,7 @@ class TextView(QAbstractScrollArea):
             viewport_width = self.viewport().width()
 
             height = self.line_height #fm.lineSpacing()+1
+
             
             if self.cursor_pos is not None:
                 cursor_line, cursor_col = self.cursor_pos
@@ -442,8 +448,12 @@ class TextView(QAbstractScrollArea):
 
             lines_drawn = 0
             lines_updated = 0
+
+            plane_height, plane_width = self.plane_size
+
+            lines_to_display = self.lines[self.start_line:self.start_line + plane_height - len(self.modelines)] + self.modelines
             
-            for i, row in enumerate(self.lines[self.start_line:], self.start_line):
+            for i, row in enumerate(lines_to_display, self.start_line):
                 drew_line, renewed_cache = draw_attr_text(
                     painter, 
                     QRect(QPoint(x, y), QSize(viewport_width, height)),

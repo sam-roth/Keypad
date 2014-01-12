@@ -55,7 +55,7 @@ def makeInstanceSignal(proto_func):
                     real_obs = observer()
                     if real_obs is not None:
                         real_obs(*args, **kw)
-                except RuntimeError:
+                except Exception:
                     traceback.print_exc()
     return InstanceSignal()
 
