@@ -53,7 +53,7 @@ class BufferHistory(object):
 
     
     @contextmanager
-    def _ignoring(self):
+    def ignoring(self):
         self._ignore_changes = True
         try:
             yield
@@ -68,7 +68,7 @@ class BufferHistory(object):
 
         cs = self._changesets[-1]
 
-        with self._ignoring():
+        with self.ignoring():
             for chg in reversed(cs):
                 self.buff.reverse(chg)
 
@@ -80,11 +80,16 @@ class BufferHistory(object):
             raise errors.CantRedoError("Can't redo.")
 
         cs = self._changesets_reversed[-1]
-        with self._ignoring():
+        with self.ignoring():
             for chg in cs:
                 self.buff.execute(chg)
         self._changesets_reversed.pop()
         self._changesets.append(cs)
+
+    
+    def clear(self):
+        self._changesets.clear()
+        self._changesets_reversed.clear()
 
 
     @contextmanager

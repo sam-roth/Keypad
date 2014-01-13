@@ -36,19 +36,22 @@ class Cursor(object):
         if change.remove:
             end_y, end_x = change.inverse.insert_end_pos
 
+            # cursor was in the removed region
             if (chg_y, chg_x) < (self_y, self_x) < (end_y, end_x):
                 self_y, self_x = chg_y, chg_x
 
+            # cursor was outside of the removed region
             else:
-                if self_y >= end_y:
-                    self_y -= end_y - chg_y
-                
 
-                dx = -(end_x if self_y == end_y and self_x >= end_x else 0) + \
-                      (chg_x if self_y == chg_y and chg_y == end_y  and self_x >= end_x else 0)
-
-                
-                self_x += dx
+                # cursor was on the last line of the removed region, but outside
+                # of the removed region
+                if self_y == end_y:
+                    self_x = chg_x + (self_x - end_x)
+                    self_y = chg_y
+                    
+                # cursor was after the last line of the removed region
+                elif self_y > end_y:
+                    self_y -= chg_y 
 
         self.pos = self_y, self_x
 
@@ -58,7 +61,9 @@ class Cursor(object):
 
     @pos.setter
     def pos(self, value):
+        self._col_affinity = None
         y, x = value
+
         try:
             line = self.buffer.lines[y]
         except IndexError:
@@ -153,15 +158,18 @@ class Cursor(object):
         
         line_length = len(self.buffer.lines[y])
 
-        if self._col_affinity is not None and self._col_affinity < line_length:
-            x = self._col_affinity
-            self._col_affinity = None
+        col_affinity = self._col_affinity
+
+        if col_affinity is not None and col_affinity < line_length:
+            x = col_affinity
+            col_affinity = None
         elif x > line_length:
-            if self._col_affinity is None:
-                self._col_affinity = x
+            if col_affinity is None:
+                col_affinity = x
             x = line_length
 
         self.pos = y, x
+        self._col_affinity = col_affinity
 
         return self
 

@@ -45,7 +45,9 @@ def qcolor_marshaller(attrname):
 
 class TextViewSettings(object):
     def __init__(self):
-        self.q_font    = QFont('Menlo', 14)
+        self.q_font    = QFont('Menlo')
+        self.q_font.setPixelSize(14)
+            
         self.q_bgcolor = QColor.fromRgb(0, 43, 54)
         self.q_fgcolor = QColor.fromRgb(131, 148, 150) 
         self.tab_stop  = 8
@@ -293,6 +295,12 @@ class TextView(QAbstractScrollArea):
 
     def beep(self):
         qApp.beep()
+    
+    
+    @property
+    def buffer_lines_visible(self):
+        h, w = self.plane_size
+        return h - len(self.modelines)
 
     @property
     def tab_width(self): return 8

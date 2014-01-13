@@ -1,8 +1,11 @@
 
-
+import re
 from .cursor import Cursor
-from .attributed_string import AttributedString
+from .attributed_string import AttributedString, lower_bound
 from . import errors
+
+
+from . import syntax, util
 
 class Presenter(object):
     def __init__(self, view, buff):
@@ -27,15 +30,8 @@ class Presenter(object):
         
     def refresh_view(self, full=False):
         self.view.lines = self.buffer.lines
-        for line in self.buffer.lines:
-            #if line.caches.get('polished', False):
-            #    continue
-            #line.set_attribute('color', None)
-            line.set_attribute('bgcolor', None)
-            #line.set_attribute('cursor_after', False)
-
-            #line_syntax_c(line)
-            #line.caches['polished'] = True
+        
+        syntax.python_syntax(self.buffer)
 
         curs = self.canonical_cursor
         if curs is not None:
@@ -101,11 +97,47 @@ class CUAInteractionMode(object):
             self.pres.anchor_cursor = other
 
 
+        def advance_word(n):
+            rgx = re.compile(
+                r'''
+                  \b 
+                | $ 
+                | ^ 
+                | _                     # for snake_case idents
+                | (?<= _ ) \w           #  -> match after "_" too
+                | (?<= [a-z] ) [A-Z]    # for camelCase and PascalCase idents
+                | ['"]                  # match strings
+                | (?<= ['"] ) .         # match after strings
+                ''',
+                re.VERBOSE
+            )
+            def result():
+                line, col = self.curs.pos
+                posns = [match.start() for match in 
+                         rgx.finditer(self.curs.line.text)]
+                idx = lower_bound(posns, col)
+                idx += n
+                
+                try:
+                    new_col = posns[idx]
+                except IndexError:
+                    if n < 0:
+                        self.curs.up().end()
+                    else:
+                        self.curs.down().home()
+                else:
+                    self.curs.right(new_col - col)
+
+            return result
+
+
         manip = self.curs.manip
         
         self.keybindings = KeySequenceDict(
             (key.left       .optional(shift),   cursor_move(self.curs.left)), 
             (key.right      .optional(shift),   cursor_move(self.curs.right)), 
+            (alt.left       .optional(shift),   cursor_move(advance_word(-1))),
+            (alt.right      .optional(shift),   cursor_move(advance_word(1))),
             (key.up         .optional(shift),   cursor_move(self.curs.up)), 
             (key.down       .optional(shift),   cursor_move(self.curs.down)),
             (key.pagedown   .optional(shift),   cursor_move(page_move(1))),
@@ -128,10 +160,55 @@ class CUAInteractionMode(object):
 
 
         self.pres.view.key_press.connect(self._on_key_press)
+        self.pres.view.scrolled.connect(self._on_view_scrolled)
+        self.pres.view.mouse_down_char.connect(self._on_mouse_down)
+        self.pres.view.mouse_move_char.connect(self._on_mouse_move)
+
+    def _on_view_scrolled(self, start_line):
+        self.pres.refresh_view(full=True)
+        #y, x = self.curs.pos
+        #max_y = start_line + self.pres.view.buffer_lines_visible
+        #new_y = util.clamp(start_line, max_y, y)
+
+        #dy = new_y - y
+        #
+        #self.curs.down(dy)
+
+        #self._show_default_modeline()
+        #self.pres.refresh_view(full=True)
+
+    def _on_mouse_down(self, line, col):
+        self.pres.anchor_cursor = None
+        self.curs.move(0,0).down(line).right(col)
+        self._show_default_modeline()
+        self.pres.refresh_view()
+
+    def _on_mouse_move(self, buttons, line, col):
+        if buttons & self.pres.view.MouseButtons.Left:
+            if self.pres.anchor_cursor is None:
+                self.pres.anchor_cursor = self.curs.clone()
+            self.curs.move(0,0).down(line).right(col)
+            self._show_default_modeline()
+            self.pres.refresh_view()
+
+
 
     @property
     def curs(self):
         return self.pres.canonical_cursor
+
+
+    def show_modeline(self, text):
+        self.modeline.remove(0, None)
+        self.modeline.append(text)
+        if isinstance(text, str):
+            self.modeline.set_attribute('color', '#268bd2')
+
+
+    def _show_default_modeline(self):
+        self.modeline.remove(0, None)
+        self.modeline.append('{:<20} [{}]'.format(self.curs.pos, type(self).__name__))
+        self.modeline.set_attribute('color', '#268bd2')
 
     
     def _on_key_press(self, evt):
@@ -157,16 +234,21 @@ class CUAInteractionMode(object):
                     success = False
 
             if success:
-                self.modeline.remove(0, None)
-                self.modeline.append('{:<20} [{}]'.format(self.curs.pos, type(self).__name__))
-                self.modeline.set_attribute('color', '#268bd2')
+                self._show_default_modeline()
 
         plane_height, plane_width = self.pres.view.plane_size
-        if not (self.view.start_line <= self.curs.pos[0] < self.view.start_line + plane_height - 1):
-            self.view.start_line = self.curs.pos[0]
-            self.pres.refresh_view(full=True)
-        else:
-            self.pres.refresh_view(full=False)
+
+        
+        full_redraw_needed = False
+
+        if self.view.start_line > self.curs.pos[0]:
+            self.view.scroll_to_line(self.curs.pos[0])
+            full_redraw_needed = True
+        elif self.view.start_line + self.view.buffer_lines_visible <= self.curs.pos[0]:
+            self.view.scroll_to_line(self.curs.pos[0] - self.view.buffer_lines_visible + 1)
+            full_redraw_needed = True
+
+        self.pres.refresh_view(full=full_redraw_needed)
         
 
 def main():

@@ -27,6 +27,15 @@ def dump_object(obj):
     return header + body + end
 
 
+def clamp(lo, hi, val):
+    if val < lo:
+        return lo
+    elif val >= hi:
+        return hi - 1
+    else:
+        return val
+
+
 
 class FatalError(BaseException):
     pass
