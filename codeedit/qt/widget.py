@@ -2,7 +2,7 @@
 
 from PyQt4.Qt import *
 
-from .. import presenter, new_buffer, cursor, buffer_manipulator
+from .. import presenter, buffer, cursor, buffer_manipulator
 from . import view
 
 
@@ -11,7 +11,7 @@ class TextWidget(view.TextView):
     def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.buffer = new_buffer.Buffer()
+        self.buffer = buffer.Buffer()
         
         manip = buffer_manipulator.BufferManipulator(self.buffer)
         self.presenter = presenter.Presenter(self, self.buffer)

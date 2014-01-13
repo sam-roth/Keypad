@@ -8,7 +8,7 @@ class Presenter(object):
     def __init__(self, view, buff):
         '''
         :type view: codeedit.qt.view.TextView
-        :type buff: codeedit.new_buffer.Buffer
+        :type buff: codeedit.buffer.Buffer
         '''
         self.view = view
         self.buffer = buff
@@ -172,7 +172,7 @@ class CUAInteractionMode(object):
 def main():
     from PyQt4 import Qt
     from .qt.view import TextView
-    from .new_buffer import Buffer
+    from .buffer import Buffer
     from .buffer_manipulator import BufferManipulator
     from .cursor import Cursor
     import re

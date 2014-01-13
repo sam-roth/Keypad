@@ -1,5 +1,5 @@
 
-from .new_buffer import TextModification
+from .buffer import TextModification, Buffer
 
 class Cursor(object):
 
@@ -17,7 +17,7 @@ class Cursor(object):
         
     def _on_buffer_text_modified(self, change):
         '''
-        :type change: codeedit.new_buffer.TextModification
+        :type change: codeedit.buffer.TextModification
         '''
         
         self_y, self_x = self.pos
@@ -178,7 +178,6 @@ class Cursor(object):
 
 
 def main():
-    from .new_buffer import Buffer
     from .buffer_manipulator import BufferManipulator
 
     buff = Buffer()

@@ -8,7 +8,7 @@ import warnings
 class BufferHistory(object):
     def __init__(self, buff):
         '''
-        :type change: codeedit.new_buffer.Buffer
+        :type change: codeedit.buffer.Buffer
         '''
 
         self._ignore_changes = False
@@ -31,7 +31,7 @@ class BufferHistory(object):
     
     def _on_buffer_text_modified(self, change):
         '''
-        :type change: codeedit.new_buffer.TextModification
+        :type change: codeedit.buffer.TextModification
         '''
 
         if self._ignore_changes: return
@@ -98,9 +98,9 @@ class BufferHistory(object):
 
 
 def main():
-    from . import new_buffer
+    from . import buffer 
 
-    buff = new_buffer.Buffer()
+    buff = buffer.Buffer()
     hist = BufferHistory(buff)
 
     with hist.transaction():

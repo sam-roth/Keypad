@@ -1,6 +1,6 @@
 
 
-from .new_buffer import Buffer, TextModification
+from .buffer import Buffer, TextModification
 from .buffer_history import BufferHistory
 from .signal import Signal
 
