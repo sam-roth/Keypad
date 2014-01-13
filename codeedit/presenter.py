@@ -122,6 +122,7 @@ class CUAInteractionMode(object):
 
         kb = self.keybindings
 
+        # mainly for Mac users (though Home and End are mapped too)
         kb[ctrl.left.optional(shift)] = kb[key.home]
         kb[ctrl.right.optional(shift)] = kb[key.end]
 
@@ -174,7 +175,7 @@ def main():
     from .new_buffer import Buffer
     from .buffer_manipulator import BufferManipulator
     from .cursor import Cursor
-
+    import re
 
     import sys
 
@@ -183,6 +184,16 @@ def main():
     tv = TextView()
     buff = Buffer()
     manip = BufferManipulator(buff)
+
+    @manip.executed_change.connect
+    def autoindent(chg):
+        if chg.insert.endswith('\n'):
+            beg_curs = Cursor(manip.buffer).move(*chg.pos)
+            indent = re.match(r'^\s*', beg_curs.line.text)
+            if indent is not None:
+                Cursor(manip.buffer)\
+                    .move(*chg.insert_end_pos)\
+                    .insert(indent.group(0))
 
     curs = Cursor(manip)
 
