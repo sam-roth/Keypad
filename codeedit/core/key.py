@@ -686,11 +686,11 @@ class KeySequenceBuilder(object):
 
 
 
-key = KeySequenceBuilder(0)
+Keys = KeySequenceBuilder(0)
 
-ctrl = key.ctrl
-alt = key.alt
-shift = key.shift
-meta = key.meta
+Ctrl    = Keys.ctrl
+Alt     = Keys.alt
+Shift   = Keys.shift
+Meta    = Keys.meta
 
 

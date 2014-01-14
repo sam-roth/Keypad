@@ -7,7 +7,7 @@ from PyQt4.Qt               import *
 from .text_rendering        import TextViewSettings, draw_attr_text
 from .qt_util               import KeyEvent
 from ..core                 import AttributedString, Signal
-from ..core.key             import SimpleKeySequence, key, KeySequenceDict
+from ..core.key             import SimpleKeySequence, Keys, KeySequenceDict
 
 
 
