@@ -1,6 +1,8 @@
 
-from contextlib import contextmanager
-from . import util, errors
+from ..             import util
+from ..core         import errors
+
+from contextlib     import contextmanager
 import warnings
 
 

@@ -1,5 +1,5 @@
 
-from . import buffer as buffer_
+from .. import buffers
 import re
 import keyword
 

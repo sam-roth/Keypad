@@ -1,9 +1,7 @@
 
 
-from . import util
-from .signal import Signal
-from .attributed_string import AttributedString
-from .struct import Struct
+from ..                     import util
+from ..core                 import Signal, Struct, AttributedString
 
 class TextModification(Struct):
     pos         = ()

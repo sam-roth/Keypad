@@ -1,8 +1,8 @@
 
 
-from .buffer import Buffer, TextModification
-from .buffer_history import BufferHistory
-from .signal import Signal
+from .buffer            import Buffer, TextModification
+from .buffer_history    import BufferHistory
+from ..core             import Signal
 
 class BufferManipulator(object):
     def __init__(self, buff):

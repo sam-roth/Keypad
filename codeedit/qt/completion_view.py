@@ -2,13 +2,12 @@
 import platform
 import copy
 
-from PyQt4.Qt import *
+from PyQt4.Qt               import *
 
-from .text_rendering import TextViewSettings, draw_attr_text
-from .qt_util import KeyEvent
-from ..key import SimpleKeySequence, key, KeySequenceDict
-from ..attributed_string import AttributedString
-from ..signal import Signal
+from .text_rendering        import TextViewSettings, draw_attr_text
+from .qt_util               import KeyEvent
+from ..core                 import AttributedString, Signal
+from ..core.key             import SimpleKeySequence, key, KeySequenceDict
 
 
 
@@ -65,7 +64,7 @@ class CompletionListItemDelegate(QItemDelegate):
 class CompletionListModel(QAbstractTableModel):
 
     def __init__(self):
-        from ..colors import scheme
+        from ..presentation.colors import scheme
         super().__init__()
 
         self._completions = ()
@@ -145,7 +144,6 @@ class CompletionView(QWidget):
         self.setFocusProxy(self._listWidget)
         self._listWidget.installEventFilter(self)
         
-        self.key_press  += self.on_key_press
         self.done       += self._close
 
         self.model.modelReset.connect(self.on_model_reset)
@@ -166,20 +164,6 @@ class CompletionView(QWidget):
     def showEvent(self, evt):
         super().showEvent(evt)
 
-    def on_key_press(self, event):
-        if key.esc.matches(event.key):
-            self.done(None)
-        elif key.return_.matches(event.key) or \
-                key.enter.matches(event.key):
-            
-            idxs = self._listWidget.selectedIndexes()
-            idx = None
-            if idxs:
-                idx = idxs[0].row()
-
-            self.done(idx)
-        
-
     def on_model_reset(self):
         self._listWidget.resizeColumnToContents(0)
 
@@ -188,12 +172,20 @@ class CompletionView(QWidget):
             
             ignored_keys = [
                 Qt.Key_Down, Qt.Key_Up,
-                Qt.Key_PageUp, Qt.Key_PageDown
-               # Qt.Key_Enter, Qt.Key_Return, Qt.Key_Escape
+                Qt.Key_PageUp, Qt.Key_PageDown,
+                Qt.Key_Home, Qt.Key_End
+                #Qt.Key_Enter, Qt.Key_Return, Qt.Key_Escape
             ]
 
             if event.key() in ignored_keys:
                 return False
+            elif event.key() in (Qt.Key_Enter, Qt.Key_Return): 
+                indices = self._listWidget.selectedIndexes()
+                self.done(indices[0] if indices else None)
+                return True
+            elif event.key() == Qt.Key_Escape:
+                self.done(None)
+                return True
             else:
                 self.filter_key_press(event)
                 return True
@@ -226,8 +218,8 @@ def main():
 
     layout.addWidget(button)
     
-    from .widget import TextWidget
-    from ..cursor import Cursor
+    from .widget    import TextWidget
+    from ..buffers  import Cursor
 
     textw = TextWidget(parent=primary)
     layout.addWidget(textw)

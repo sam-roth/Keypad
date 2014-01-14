@@ -1,12 +1,13 @@
 
 import logging
 import re
-from .cursor import Cursor
-from .attributed_string import AttributedString, lower_bound
-from . import errors
 
-
-from . import syntax, util
+from .                          import syntax
+from ..                         import util
+from ..buffers                  import Cursor
+from ..core                     import AttributedString, errors
+from ..core.attributed_string   import lower_bound
+from ..core.key                 import *
 
 import unicodedata
 
@@ -59,7 +60,6 @@ class Presenter(object):
             self.view.partial_redraw()
 
 
-from .key import *
 
 class CUAInteractionMode(object):
     def __init__(self, pres):
@@ -272,9 +272,7 @@ class CUAInteractionMode(object):
 def main():
     from PyQt4 import Qt
     from .qt.view import TextView
-    from .buffer import Buffer
-    from .buffer_manipulator import BufferManipulator
-    from .cursor import Cursor
+    from .buffers import Buffer, BufferManipulator
     import re
 
     import sys
