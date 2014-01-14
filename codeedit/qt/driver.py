@@ -75,4 +75,6 @@ class Application(QApplication):
 
 if __name__ == '__main__':
     import sys
+    import logging
+    logging.basicConfig(level=logging.DEBUG)
     sys.exit(Application(sys.argv).exec_())

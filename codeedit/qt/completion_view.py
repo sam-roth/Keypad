@@ -1,13 +1,15 @@
 
+import platform
+import copy
 
 from PyQt4.Qt import *
 
-from .view import TextViewSettings, draw_attr_text, KeyEvent
+from .text_rendering import TextViewSettings, draw_attr_text
+from .qt_util import KeyEvent
 from ..key import SimpleKeySequence, key, KeySequenceDict
 from ..attributed_string import AttributedString
 from ..signal import Signal
 
-import platform
 
 
 completion_view_stylesheet = r"""
@@ -29,16 +31,18 @@ QTreeView {{
 
 class CompletionListItemDelegate(QItemDelegate):
 
-    def __init__(self):
+    def __init__(self, settings):
         super().__init__()
-        nset = self.settings = TextViewSettings()
-        sset = self.selected_settings = TextViewSettings()
+        nset = self.settings = copy.copy(settings)
+
+        sset = self.selected_settings = copy.copy(settings)
         sch = nset.scheme
         
         sset.bgcolor = sch.emphasize(nset.bgcolor, 1)
         sset.fgcolor = sch.emphasize(nset.fgcolor, 1)
 
         for s in (self.settings, self.selected_settings):
+            s.q_font = QFont(s.q_font)
             s.q_font.setPointSize(13)
 
     def paint(self, painter, option, index):
@@ -63,10 +67,16 @@ class CompletionListModel(QAbstractTableModel):
     def __init__(self):
         from ..colors import scheme
         super().__init__()
-        self.columns = 2
 
         self._completions = ()
         
+    @property
+    def columns(self):
+        if self._completions:
+            return len(self._completions[0])
+        else:
+            return 1
+
 
     @property
     def completions(self):
@@ -104,39 +114,41 @@ class CompletionListModel(QAbstractTableModel):
 class CompletionView(QWidget):
 
     
-    def __init__(self, parent=None):
+    def __init__(self, settings=None, parent=None):
         super().__init__(parent)
+
+        if settings is None:
+            settings = TextViewSettings()
+        scheme = settings.scheme
         
         self._listWidget = QTreeView(self)
         self._layout = QVBoxLayout(self)
         self._layout.addWidget(self._listWidget)
+        self.setContentsMargins(0, 0, 0, 0)
 
         self.setWindowFlags(Qt.Popup)
         self.setAttribute(Qt.WA_TranslucentBackground)
-        
-        self.setAttribute(Qt.WA_QuitOnClose) # TODO: remove this line
 
         self._listWidget.setAttribute(Qt.WA_MacShowFocusRect, False)
         self._listWidget.setHeaderHidden(True)
         
-        from ..colors import scheme
 
         self.setStyleSheet(completion_view_stylesheet.format(
-            settings=TextViewSettings(),
+            settings=settings,
             selbg=scheme.emphasize(scheme.bg, 1)
         ))
 
-        self._completion_model = CompletionListModel()
-        self._listWidget.setModel(self._completion_model)
-        self._listWidget.setItemDelegate(CompletionListItemDelegate())
+        self.model = CompletionListModel()
+        self._listWidget.setModel(self.model)
+        self._listWidget.setItemDelegate(CompletionListItemDelegate(settings))
 
         self.setFocusProxy(self._listWidget)
         self._listWidget.installEventFilter(self)
         
-        self.key_press.connect(self.on_key_press)
-        self.done.connect(self._close)
+        self.key_press  += self.on_key_press
+        self.done       += self._close
 
-        self._completion_model.modelReset.connect(self.on_model_reset)
+        self.model.modelReset.connect(self.on_model_reset)
 
 
     @Signal
@@ -217,7 +229,7 @@ def main():
     from .widget import TextWidget
     from ..cursor import Cursor
 
-    textw = TextWidget(primary)
+    textw = TextWidget(parent=primary)
     layout.addWidget(textw)
 
     
@@ -225,7 +237,7 @@ def main():
     primary.show()
     primary.raise_()
 
-    cv = CompletionView(primary)
+    cv = CompletionView(parent=primary)
 
     @cv.done.connect
     def done_handler(idx):
@@ -235,9 +247,9 @@ def main():
     annot2 = AttributedString('value', italic=True)
 
 
-    cv._completion_model.completions = [(x, annot) for x in keyword.kwlist] + [(x, annot2) for x in vars(os).keys()]
+    cv.model.completions = [(x, annot) for x in keyword.kwlist] + [(x, annot2) for x in vars(os).keys()]
 
-    all_comps = cv._completion_model.completions
+    all_comps = cv.model.completions
 
     origin_curs = Cursor(textw.buffer)
 
@@ -250,7 +262,7 @@ def main():
         filter_exp = '.*?'.join(filter_text)
 
 
-        cv._completion_model.completions = sorted([c for c in all_comps if re.match(filter_exp, c[0].lower()) is not None], key=lambda x: len(x[0]))
+        cv.model.completions = sorted([c for c in all_comps if re.match(filter_exp, c[0].lower()) is not None], key=lambda x: len(x[0]))
 
     
     cv.show()

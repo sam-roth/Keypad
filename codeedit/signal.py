@@ -33,6 +33,14 @@ def makeInstanceSignal(proto_func):
         def __init__(self):
             self._observers = set()
 
+        def __iadd__(self, observer):
+            self.connect(observer)
+            return self
+
+        def __isub__(self, observer):
+            self.disconnect(observer)
+            return self
+
         def connect(self, observer):
             if isinstance(observer, types.MethodType):
                 self._observers.add(WeakMethodProxy(observer))

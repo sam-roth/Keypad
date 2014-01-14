@@ -1,7 +1,10 @@
 
 from PyQt4.Qt import *
+from collections import namedtuple
 import contextlib
 
+
+KeyEvent = namedtuple('KeyEvent', 'key text')
 
 @contextlib.contextmanager
 def ending(painter):

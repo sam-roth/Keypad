@@ -3,19 +3,17 @@ import sys
 import contextlib
 import math
 
-from collections     import namedtuple
+from collections      import namedtuple
 
-from PyQt4.Qt        import *
+from PyQt4.Qt         import *
 
-from ..              import signal, attributed_string
-from ..key           import SimpleKeySequence
-from .qt_util        import *
-from .text_rendering import *
-    
-    
+from ..               import signal, attributed_string
+from ..key            import SimpleKeySequence
+from .qt_util         import *
+from .text_rendering  import *
+from .completion_view import CompletionView
 
 
-KeyEvent = namedtuple('KeyEvent', 'key text')
 
 class TextView(QAbstractScrollArea):
 
@@ -50,6 +48,32 @@ class TextView(QAbstractScrollArea):
         self._prevent_partial_redraw = False
         self._last_cursor_line = None
         self.modelines = []
+
+        self._completion_view = CompletionView(parent=self, settings=self.settings)
+        self._completion_view.hide()
+
+        self._completion_view.key_press += self.key_press
+        self._completion_view.done      += self.completion_done
+
+    @property
+    def completions(self):
+        return self._completion_view.model.completions
+    
+    @completions.setter
+    def completions(self, val):
+        self._completion_view.model.completions = val
+
+    def show_completions(self):
+        x,y = self.map_from_plane(*self.cursor_pos)
+
+        self._completion_view.move(self.mapToGlobal(QPoint(x, y)))
+        self._completion_view.show()
+
+
+    @signal.Signal
+    def completion_done(self, index):
+        pass
+
 
     def beep(self):
         qApp.beep()
@@ -129,6 +153,16 @@ class TextView(QAbstractScrollArea):
             return line, raw_col
         else:
             return line, col
+
+    def map_from_plane(self, line, col):
+        
+        y = self._margins.top() + line * self.line_height
+        fm = QFontMetricsF(self.font())
+        
+        x = self._margins.left() + fm.width(self.lines[line].text[:col])
+
+        return x, y
+
         
     @signal.Signal
     def mouse_down_char(self, line, col): pass
@@ -241,7 +275,6 @@ class TextView(QAbstractScrollArea):
             self._partial_redraw_ok = False
             self._last_cursor_line = cursor_line
             
-
 
     def partial_redraw(self):
         self._partial_redraw_ok = True

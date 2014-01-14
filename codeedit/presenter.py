@@ -1,4 +1,5 @@
 
+import logging
 import re
 from .cursor import Cursor
 from .attributed_string import AttributedString, lower_bound
@@ -140,6 +141,9 @@ class CUAInteractionMode(object):
 
 
         manip = self.curs.manip
+
+        pres.view.completions = [(str(x),) for x in range(100)]
+
         
         self.keybindings = KeySequenceDict(
             (key.left       .optional(shift),   cursor_move(self.curs.left)), 
@@ -154,13 +158,18 @@ class CUAInteractionMode(object):
             (key.delete,                        remove(1)),
             (key.home       .optional(shift),   cursor_move(self.curs.home)),
             (key.end        .optional(shift),   cursor_move(self.curs.end)),
+            (key.enter,                         lambda evt: self.curs.insert('\n')),
             (ctrl.a,                            select_all),
             (ctrl.z,                            lambda evt: manip.history.undo()),
             (ctrl.shift.z,                      lambda evt: manip.history.redo()),
+            (meta.space,                        lambda evt: pres.view.show_completions()),
         )
 
 
+
         kb = self.keybindings
+
+        kb[key.return_] = kb[key.enter]
 
         # mainly for Mac users (though Home and End are mapped too)
         kb[ctrl.left.optional(shift)] = kb[key.home]
@@ -221,6 +230,7 @@ class CUAInteractionMode(object):
     
     def _on_key_press(self, evt):
         success = True
+        logging.debug('key press: %s', evt)
         with self.curs.manip.history.transaction():
             try:
                 binding = self.keybindings[evt.key]
@@ -231,8 +241,8 @@ class CUAInteractionMode(object):
                 try:
                     binding(evt)
                 except errors.UserError as exc:
-                    import traceback
-                    traceback.print_exc()
+                    logging.exception(exc)
+                    
                     self.pres.view.beep()
                     self.modeline.remove(0, None)
                     self.modeline.append(str(exc) + ' [' + type(exc).__name__ + ']')
