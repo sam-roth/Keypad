@@ -2,7 +2,7 @@
 
 from PyQt4.Qt import *
 
-from .. import presentation, buffers
+from .. import control, buffers
 from . import view
 
 
@@ -12,7 +12,7 @@ class TextWidget(view.TextView):
         super().__init__(parent)
 
         self.buffer = buffers.Buffer()
-        self.presenter = presentation.Presenter(self, self.buffer)
+        self.presenter = control.Controller(self, self.buffer)
 
     def show_modeline(self, text):
         self.interaction_mode.show_modeline(text)

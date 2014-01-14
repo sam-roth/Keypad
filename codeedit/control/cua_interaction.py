@@ -2,8 +2,9 @@
 import re
 import logging
 
-from ..core        import AttributedString, errors
-from ..core.key    import KeySequenceDict, Keys, Ctrl, Alt, Shift, Meta, Modifiers
+from ..core                     import AttributedString, errors
+from ..core.key                 import KeySequenceDict, Keys, Ctrl, Alt, Shift, Meta, Modifiers
+from ..core.attributed_string   import lower_bound
 
 
 import unicodedata

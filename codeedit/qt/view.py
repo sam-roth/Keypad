@@ -3,15 +3,15 @@ import sys
 import contextlib
 import math
 
-from collections			import namedtuple
+from collections                import namedtuple
 
-from PyQt4.Qt         		import *
+from PyQt4.Qt                   import *
 
-from .qt_util         		import *
-from .text_rendering  		import *
-from .completion_view 		import CompletionView
-from ..core					import signal, attributed_string
-from ..core.key				import SimpleKeySequence
+from .qt_util                   import *
+from .text_rendering            import *
+from .completion_view           import CompletionView
+from ..core                     import signal, attributed_string
+from ..core.key                 import SimpleKeySequence
 
 
 

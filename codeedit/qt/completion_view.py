@@ -64,7 +64,7 @@ class CompletionListItemDelegate(QItemDelegate):
 class CompletionListModel(QAbstractTableModel):
 
     def __init__(self):
-        from ..presentation.colors import scheme
+        from ..control.colors import scheme
         super().__init__()
 
         self._completions = ()

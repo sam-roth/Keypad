@@ -6,7 +6,7 @@ from .qt_util import *
 
 class TextViewSettings(object):
     def __init__(self):
-        from ..presentation import colors
+        from ..control import colors
 
         self.scheme    = colors.scheme
 

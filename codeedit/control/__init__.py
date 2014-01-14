@@ -1,5 +1,5 @@
 
 
 from .                  import syntax, colors
-from .presenter         import Presenter
+from .controller        import Controller
 from .cua_interaction   import CUAInteractionMode
