@@ -2,8 +2,8 @@
 import re
 import logging
 
-from ..core        import AttributedString
-from ..core.key    import KeySequenceDict, Keys, Ctrl, Alt, Shift, Meta
+from ..core        import AttributedString, errors
+from ..core.key    import KeySequenceDict, Keys, Ctrl, Alt, Shift, Meta, Modifiers
 
 
 import unicodedata
@@ -13,9 +13,6 @@ def isprint(ch):
         return not unicodedata.category(ch).startswith('C')
     except TypeError:
         return False
-
-
-
 
 
 class CUAInteractionMode(object):
@@ -100,8 +97,6 @@ class CUAInteractionMode(object):
         manip = self.curs.manip
 
         pres.view.completions = [(str(x),) for x in range(100)]
-
-        
         
         self.keybindings = KeySequenceDict(
             (Keys.left      .optional(Shift),   cursor_move(self.curs.left)), 

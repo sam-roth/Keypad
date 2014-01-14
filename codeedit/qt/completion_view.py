@@ -246,7 +246,7 @@ def main():
     origin_curs = Cursor(textw.buffer)
 
 
-    @textw.manip.executed_change.connect
+    @textw.presenter.manipulator.executed_change.connect
     def key_press_handler(evt):
         origin_curs.move(0, 0)
         filter_text = origin_curs.text_to(textw.presenter.canonical_cursor).lower()

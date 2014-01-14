@@ -12,14 +12,7 @@ class TextWidget(view.TextView):
         super().__init__(parent)
 
         self.buffer = buffers.Buffer()
-        
-        manip = buffers.BufferManipulator(self.buffer)
-        self.manip = manip
         self.presenter = presentation.Presenter(self, self.buffer)
-        self.presenter.canonical_cursor = buffers.Cursor(manip)
-        self.presenter.anchor_cursor = None
-        self.interaction_mode = presentation.CUAInteractionMode(self.presenter)
-        
 
     def show_modeline(self, text):
         self.interaction_mode.show_modeline(text)

@@ -5,32 +5,40 @@ import re
 from .                          import syntax
 from .cua_interaction           import CUAInteractionMode
 from ..                         import util
-from ..buffers                  import Cursor
-from ..core                     import AttributedString, errors
+from ..buffers                  import Cursor, BufferManipulator, Buffer
+from ..core                     import AttributedString, errors, Signal
+from ..core.tag                 import Tagged, autoconnect
 from ..core.attributed_string   import lower_bound
 from ..core.key                 import *
 
-class Presenter(object):
+class Presenter(Tagged):
     def __init__(self, view, buff):
         '''
         :type view: codeedit.qt.view.TextView
         :type buff: codeedit.buffer.Buffer
         '''
-        self.view = view
-        self.buffer = buff
-        self.view.lines = self.buffer.lines
-        self.view.keep = self
+        super().__init__()
 
-        self.view.scrolled.connect(self.view_scrolled)
+        self.view               = view
+        self.buffer             = buff
+        self.view.lines         = self.buffer.lines
+        self.view.keep          = self
+        self.manipulator        = BufferManipulator(buff)
+        self.canonical_cursor   = Cursor(self.manipulator)
+        self.anchor_cursor      = Cursor(self.manipulator)
 
-        self.canonical_cursor = Cursor(buff)
-        self.anchor_cursor = Cursor(buff)
+        self.interaction_mode   = CUAInteractionMode(self)
 
+        self.view.scrolled                  += self._on_view_scrolled
+        self.manipulator.executed_change    += self.user_changed_buffer
 
-    def view_scrolled(self, start_line):
+    @Signal
+    def user_changed_buffer(self, change):
+        pass
+
+    def _on_view_scrolled(self, start_line):
         self.view.start_line = start_line
 
-        
     def refresh_view(self, full=False):
         self.view.lines = self.buffer.lines
         
@@ -51,6 +59,21 @@ class Presenter(object):
             self.view.full_redraw()
         else:
             self.view.partial_redraw()
+
+
+@autoconnect(Presenter.user_changed_buffer, 
+             lambda tags: tags.get('autoindent'))
+def autoindent(presenter, chg):
+    manip = presenter.manipulator
+    if chg.insert.endswith('\n'):
+        beg_curs = Cursor(manip.buffer).move(*chg.pos)
+        indent = re.match(r'^\s*', beg_curs.line.text)
+        if indent is not None:
+            Cursor(manip.buffer)\
+                .move(*chg.insert_end_pos)\
+                .insert(indent.group(0))
+
+
 
 
 def main():

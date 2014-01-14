@@ -45,9 +45,11 @@ class MainWindow(QMainWindow):
             return False
         else:
             tw = TextWidget()
-            with tw.manip.history.ignoring(), open(path, 'r') as f:
+            with tw.presenter.manipulator.history.ignoring(), open(path, 'r') as f:
                 tw.presenter.canonical_cursor.insert(f.read()).move(0,0)
                 tw.presenter.refresh_view(full=True)
+
+            tw.presenter.add_tags(syntax='python', autoindent=True)
             
             mw = self.mdi.addSubWindow(tw)
             mw.setWindowState(Qt.WindowMaximized)
