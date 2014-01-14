@@ -1,272 +1,19 @@
 
-
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
-
-
-
 import sys
 import contextlib
 import math
 
-from .. import signal, attributed_string
-from ..key import SimpleKeySequence
-from . import consts
+from collections     import namedtuple
 
+from PyQt4.Qt        import *
 
-@contextlib.contextmanager
-def ending(painter):
-    try:
-        yield painter
-    finally:
-        painter.end()
-
-
-@contextlib.contextmanager
-def restoring(painter):
-    try:
-        painter.save()
-        yield painter
-    finally:
-        painter.restore()
-
-def qcolor_marshaller(attrname):
-    def fget(self):
-        # QColor::name() actually returns an HTML-style hex string like
-        # #AABBCC.
-        return getattr(self, attrname).name()
-
-    def fset(self, value):
-        setattr(self, attrname, QColor(value))
-    
-    return property(fget, fset)
-
-
-
-class TextViewSettings(object):
-    def __init__(self):
-        from .. import colors
-
-        self.scheme    = colors.scheme
-
-        self.q_font    = QFont('Menlo')
-        self.q_font.setPixelSize(14)
-            
-        self.q_bgcolor = QColor(self.scheme.bg) #QColor.fromRgb(0, 43, 54)
-        self.q_fgcolor = QColor(self.scheme.fg)
-        #QColor.fromRgb(131, 148, 150) 
-        self.tab_stop  = 8
-
-
-
-
-    bgcolor = qcolor_marshaller('q_bgcolor')
-    fgcolor = qcolor_marshaller('q_fgcolor')
-
-    @property
-    def q_font(self):
-        return self._q_font
-
-    @q_font.setter
-    def q_font(self, value):
-        self._q_font = value
-        # assume monospace
-        fm = QFontMetricsF(value)
-        self.char_width = fm.width('X')
-
-    def expand_tabs(self, text):
-        return text.expandtabs(self.tab_stop)
-
+from ..              import signal, attributed_string
+from ..key           import SimpleKeySequence
+from .qt_util        import *
+from .text_rendering import *
     
     
 
-def render_attr_text(text, cfg):
-    '''
-    Renders the `AttributedString` `text` to a pixmap.
-
-    :type text: codeedit.attributed_string.AttributedString
-    :type cfg: codeedit.view.TextViewSettings
-    '''
-
-    assert isinstance(cfg, TextViewSettings)
-
-    
-    # fonts can have fractional width (at least on OS X) => use -F variant of
-    # QFontMetrics
-    fm = QFontMetricsF(cfg.q_font)
-    
-    bounding_rect_size = QSizeF(
-        fm.width(cfg.expand_tabs(text.text)) + 1,
-        fm.lineSpacing() + 1
-    )
-
-    pixmap = QPixmap(bounding_rect_size.toSize())
-    #pixmap.setAlphaChannel(QPixmap(bounding_rect_size.toSize()))
-    #assert pixmap.hasAlpha()
-    
-    # current coordinates
-    xc = 0.0
-    yc = fm.ascent()
-    raw_col = 0
-    
-
-    painter = QPainter(pixmap)
-    with ending(painter):
-        painter.setFont(cfg.q_font)
-        
-        # clear background (may have alpha component, so set appropriate
-        # CompositionMode)
-        with restoring(painter):
-            painter.setCompositionMode(QPainter.CompositionMode_Source)
-            painter.fillRect(pixmap.rect(), cfg.q_bgcolor)
-
-        color = None
-        bgcolor = None
-        italic = False
-        underline = False
-    
-        for string, deltas in text.iterchunks():
-            color = deltas.get('color', color) or cfg.q_fgcolor
-            bgcolor = deltas.get('bgcolor', bgcolor)
-            new_italic = deltas.get('italic', italic)
-            new_underline = deltas.get('underline', underline)
-
-            if new_italic != italic or new_underline != underline:
-                italic = new_italic
-                underline = new_underline
-
-                font = painter.font()
-                font.setItalic(new_italic)
-                font.setUnderline(new_underline)
-                painter.setFont(font)
-            
-            # tab_expanded_string used for width calculations
-            offset_from_tstop = raw_col % cfg.tab_stop
-            tab_expanded_string = cfg.expand_tabs(' ' * (offset_from_tstop) + string)[offset_from_tstop:]
-            width = fm.width(tab_expanded_string)
-
-
-            # draw background
-            if bgcolor is not None:
-                painter.fillRect(
-                    QRectF(xc, 0, width, fm.lineSpacing()),
-                    QColor(bgcolor)
-                )
-            
-            painter.setPen(QColor(color))
-            painter.drawText(QPointF(xc, yc), tab_expanded_string)# string)
-
-            xc += width
-            raw_col += len(tab_expanded_string)
-
-    return pixmap
-            
-
-def draw_attr_text(painter, rect, text, settings, partial=False):
-    cache_key = 'codeedit.view.draw_attr_text.pixmap'
-    draw_pos_key = 'codeedit.view.draw_attr_text.pos'
-    
-    pixmap = text.caches.get(cache_key)
-
-    no_cache            = pixmap is None
-    should_draw_text    = not partial or no_cache or \
-                          text.caches.get(draw_pos_key, None) != rect.topLeft()
-    
-
-    if no_cache:
-        pixmap = render_attr_text(text, settings)
-        text.caches[cache_key] = pixmap
-    
-    if should_draw_text:
-        text.caches[draw_pos_key] = rect.topLeft()
-        with restoring(painter):
-            painter.setCompositionMode(QPainter.CompositionMode_Source)
-            painter.fillRect(rect, settings.q_bgcolor)
-        painter.drawPixmap(rect.topLeft(), pixmap)
-
-    return (should_draw_text, no_cache)
-    
-
-def draw_attr_text_old(painter, point, text, tab_width=8):
-    unchanged = object()
-    
-    with restoring(painter):
-        orig_pen = painter.pen()
-        orig_brush = painter.brush()
-
-        
-        dx = 0
-        fm = QFontMetricsF(painter.font())
-        cwidth = fm.width('M')
-
-
-        pixmap_cache = text.caches.get('pixmap_cache')
-        if pixmap_cache is None:
-            boundingRectSize = QSizeF(fm.width(text.text.replace('\t', ' '*tab_width)), fm.lineSpacing()+1)
-            pixmap_cache = QPixmap(boundingRectSize.toSize())
-            
-            cache_painter = QPainter(pixmap_cache)
-            
-            with ending(cache_painter):
-                cache_painter.setFont(painter.font())
-                cache_painter.setPen(painter.pen())
-                cache_painter.setBrush(painter.brush())
-                with restoring(cache_painter):
-                    cache_painter.setCompositionMode(QPainter.CompositionMode_Source)
-                    cache_painter.fillRect(pixmap_cache.rect(), QColor(0, 0, 0, int(255*0.9)))
-
-                last_bgcolor = None
-                for string, deltas in text.iterchunks():
-                    
-                    color = deltas.get('color', unchanged)
-                    bgcolor = deltas.get('bgcolor', unchanged)
-                    cursor_after = deltas.get('cursor_after', False)
-
-                    string = string.replace('\t', ' '*tab_width)
-                    width = fm.width(string)
-                    pos = QPointF(dx, fm.ascent())
-                    
-                    with restoring(cache_painter):
-                        if bgcolor is not unchanged:
-                            last_bgcolor = bgcolor
-                        else:
-                            bgcolor = last_bgcolor
-                        
-                        if bgcolor is not None:
-                            cache_painter.setBrush(QColor(bgcolor))
-                            cache_painter.setPen(Qt.transparent)
-                            cache_painter.drawRect(QRectF(
-                                QPointF(dx, 0),
-                                QSizeF(cwidth * len(string), fm.lineSpacing()+1)
-                            ))
-                        else:
-                            cache_painter.setBrush(orig_brush)
-                    if color is None:
-                        cache_painter.setPen(orig_pen)
-                    elif color is not unchanged:
-                        cache_painter.setPen(QColor(color))
-
-                    cache_painter.drawText(pos, string)
-
-                    if cursor_after:
-                        cache_painter.drawLine(dx + width-1, 0, dx + width-1, pixmap_cache.height())
-                    dx += width
-            text.caches['pixmap_cache'] = pixmap_cache
-
-        painter.drawPixmap(point, pixmap_cache)
-
-
-class QtUi(object):
-
-    @classmethod
-    def parse_keystroke(cls, ks):
-        return QKeySequence.fromString(ks)[0]
-
-    
-qtUi = QtUi()
-
-
-from collections import namedtuple
 
 KeyEvent = namedtuple('KeyEvent', 'key text')
 
@@ -278,21 +25,14 @@ class TextView(QAbstractScrollArea):
         Middle = Qt.MiddleButton
     
 
-    KeyModifiers = consts.KeyModifiers
-    Keys = consts.Keys
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setAttribute(Qt.WA_OpaquePaintEvent, True)
         self.viewport().setAttribute(Qt.WA_OpaquePaintEvent, True)
 
-        #self.setAttribute(Qt.WA_NoSystemBackground)
-        #self.viewport().setAttribute(Qt.WA_NoSystemBackground)
-        self.ui = qtUi       
         
         self.settings = TextViewSettings()
-        #self.setAttribute(Qt.WA_TranslucentBackground)
-        #self.viewport().setAttribute(Qt.WA_TranslucentBackground, True)
         self.setFont(self.settings.q_font)
 
         self._lines = []
@@ -404,7 +144,6 @@ class TextView(QAbstractScrollArea):
         self.update_plane_size()
 
     def _viewport_paint(self, event):
-        #print('paint partial=', self._partial_redraw_ok)
         painter = QPainter(self.viewport())
         area_size = self.viewport().size()
         self.verticalScrollBar().setPageStep(area_size.height())
@@ -440,7 +179,6 @@ class TextView(QAbstractScrollArea):
 
     
     def scrollContentsBy(self, dx, dy):
-        #print('scrollContentsBy')
         self.scrolled(self.verticalScrollBar().value())
         self.viewport().update()
     
@@ -464,7 +202,7 @@ class TextView(QAbstractScrollArea):
 
             viewport_width = self.viewport().width()
 
-            height = self.line_height #fm.lineSpacing()+1
+            height = self.line_height 
 
             
             if self.cursor_pos is not None:
@@ -491,7 +229,6 @@ class TextView(QAbstractScrollArea):
 
                 if i == cursor_line:
                     cursor_x = fm.width(self.settings.expand_tabs(row.text[:cursor_col])) + x
-                    #cursor_x = fm.width(row.text[:cursor_col].replace('\t', ' ' * self.tab_width)) + x
                     painter.drawLine(cursor_x, y + 1, cursor_x, y + height - 2)
 
                 y += height
@@ -501,9 +238,6 @@ class TextView(QAbstractScrollArea):
             if y < self.height():
                 painter.setCompositionMode(QPainter.CompositionMode_Source)
                 painter.fillRect(QRect(QPoint(x, y), QSize(self.width() - x, self.height() - y)), self.settings.q_bgcolor)
-            #if self._partial_redraw_ok:
-            #    print('redrew', lines_drawn, 'lines')
-            #print('updated', lines_updated, 'lines')
             self._partial_redraw_ok = False
             self._last_cursor_line = cursor_line
             
@@ -512,11 +246,9 @@ class TextView(QAbstractScrollArea):
     def partial_redraw(self):
         self._partial_redraw_ok = True
         self.viewport().update()
-        #self.viewport().repaint()
 
     def full_redraw(self):
         self._prevent_partial_redraw = True
-        #self.viewport().repaint()
         self.viewport().update()
 
 
@@ -536,7 +268,6 @@ def make_test_attr_str():
     
     return astr
     
-#if __name__ == '__main__':
 
 def main():
 
@@ -557,9 +288,6 @@ def main():
     @tv.plane_size_changed.connect
     def on_plane_size_change(width, height):
         pass
-        #print('New plane size: {}x{}'.format(width, height))
-
-        #tv.put_text(0, 0, 'Hello, world!')
 
     win.show()
     win.resize(640, 480)
