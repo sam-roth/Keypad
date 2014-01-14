@@ -22,12 +22,13 @@ _python_kwlist = frozenset(keyword.kwlist) - frozenset('from import None False T
 _python_kw_highlighter = highlight_kw(_python_kwlist)
 _d_string_highlighter = highlight_regex(r'"([^"]|\\")*"')
 _q_string_highlighter = highlight_regex(r"'([^']|\\')*'")
+_python_func_highlighter = highlight_regex(
     r"""
 
       (?<= def  ) \s+\w+        
     | (?<= class) \s+\w+
     | (?<= @    ) (\w|\.)+      # decorators
-
+    | (?<= @    ) (\w|\.)+
     """,
     re.VERBOSE
 )

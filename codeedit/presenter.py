@@ -7,6 +7,14 @@ from . import errors
 
 from . import syntax, util
 
+import unicodedata
+
+def isprint(ch):
+    try:
+        return not unicodedata.category(ch).startswith('C')
+    except TypeError:
+        return False
+
 class Presenter(object):
     def __init__(self, view, buff):
         '''
@@ -217,7 +225,7 @@ class CUAInteractionMode(object):
             try:
                 binding = self.keybindings[evt.key]
             except KeyError:
-                if evt.text:
+                if isprint(evt.text):
                     self.curs.insert(evt.text)
             else:
                 try:

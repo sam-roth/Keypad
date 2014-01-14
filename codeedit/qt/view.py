@@ -45,11 +45,16 @@ def qcolor_marshaller(attrname):
 
 class TextViewSettings(object):
     def __init__(self):
+        from .. import colors
+
+        self.scheme    = colors.scheme
+
         self.q_font    = QFont('Menlo')
         self.q_font.setPixelSize(14)
             
-        self.q_bgcolor = QColor.fromRgb(0, 43, 54)
-        self.q_fgcolor = QColor.fromRgb(131, 148, 150) 
+        self.q_bgcolor = QColor(self.scheme.bg) #QColor.fromRgb(0, 43, 54)
+        self.q_fgcolor = QColor(self.scheme.fg)
+        #QColor.fromRgb(131, 148, 150) 
         self.tab_stop  = 8
 
 
@@ -117,10 +122,23 @@ def render_attr_text(text, cfg):
 
         color = None
         bgcolor = None
+        italic = False
+        underline = False
     
         for string, deltas in text.iterchunks():
             color = deltas.get('color', color) or cfg.q_fgcolor
             bgcolor = deltas.get('bgcolor', bgcolor)
+            new_italic = deltas.get('italic', italic)
+            new_underline = deltas.get('underline', underline)
+
+            if new_italic != italic or new_underline != underline:
+                italic = new_italic
+                underline = new_underline
+
+                font = painter.font()
+                font.setItalic(new_italic)
+                font.setUnderline(new_underline)
+                painter.setFont(font)
             
             # tab_expanded_string used for width calculations
             offset_from_tstop = raw_col % cfg.tab_stop

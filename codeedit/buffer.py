@@ -93,6 +93,10 @@ class Buffer(object):
 
         self.text_modified(TextModification(pos=pos, insert=text))
 
+    @property
+    def text(self):
+        return '\n'.join(line.text for line in self._lines)
+
 
 
     def remove(self, pos, length):

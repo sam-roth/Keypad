@@ -45,7 +45,7 @@ class Cursor(object):
 
                 # cursor was on the last line of the removed region, but outside
                 # of the removed region
-                if self_y == end_y:
+                if self_y == end_y and self_x >= end_x:
                     self_x = chg_x + (self_x - end_x)
                     self_y = chg_y
                     
@@ -69,7 +69,7 @@ class Cursor(object):
         except IndexError:
             raise IndexError('Line {}/{}'.format(y, len(self.buffer.lines)))
         else:
-            if x > len(line):
+            if x > len(line) or x < 0:
                 raise IndexError('Column {}/{}'.format(x, len(line)))
             else:
                 self._pos = value
