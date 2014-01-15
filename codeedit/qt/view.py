@@ -14,6 +14,7 @@ from ..core                     import signal, attributed_string
 from ..core.key                 import SimpleKeySequence
 
 
+import logging
 
 class TextView(QAbstractScrollArea):
 
@@ -49,11 +50,18 @@ class TextView(QAbstractScrollArea):
         self._last_cursor_line = None
         self.modelines = []
 
+        mouse_cursor = self.cursor()
+        mouse_cursor.setShape(Qt.IBeamCursor)
+        self.setCursor(mouse_cursor)
+
         self._completion_view = CompletionView(parent=self, settings=self.settings)
         self._completion_view.hide()
 
         self._completion_view.key_press += self.key_press
         self._completion_view.done      += self.completion_done
+
+
+        
 
     @property
     def completions(self):
@@ -249,9 +257,14 @@ class TextView(QAbstractScrollArea):
 
             plane_height, plane_width = self.plane_size
 
-            lines_to_display = self.lines[self.start_line:self.start_line + plane_height - len(self.modelines)] + self.modelines
+            text_lines = self.lines[self.start_line:self.start_line + plane_height - len(self.modelines)] 
+            lines_to_display = text_lines + self.modelines
             
             for i, row in enumerate(lines_to_display, self.start_line):
+
+                if i == len(text_lines) + self.start_line:
+                    y = self.height() - height * len(self.modelines) - self._margins.bottom()
+
                 drew_line, renewed_cache = draw_attr_text(
                     painter, 
                     QRect(QPoint(x, y), QSize(viewport_width, height)),
@@ -272,6 +285,8 @@ class TextView(QAbstractScrollArea):
             if y < self.height():
                 painter.setCompositionMode(QPainter.CompositionMode_Source)
                 painter.fillRect(QRect(QPoint(x, y), QSize(self.width() - x, self.height() - y)), self.settings.q_bgcolor)
+
+            #logging.debug('Redraw: %s copied from pixmap, %s rerendered.', lines_drawn, lines_updated)
             self._partial_redraw_ok = False
             self._last_cursor_line = cursor_line
             

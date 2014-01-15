@@ -94,6 +94,19 @@ class CUAInteractionMode(object):
 
             return result
 
+        
+        def delete_word(n):
+            advance = advance_word(n)
+            def result(evt):
+                if self.pres.anchor_cursor is None:
+                    self.pres.anchor_cursor = self.curs.clone()
+                    advance()
+                self.curs.remove_to(self.pres.anchor_cursor)
+                self.pres.anchor_cursor = None
+            return result
+
+
+
 
         manip = self.curs.manip
 
@@ -104,6 +117,8 @@ class CUAInteractionMode(object):
             (Keys.right     .optional(Shift),   cursor_move(self.curs.right)), 
             (Alt.left       .optional(Shift),   cursor_move(advance_word(-1))),
             (Alt.right      .optional(Shift),   cursor_move(advance_word(1))),
+            (Alt.backspace,                     delete_word(-1)),
+            (Alt.delete,                        delete_word(1)),
             (Keys.up        .optional(Shift),   cursor_move(self.curs.up)), 
             (Keys.down      .optional(Shift),   cursor_move(self.curs.down)),
             (Keys.pagedown  .optional(Shift),   cursor_move(page_move(1))),
@@ -116,7 +131,7 @@ class CUAInteractionMode(object):
             (Ctrl.a,                            select_all),
             (Ctrl.z,                            lambda evt: manip.history.undo()),
             (Ctrl.shift.z,                      lambda evt: manip.history.redo()),
-            (Meta.space,                        lambda evt: pres.view.show_completions()),
+            (Meta.space,                        lambda evt: pres.completion_requested()),
         )
 
 
@@ -184,12 +199,14 @@ class CUAInteractionMode(object):
     
     def _on_key_press(self, evt):
         success = True
-        logging.debug('key press: %s', evt)
         with self.curs.manip.history.transaction():
             try:
                 binding = self.keybindings[evt.key]
             except KeyError:
                 if isprint(evt.text):
+                    if self.pres.anchor_cursor is not None:
+                        self.curs.remove_to(self.pres.anchor_cursor)
+                        self.pres.anchor_cursor = None
                     self.curs.insert(evt.text)
             else:
                 try:

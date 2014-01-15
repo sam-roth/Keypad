@@ -3,9 +3,8 @@
 
 from PyQt4.Qt import *
 from .widget import TextWidget
-
-
-
+from ..control import behavior # module contains autoconnects
+from queue import Queue 
 
 class MainWindow(QMainWindow):
     def __init__(self, parent=None):
@@ -45,31 +44,52 @@ class MainWindow(QMainWindow):
             return False
         else:
             tw = TextWidget()
-            with tw.presenter.manipulator.history.ignoring(), open(path, 'r') as f:
-                tw.presenter.canonical_cursor.insert(f.read()).move(0,0)
-                tw.presenter.refresh_view(full=True)
+            with tw.controller.manipulator.history.ignoring(), open(path, 'r') as f:
+                tw.controller.canonical_cursor.insert(f.read()).move(0,0)
+                tw.controller.refresh_view(full=True)
 
-            tw.presenter.add_tags(syntax='python', autoindent=True)
             
+            tw.controller.request_init()
             mw = self.mdi.addSubWindow(tw)
             mw.setWindowState(Qt.WindowMaximized)
             
             return True
             
 
+from ..core import notification_center
 
+
+class _ProcessPosted(QEvent):
+    ProcessPostedType = QEvent.registerEventType()
     
+    def __init__(self):
+        super().__init__(_ProcessPosted.ProcessPostedType)
 
 
 class Application(QApplication):
 
     def exec_(self):
-        
         mw = MainWindow()
         mw.show()
         mw.raise_()
         
+        notification_center.register_post_handler(self._on_post)
+
         return super().exec_()
+
+    
+    def event(self, evt):
+        if evt.type() == _ProcessPosted.ProcessPostedType:
+            notification_center.process_events()
+            return True
+        else:
+            return super().event(evt)
+
+    
+
+    def _on_post(self):
+        self.postEvent(self, _ProcessPosted())
+
 
 
 
@@ -78,5 +98,9 @@ class Application(QApplication):
 if __name__ == '__main__':
     import sys
     import logging
-    logging.basicConfig(level=logging.DEBUG)
+    
+    logfmt = '[%(asctime)s|%(module)s:%(lineno)d|%(levelname)s]\n  %(message)s'
+
+    logging.basicConfig(level=logging.DEBUG,
+                        format=logfmt)
     sys.exit(Application(sys.argv).exec_())

@@ -12,7 +12,7 @@ class TextWidget(view.TextView):
         super().__init__(parent)
 
         self.buffer = buffers.Buffer()
-        self.presenter = control.Controller(self, self.buffer)
+        self.controller = control.Controller(self, self.buffer)
 
     def show_modeline(self, text):
         self.interaction_mode.show_modeline(text)

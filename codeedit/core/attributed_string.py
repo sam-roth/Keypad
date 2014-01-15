@@ -1,4 +1,4 @@
-
+import logging
 
 from collections import defaultdict
 
@@ -135,8 +135,6 @@ class AttributedString(object):
             if attr.length != len(self._text):
                 attr.length = len(self._text)
             attr[begin:end] = value
-        #else:
-            #print('did not invalidate')
 
 
     def set_attribute(self, *args, **kw):

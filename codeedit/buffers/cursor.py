@@ -183,6 +183,9 @@ class Cursor(object):
         return self.move(col=0)
 
 
+    def __repr__(self):
+        return 'Cursor{!r}'.format(self.pos)
+
 
 
 def main():

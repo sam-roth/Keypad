@@ -181,7 +181,7 @@ class CompletionView(QWidget):
                 return False
             elif event.key() in (Qt.Key_Enter, Qt.Key_Return): 
                 indices = self._listWidget.selectedIndexes()
-                self.done(indices[0] if indices else None)
+                self.done(indices[0].row() if indices else None)
                 return True
             elif event.key() == Qt.Key_Escape:
                 self.done(None)

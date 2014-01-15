@@ -10,6 +10,15 @@ import functools
 class Tagged(object):
     def __init__(self):
         self.__tags = {}
+        self.extensions = {}
+
+    @signal.Signal
+    def needs_init(self):
+        pass
+
+    def request_init(self):
+        self.tags_added(self, {})
+        self.needs_init()
 
 
     @signal.ClassSignal
@@ -33,6 +42,9 @@ class Tagged(object):
             tag_kv[k] = self.__tags.pop(k)
 
         self.tags_removed(self, tag_kv)
+
+
+
 
     @property
     def tags(self):
@@ -70,7 +82,7 @@ class Autoconnection(object):
 
     
     def _on_tags_added(self, inst, tags):
-        if self.pred(inst.tags):
+        if inst not in self._observed and self.pred(tags):
             if self.sig is None:
                 self.func(inst, True)
             else:
@@ -90,7 +102,29 @@ class Autoconnection(object):
     def __call__(self, *args, **kw):
         return self.func(*args, **kw)
 
-def autoconnect(signal_or_cls, predicate=None):
+
+class Autoextension(object):
+    def __init__(self, extended_cls, extension_cls, pred):
+        self.pred = pred
+        self.extended_cls = extended_cls
+        self.extension_cls = extension_cls
+        
+        extended_cls.tags_added += self._on_tags_added
+
+    def _on_tags_added(self, inst, tags):
+        if self.extension_cls not in inst.extensions\
+            and self.pred(tags):
+            
+            inst.extensions[self.extension_cls] = self.extension_cls(inst)
+
+    def _on_tags_removed(self, inst, tags):
+        if self.extension_cls in inst.extensions\
+            and not self.pred(inst.tags):
+            del inst.extensions[self.extension_cls]
+
+    
+
+def autoconnect(signal_or_cls, predicate):
     def result(func):
         conn = Autoconnection(signal_or_cls, predicate, func)
         functools.update_wrapper(conn, func)
@@ -98,6 +132,11 @@ def autoconnect(signal_or_cls, predicate=None):
     return result
 
 
+def autoextend(extended_cls, predicate):
+    def result(extension_cls):
+        extension_cls._autoextension = Autoextension(extended_cls, extension_cls, predicate)
+        return extension_cls
+    return result
 
 def main():
     class T1(Tagged):
