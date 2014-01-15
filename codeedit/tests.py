@@ -3,6 +3,7 @@
 import unittest
 
 from .buffers import Buffer, Span, Region, Cursor
+from .core import write_atomically 
 
 
 buff_text = '''\
@@ -65,6 +66,54 @@ class TestSpan(unittest.TestCase):
     def test_subtract_from_null(self):
         span = Region() - self.line0
         assert span.text == ''
+
+
+import random
+import string
+import tempfile
+import logging
+import os
+
+
+class TestAtomicWrites(unittest.TestCase):
+    def setUp(self):
+        self.prng = prng = random.Random(1234)
+
+        def random_printable():
+            return ''.join(
+                prng.choice(string.printable)
+                for _ in range(1024)
+            )
+
+        self.corpus1 = random_printable()
+        self.corpus2 = random_printable()
+
+        fd, self.filename = tempfile.mkstemp(text=False)
+
+        enc = self.corpus1.encode()
+        with open(fd, 'wb') as f:
+            f.write(enc)
+
+        print('write to file %r' % self.filename)
+        self.check_file(self.filename, enc)
+
+
+    def tearDown(self):
+        os.unlink(self.filename)
+        
+               
+    def check_file(self, path, text):
+        with open(path, 'rb') as f:
+            assert f.read() == text
+    
+
+    def test_atomic_write(self):
+
+        with write_atomically(self.filename) as f:
+            f.write(self.corpus2.encode())
+
+        self.check_file(self.filename, self.corpus2.encode())
+
 
 
 if __name__ == '__main__':

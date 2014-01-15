@@ -82,15 +82,13 @@ class CUAInteractionMode(object):
                 idx = lower_bound(posns, col)
                 idx += n
                 
-                try:
+                if 0 <= idx < len(posns):
                     new_col = posns[idx]
-                except IndexError:
-                    if n < 0:
-                        self.curs.up().end()
-                    else:
-                        self.curs.down().home()
-                else:
                     self.curs.right(new_col - col)
+                elif idx < 0:
+                    self.curs.up().end()
+                else:
+                    self.curs.down().home()
 
             return result
 

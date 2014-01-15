@@ -6,6 +6,8 @@ from .widget import TextWidget
 from ..control import behavior # module contains autoconnects
 from queue import Queue 
 
+import pathlib
+
 class MainWindow(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -15,6 +17,7 @@ class MainWindow(QMainWindow):
         m.setTabsClosable(True)
         m.setTabsMovable(True)
         m.setDocumentMode(True)
+        m.subWindowActivated.connect(self._after_tab_change)
 
         
         self.setCentralWidget(self.mdi)
@@ -31,6 +34,20 @@ class MainWindow(QMainWindow):
 
         self.open(__file__)
 
+    
+    def _after_tab_change(self, window):
+
+        try:
+            controller = window.widget().controller    
+        except AttributeError:
+            return
+
+        try:
+            path = controller.tags['path']
+        except KeyError:
+            return
+
+        self.setWindowFilePath(path.as_posix())
         
     
     def open(self, path=None):
@@ -50,8 +67,12 @@ class MainWindow(QMainWindow):
 
             
             tw.controller.request_init()
+            tw.controller.add_tags(path=pathlib.Path(path))
+
             mw = self.mdi.addSubWindow(tw)
             mw.setWindowState(Qt.WindowMaximized)
+
+            self.setWindowFilePath(path)
             
             return True
             
