@@ -148,6 +148,8 @@ class CompletionView(QWidget):
 
         self.model.modelReset.connect(self.on_model_reset)
 
+        self.resize(500, 300)
+
 
     @Signal
     def key_press(self, event):
@@ -166,6 +168,7 @@ class CompletionView(QWidget):
 
     def on_model_reset(self):
         self._listWidget.resizeColumnToContents(0)
+        self._listWidget.selectionModel().setCurrentIndex(self.model.index(0,0), QItemSelectionModel.ClearAndSelect)
 
     def eventFilter(self, receiver, event):
         if event.type() == QEvent.KeyPress and receiver is self._listWidget:

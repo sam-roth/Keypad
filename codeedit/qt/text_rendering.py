@@ -11,7 +11,7 @@ class TextViewSettings(object):
         self.scheme    = colors.scheme
 
         self.q_font    = QFont('Menlo')
-        self.q_font.setPixelSize(14)
+        self.q_font.setPixelSize(13)
             
         self.q_bgcolor = QColor(self.scheme.bg) #QColor.fromRgb(0, 43, 54)
         self.q_fgcolor = QColor(self.scheme.fg)

@@ -130,7 +130,8 @@ class AttributedString(object):
         span_info = attr.span_info(begin)
         
         numeric_end = end if end is not None else len(self)
-        if span_info is None or (span_info.start, span_info.end, span_info.value) != (begin, numeric_end, value):
+        if span_info is None or attr.length != len(self._text) or \
+                (span_info.start, span_info.end, span_info.value) != (begin, numeric_end, value):
             self.invalidate()
             if attr.length != len(self._text):
                 attr.length = len(self._text)

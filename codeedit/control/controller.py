@@ -2,11 +2,13 @@
 import logging
 import re
 
+import pathlib
+
 from .                          import syntax
 from .cua_interaction           import CUAInteractionMode
 from ..                         import util
 from ..buffers                  import Cursor, BufferManipulator, Buffer, Span, Region
-from ..core                     import AttributedString, errors, Signal
+from ..core                     import AttributedString, errors, Signal, write_atomically
 from ..core.tag                 import Tagged, autoconnect
 from ..core.attributed_string   import lower_bound
 from ..core.key                 import *
@@ -16,7 +18,7 @@ class Controller(Tagged):
     def __init__(self, view, buff):
         '''
         :type view: codeedit.qt.view.TextView
-        :type buff: codeedit.buffer.Buffer
+        :type buff: codeedit.buffers.Buffer
         '''
         super().__init__()
 
@@ -33,14 +35,81 @@ class Controller(Tagged):
         self.view.scrolled                  += self._on_view_scrolled
         self.manipulator.executed_change    += self.user_changed_buffer
         self.view.completion_done           += self.completion_done
+        buff.text_modified                  += self.buffer_was_changed
 
 
         self._prev_region = Region()
 
+    @property
+    def history(self):
+        return self.manipulator.history
+    
+    def clear(self):
+        '''
+        Remove all text from `self.buffer`.
+
+        Requires an active history transaction.
+        '''
+        start = Cursor(self.buffer)
+        end = Cursor(self.buffer).move(*self.buffer.end_pos)
+        start.remove_to(end)
+
+    def append_from_path(self, path):
+        '''
+        Append the contents of `self.buffer` with the contents of the file
+        located at `path` decoded using UTF-8.
+
+        Requires an active history transaction.
+        '''
+        with path.open('rb') as f:
+            Cursor(self.buffer).move(*self.buffer.end_pos).insert(f.read().decode())
+
+    def replace_from_path(self, path):
+        '''
+        Replace the contents of `self.buffer` with the contents of the
+        file located at `path` decoded using UTF-8. 
+
+        Requires an active history transaction.
+        '''
+
+        self.clear()
+        self.append_from_path(path)
+        self.add_tags(path=path)
+        self.canonical_cursor.move(0,0)
+
+        self.loaded_from_path(path)
+
+    def write_to_path(self, path):
+        '''
+        Atomically write the contents of `self.buffer` to the file located
+        at `path` encoded with UTF-8.
+        '''
+        
+        self.will_write_to_path(path)
+        with write_atomically(path) as f:
+            f.write(self.buffer.text.encode())
+        self.wrote_to_path(path)
+    
+    
+    @Signal
+    def will_write_to_path(self, path):
+        pass
+
+    @Signal
+    def wrote_to_path(self, path):
+        pass
+
+    @Signal
+    def loaded_from_path(self, path):
+        pass
 
 
     @Signal
     def user_changed_buffer(self, change):
+        pass
+
+    @Signal
+    def buffer_was_changed(self, change):
         pass
 
     @Signal
@@ -53,6 +122,10 @@ class Controller(Tagged):
 
     @Signal
     def completion_done(self, index):
+        pass
+
+    @Signal
+    def user_requested_help(self):
         pass
 
     def _on_view_scrolled(self, start_line):

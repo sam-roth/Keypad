@@ -32,7 +32,7 @@ class MainWindow(QMainWindow):
         
         self.menu_bar = menu_bar
 
-        self.open(__file__)
+        self.open('/Users/Sam/Desktop/Projects/codeedit2/test2.py')
 
     
     def _after_tab_change(self, window):
@@ -61,18 +61,18 @@ class MainWindow(QMainWindow):
             return False
         else:
             tw = TextWidget()
-            with tw.controller.manipulator.history.ignoring(), open(path, 'r') as f:
-                tw.controller.canonical_cursor.insert(f.read()).move(0,0)
-                tw.controller.refresh_view(full=True)
-
             
-            tw.controller.request_init()
-            tw.controller.add_tags(path=pathlib.Path(path))
+            path = pathlib.Path(path)
 
+            with tw.controller.history.ignoring():
+                tw.controller.replace_from_path(path)
+            
+            
             mw = self.mdi.addSubWindow(tw)
             mw.setWindowState(Qt.WindowMaximized)
+            mw.setWindowTitle(path.name)
 
-            self.setWindowFilePath(path)
+            self.setWindowFilePath(path.as_posix())
             
             return True
             
@@ -90,10 +90,18 @@ class _ProcessPosted(QEvent):
 class Application(QApplication):
 
     def exec_(self):
+        # Workaround for QTBUG-32789
+        QFont.insertSubstitution('.Lucida Grande UI', 'Lucida Grande')
+        
+        self.setWheelScrollLines(10)
+
+
         mw = MainWindow()
         mw.show()
         mw.raise_()
         
+        
+
         notification_center.register_post_handler(self._on_post)
 
         return super().exec_()

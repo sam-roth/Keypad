@@ -13,6 +13,9 @@ from .completion_view           import CompletionView
 from ..core                     import signal, attributed_string
 from ..core.key                 import SimpleKeySequence
 
+import time
+
+
 
 import logging
 
@@ -24,6 +27,8 @@ class TextView(QAbstractScrollArea):
         Middle = Qt.MiddleButton
     
 
+
+    
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -61,6 +66,8 @@ class TextView(QAbstractScrollArea):
         self._completion_view.done      += self.completion_done
 
 
+        #self._last_paint_time = 0
+        #self._update_rate_limit = 1.0/30
         
 
     @property
@@ -137,7 +144,9 @@ class TextView(QAbstractScrollArea):
         new_plane_size = (height_chars, width_chars)
         if new_plane_size != self._plane_size:
             self._plane_size = new_plane_size
+            self.verticalScrollBar().setPageStep(height_chars)
             self.plane_size_changed(width_chars, height_chars)
+            
 
     def map_to_plane(self, x, y):
         line = int(math.floor((y - self._margins.top()) / self.line_height)) + self.start_line
@@ -164,7 +173,7 @@ class TextView(QAbstractScrollArea):
 
     def map_from_plane(self, line, col):
         
-        y = self._margins.top() + line * self.line_height
+        y = self._margins.top() + (line - self.start_line) * self.line_height
         fm = QFontMetricsF(self.font())
         
         x = self._margins.left() + fm.width(self.lines[line].text[:col])
@@ -186,9 +195,18 @@ class TextView(QAbstractScrollArea):
         self.update_plane_size()
 
     def _viewport_paint(self, event):
+
+        #if time.monotonic() - self._last_paint_time < self._update_rate_limit:
+        #    self.viewport().update() # defer
+        #    return
+
+
+        #self._last_paint_time = time.monotonic()
+            
+
         painter = QPainter(self.viewport())
         area_size = self.viewport().size()
-        self.verticalScrollBar().setPageStep(area_size.height())
+        self.verticalScrollBar().setPageStep(self.plane_size[0])
         self.verticalScrollBar().setRange(0, len(self.lines))
 
         with ending(painter):
@@ -198,6 +216,8 @@ class TextView(QAbstractScrollArea):
         self._paint_to(self.viewport())
 
     def viewportEvent(self, event):
+        if event.type() == QEvent.KeyPress:
+            print(event)
         if event.type() == QEvent.Paint:
             assert isinstance(event, QPaintEvent)
             self._viewport_paint(event)
@@ -210,19 +230,33 @@ class TextView(QAbstractScrollArea):
             line, col = self.map_to_plane(event.x(), event.y())
             self.mouse_move_char(event.buttons(), line, col)
             return True
+
         else:
             return super().viewportEvent(event)
 
+    def event(self, event):
+        if event.type() == QEvent.KeyPress:
+            self.keyPressEvent(event)
+            return True
+        else:
+            return super().event(event)
+
     def keyPressEvent(self, event):
         event.accept()
-        self.key_press(KeyEvent(key=SimpleKeySequence(modifiers=event.modifiers() & ~Qt.KeypadModifier,
-                                                      keycode=event.key()),
-                                text=event.text().replace('\r', '\n')))
+        self.key_press(
+            KeyEvent(
+                key=SimpleKeySequence(
+                    modifiers=event.modifiers() & ~Qt.KeypadModifier,
+                    keycode=event.key()
+                ),
+                text=event.text().replace('\r', '\n')
+            )
+        )
 
     
     def scrollContentsBy(self, dx, dy):
         self.scrolled(self.verticalScrollBar().value())
-        self.viewport().update()
+        #self.viewport().update()
     
 
     def _paint_to(self, device):
@@ -259,11 +293,15 @@ class TextView(QAbstractScrollArea):
 
             text_lines = self.lines[self.start_line:self.start_line + plane_height - len(self.modelines)] 
             lines_to_display = text_lines + self.modelines
+
+            text_lines_end = 0
+            modeline_start = 0
             
             for i, row in enumerate(lines_to_display, self.start_line):
 
                 if i == len(text_lines) + self.start_line:
-                    y = self.height() - height * len(self.modelines) - self._margins.bottom()
+                    text_lines_end = y
+                    modeline_start = y = self.height() - height * len(self.modelines) - self._margins.bottom()
 
                 drew_line, renewed_cache = draw_attr_text(
                     painter, 
@@ -282,9 +320,15 @@ class TextView(QAbstractScrollArea):
                 if y >= self.height():
                     break
 
-            if y < self.height():
-                painter.setCompositionMode(QPainter.CompositionMode_Source)
-                painter.fillRect(QRect(QPoint(x, y), QSize(self.width() - x, self.height() - y)), self.settings.q_bgcolor)
+            
+            painter.setCompositionMode(QPainter.CompositionMode_Source)
+            painter.fillRect(
+                QRect(
+                    QPoint(x, text_lines_end), 
+                    QSize(self.width() - x, modeline_start - text_lines_end)
+                ), 
+                self.settings.q_bgcolor
+            )
 
             #logging.debug('Redraw: %s copied from pixmap, %s rerendered.', lines_drawn, lines_updated)
             self._partial_redraw_ok = False

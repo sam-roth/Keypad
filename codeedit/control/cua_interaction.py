@@ -130,6 +130,8 @@ class CUAInteractionMode(object):
             (Ctrl.z,                            lambda evt: manip.history.undo()),
             (Ctrl.shift.z,                      lambda evt: manip.history.redo()),
             (Meta.space,                        lambda evt: pres.completion_requested()),
+            (Keys.f1,                           lambda evt: pres.user_requested_help()),
+            (Keys.tab,                          lambda evt: self.curs.insert('    ')),
         )
 
 

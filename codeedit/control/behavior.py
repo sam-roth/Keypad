@@ -5,20 +5,21 @@ import weakref, types, re
 from .              import syntax
 from .controller    import Controller
 from ..core.tag     import autoconnect, autoextend
-from ..core         import notification_center
+from ..core         import notification_center, AttributedString
+from ..core.attributed_string import upper_bound
 from ..buffers      import Cursor
 
+import logging
 
-@autoconnect(Controller.needs_init,
-             lambda tags: True)
-def setup_buffer(controller):
-    # TODO: recognize filetypes
-    controller.add_tags(
-        syntax='python',
-        autoindent=True
-    )
+@autoconnect(Controller.loaded_from_path)
+def setup_buffer(controller, path):
+    if path.suffix == '.py':
+        controller.add_tags(
+            syntax='python',
+            autoindent=True
+        )
 
-    controller.refresh_view()
+        controller.refresh_view()
 
 
 @autoconnect(Controller.buffer_needs_highlight,
@@ -37,6 +38,13 @@ def autoindent(controller, chg):
                 .move(*chg.insert_end_pos)\
                 .insert(indent.group(0))
 
+
+
+
+#@autoconnect(Controller.buffer_was_changed,
+#             lambda tags: tags.get('softtabstop'))
+#def softtabstop(controller, chg):
+    
 
 
 import jedi
@@ -61,38 +69,99 @@ class PythonCompleter(object):
         self.controller.completion_requested += self._on_completion_requested
         self.controller.user_changed_buffer  += self._on_user_changed_buffer
         self.controller.completion_done      += self._on_completion_done
+        self.controller.user_requested_help  += self._on_user_requested_help
         self.start_curs = None
 
+
+    def _on_user_requested_help(self):
+        source = self.controller.buffer.text
+        line, col = self.controller.canonical_cursor.pos
+
+        def callback(result):
+            print(result)
+        
+        pool.apply_async(call_method, [
+            PythonCompleter, 
+            '_complete_thd', 
+            source, 
+            line, 
+            col,
+            self.controller.tags.get('path'),
+            'call_signatures',
+        ], callback=callback)
+        
+
     @staticmethod
-    def _complete_thd(source, line, col):
-        result = [(c.name,) for c in jedi.Script(source, line=line+1, column=col).completions()]
-        sorted_result = sorted(result, key=lambda x:len(x[0]))
+    def _complete_thd(source, line, col, path, mode='complete'):
+        try:
+            if path is not None:
+                path = path.as_posix()
+            script = jedi.Script(source, line=line+1, column=col, path=path)
+            if mode == 'complete':
+                print('working')
+                result = [
+                    (c.name, AttributedString(c.type, italic=True)) 
+                    for c in script.completions()
+                ]
+                print('finished')
+                sorted_result = sorted(result, key=lambda x:len(x[0]))
+                    
 
-        return result, sorted_result
+                return result, sorted_result
+            elif mode == 'call_signatures':
+                import pprint
+                sigs = script.call_signatures()
+                return pprint.pformat(dict(
+                    params=sigs[0].params,
+                    call_name=sigs[0].call_name
+                ))
 
+        except:
+            import traceback
+            traceback.print_exc()
 
     def _refilter(self, pattern):
-        expr = '.*?'.join(pattern.lower())
+        logging.info('filter pattern: %r', pattern)
+        expr = '.*?'.join(map(re.escape, pattern.lower()))
         rgx = re.compile(expr)
 
         self.controller.view.completions = sorted([
-            (w,) for (w,) in self.words
-            if rgx.match(w.lower()) is not None
+            t for t in self.words
+            if rgx.match(t[0].lower()) is not None
             ], key=lambda x: len(x[0]))
+
+    def _find_start(self):
+        logging.debug('_find_start')
+        start_curs = self.controller.canonical_cursor.clone()
+        
+        line, col = start_curs.pos
+        for idx, ch in enumerate(reversed(start_curs.line.text[:col])):
+            if re.match(r'[\w\d]', ch) is None:
+                start_curs.left(idx)
+                break
+        else:
+            start_curs.home()
+
+        return start_curs
     
     def _on_completion_requested(self):
-        self.start_curs = self.controller.canonical_cursor.clone()
+        self.start_curs = self._find_start().pos
+        #self.controller.canonical_cursor.clone()
 
         source = self.controller.buffer.text
-        line, col = self.start_curs.pos
+        line, col = self.start_curs
             
         def callback(args):
             def finish():
                 result, sorted_result = args
 
+
                 self.words = result
                 self.controller.view.completions = sorted_result
+                self._refilter_typed()
+
                 self.controller.view.show_completions()
+
 
             notification_center.post(finish)
 
@@ -102,26 +171,30 @@ class PythonCompleter(object):
             '_complete_thd', 
             source, 
             line, 
-            col
+            col,
+            self.controller.tags.get('path')
         ], callback=callback)
         
+    def _refilter_typed(self):
+        if self.start_curs is not None:
+            start_curs = self.controller.canonical_cursor.clone().move(*self.start_curs)
+            text = start_curs.text_to(self.controller.canonical_cursor)
+            self._refilter(text)
 
         
-
     def _on_user_changed_buffer(self, chg):
-        if self.start_curs is not None:
-            if self.start_curs.pos == self.controller.canonical_cursor.pos:
-                self.start_curs.left()
-            text = self.start_curs.text_to(self.controller.canonical_cursor)
-            self._refilter(text)
+        if chg.insert.endswith('.'):
+            self._on_completion_requested()
+        self._refilter_typed()
 
     def _on_completion_done(self, index):
         if index is None:
             self.start_curs = None
         elif self.start_curs is not None:
+            start_curs = self.controller.canonical_cursor.clone().move(*self.start_curs)
             with self.controller.manipulator.history.transaction():
                 compl = self.controller.view.completions[index][0]
-                self.start_curs.remove_to(self.controller.canonical_cursor)
+                start_curs.remove_to(self.controller.canonical_cursor)
                 self.controller.canonical_cursor.insert(compl)
 
                 self.controller.refresh_view()

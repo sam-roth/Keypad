@@ -124,7 +124,9 @@ class Autoextension(object):
 
     
 
-def autoconnect(signal_or_cls, predicate):
+def autoconnect(signal_or_cls, predicate=None):
+    if predicate is None:
+        predicate = lambda tags: True
     def result(func):
         conn = Autoconnection(signal_or_cls, predicate, func)
         functools.update_wrapper(conn, func)
