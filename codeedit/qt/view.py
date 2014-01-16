@@ -30,7 +30,7 @@ class TextView(QAbstractScrollArea):
 
     
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, provide_completion_view=True):
         super().__init__(parent)
         self.setAttribute(Qt.WA_OpaquePaintEvent, True)
         self.viewport().setAttribute(Qt.WA_OpaquePaintEvent, True)
@@ -59,30 +59,63 @@ class TextView(QAbstractScrollArea):
         mouse_cursor.setShape(Qt.IBeamCursor)
         self.setCursor(mouse_cursor)
 
-        self._completion_view = CompletionView(parent=self, settings=self.settings)
-        self._completion_view.hide()
+        if provide_completion_view:
+            self._completion_view = CompletionView(parent=self, settings=self.settings)
+            self._completion_view.hide()
 
-        self._completion_view.key_press += self.key_press
-        self._completion_view.done      += self.completion_done
+            self._completion_view.key_press += self.key_press
+            self._completion_view.done      += self.completion_done
+            self._completion_view.row_changed += self.completion_row_changed
+        else:
+            self._completion_view = None
 
 
         #self._last_paint_time = 0
         #self._update_rate_limit = 1.0/30
+        self.disable_partial_update = False
         
 
     @property
+    def completion_doc_lines(self):
+        if self._completion_view is not None:
+            return self._completion_view.doc_lines
+        else:
+            return []
+
+    @completion_doc_lines.setter
+    def completion_doc_lines(self, val):
+        if self._completion_view is not None:
+            self._completion_view.doc_lines = val
+
+
+    @property
+    def completion_doc_plane_size(self):
+        if self._completion_view is not None:
+            return self._completion_view.doc_plane_size
+        else:
+            return 1,1
+
+
+
+
+    @property
     def completions(self):
-        return self._completion_view.model.completions
+        if self._completion_view is not None:
+            return self._completion_view.model.completions
+        else:
+            return []
     
     @completions.setter
     def completions(self, val):
-        self._completion_view.model.completions = val
+        if self._completion_view is not None:
+            self._completion_view.model.completions = val
 
     def show_completions(self):
-        x,y = self.map_from_plane(*self.cursor_pos)
+        if self._completion_view is not None:
+            x,y = self.map_from_plane(*self.cursor_pos)
 
-        self._completion_view.move(self.mapToGlobal(QPoint(x, y)))
-        self._completion_view.show()
+            self._completion_view.move(self.mapToGlobal(QPoint(x, y)))
+            self._completion_view.show()
 
 
     @signal.Signal
@@ -190,6 +223,9 @@ class TextView(QAbstractScrollArea):
     @signal.Signal
     def key_press(self, event): pass
 
+    @signal.Signal
+    def completion_row_changed(self, comp_idx): pass
+
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self.update_plane_size()
@@ -210,7 +246,7 @@ class TextView(QAbstractScrollArea):
         self.verticalScrollBar().setRange(0, len(self.lines))
 
         with ending(painter):
-            if not self._partial_redraw_ok:
+            if self.disable_partial_update or not self._partial_redraw_ok:
                 painter.setCompositionMode(QPainter.CompositionMode_Source)
                 painter.fillRect(self.rect(), self.settings.q_bgcolor)
         self._paint_to(self.viewport())
@@ -263,7 +299,7 @@ class TextView(QAbstractScrollArea):
         painter = QPainter(device)
         painter.setFont(self.font())
 
-        if self._prevent_partial_redraw:
+        if self._prevent_partial_redraw or self.disable_partial_update:
             self._partial_redraw_ok = False
             self._prevent_partial_redraw = False
 

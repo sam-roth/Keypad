@@ -8,11 +8,15 @@ from . import view
 
 class TextWidget(view.TextView):
 
-    def __init__(self, parent=None):
-        super().__init__(parent)
+    def __init__(
+            self, 
+            parent=None, 
+            provide_completion_view=True,
+            provide_interaction_mode=True):
+        super().__init__(parent, provide_completion_view=provide_completion_view)
 
         self.buffer = buffers.Buffer()
-        self.controller = control.Controller(self, self.buffer)
+        self.controller = control.Controller(self, self.buffer, provide_interaction_mode=provide_interaction_mode)
 
     def show_modeline(self, text):
         self.interaction_mode.show_modeline(text)

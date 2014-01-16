@@ -13,11 +13,22 @@ from ..core.key             import SimpleKeySequence, Keys, KeySequenceDict
 
 completion_view_stylesheet = r"""
 
-QTreeView {{
+QWidget#container {{
 
+    background-color:       {settings.bgcolor};
     border-radius:          10px;
     padding-top:            10px;
     padding-bottom:         10px;
+}}
+
+
+TextView {{
+    border:                 none;
+}}
+
+QTreeView {{
+
+    border:                 none;
     background-color:       {settings.bgcolor};
     color:                  {settings.fgcolor};
     selection-background-color: {selbg};
@@ -115,21 +126,38 @@ class CompletionView(QWidget):
     
     def __init__(self, settings=None, parent=None):
         super().__init__(parent)
+        from . import view
 
         if settings is None:
             settings = TextViewSettings()
         scheme = settings.scheme
         
-        self._listWidget = QTreeView(self)
-        self._layout = QVBoxLayout(self)
-        self._layout.addWidget(self._listWidget)
         self.setContentsMargins(0, 0, 0, 0)
+        self._outer_layout = QHBoxLayout(self)
+        self._container = QWidget(self)
+        self._container.setObjectName('container')
+        self._container.setContentsMargins(0,0,0,0)
+        self._outer_layout.addWidget(self._container)
+
+        self._listWidget = QTreeView(self._container)
+        self._docs = view.TextView(self._container, provide_completion_view=False)
+        self._docs.update_plane_size()
+        self._docs.disable_partial_update = True
+
+        self._layout = QVBoxLayout(self._container)
+        self._layout.addWidget(self._listWidget)
+        self._layout.addWidget(self._docs)
+        
 
         self.setWindowFlags(Qt.Popup)
-        self.setAttribute(Qt.WA_TranslucentBackground)
+        #self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setAttribute(Qt.WA_NoSystemBackground)
+        #self.setAttribute(Qt.WA_OpaquePaintEvent, True)
 
         self._listWidget.setAttribute(Qt.WA_MacShowFocusRect, False)
         self._listWidget.setHeaderHidden(True)
+
+        self._docs.scrolled.connect(self._on_scroll)
         
 
         self.setStyleSheet(completion_view_stylesheet.format(
@@ -140,15 +168,22 @@ class CompletionView(QWidget):
         self.model = CompletionListModel()
         self._listWidget.setModel(self.model)
         self._listWidget.setItemDelegate(CompletionListItemDelegate(settings))
+        self._listWidget.selectionModel().currentRowChanged.connect(self.after_current_row_change)
 
         self.setFocusProxy(self._listWidget)
         self._listWidget.installEventFilter(self)
+        #self._docs.installEventFilter(self)
+        self._docs.setFocusProxy(self._listWidget)
         
         self.done       += self._close
 
         self.model.modelReset.connect(self.on_model_reset)
 
-        self.resize(500, 300)
+        self.resize(400, 400)
+
+    def _on_scroll(self, start_line):
+        self._docs.start_line = start_line
+        self._docs.full_redraw()
 
 
     @Signal
@@ -159,6 +194,22 @@ class CompletionView(QWidget):
     def done(self, comp_idx):
         pass
 
+    @Signal
+    def row_changed(self, comp_idx):
+        pass
+
+    @property
+    def doc_lines(self):
+        return self._docs.lines
+
+    @doc_lines.setter
+    def doc_lines(self, val):
+        self._docs.lines = val
+        self._docs.full_redraw()
+
+    @property
+    def doc_plane_size(self):
+        return self._docs.plane_size
 
     def _close(self, comp_idx):
         self.close()
@@ -168,10 +219,16 @@ class CompletionView(QWidget):
 
     def on_model_reset(self):
         self._listWidget.resizeColumnToContents(0)
-        self._listWidget.selectionModel().setCurrentIndex(self.model.index(0,0), QItemSelectionModel.ClearAndSelect)
+        self._listWidget.selectionModel().setCurrentIndex(
+            self.model.index(0,0), 
+            QItemSelectionModel.ClearAndSelect |
+            QItemSelectionModel.Rows)
+
+    def after_current_row_change(self, current, previous):
+        self.row_changed(current.row())
 
     def eventFilter(self, receiver, event):
-        if event.type() == QEvent.KeyPress and receiver is self._listWidget:
+        if event.type() == QEvent.KeyPress and (receiver is self._listWidget or receiver is self._docs):
             
             ignored_keys = [
                 Qt.Key_Down, Qt.Key_Up,

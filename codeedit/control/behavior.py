@@ -49,7 +49,7 @@ def autoindent(controller, chg):
 
 import jedi
 import multiprocessing
-
+import textwrap
 
 
 
@@ -58,6 +58,7 @@ def call_method(obj, method_name, *args, **kw):
 
 @autoextend(Controller, lambda tags: tags.get('syntax') == 'python')
 class PythonCompleter(object):
+    last_completion_info = None
     def __init__(self, controller):
         '''
         :type controller: codeedit.control.Controller
@@ -70,6 +71,7 @@ class PythonCompleter(object):
         self.controller.user_changed_buffer  += self._on_user_changed_buffer
         self.controller.completion_done      += self._on_completion_done
         self.controller.user_requested_help  += self._on_user_requested_help
+        self.controller.completion_row_changed += self._on_row_changed
         self.start_curs = None
 
 
@@ -92,22 +94,36 @@ class PythonCompleter(object):
         
 
     @staticmethod
-    def _complete_thd(source, line, col, path, mode='complete'):
+    def _complete_thd(source=None, line=None, col=None, path=None, mode='complete', comp_idx=None):
         try:
             if path is not None:
                 path = path.as_posix()
-            script = jedi.Script(source, line=line+1, column=col, path=path)
+            if mode != 'follow_definition':
+                script = jedi.Script(source, line=line+1, column=col, path=path)
             if mode == 'complete':
                 print('working')
+                comps = script.completions()
                 result = [
                     (c.name, AttributedString(c.type, italic=True)) 
-                    for c in script.completions()
+                    for c in comps
                 ]
+
+                PythonCompleter.last_completion_info = comps
+    
                 print('finished')
                 sorted_result = sorted(result, key=lambda x:len(x[0]))
                     
 
                 return result, sorted_result
+            elif mode == 'follow_definition':
+
+                try:
+                    defns = PythonCompleter.last_completion_info[comp_idx].follow_definition()
+                except:
+                    return ['error']
+                else:
+                    return [defn.doc for defn in defns]
+
             elif mode == 'call_signatures':
                 import pprint
                 sigs = script.call_signatures()
@@ -120,15 +136,51 @@ class PythonCompleter(object):
             import traceback
             traceback.print_exc()
 
+    def _on_row_changed(self, comp_idx):
+        def callback(result):
+            def msg():
+                text = '\n\n'.join(result)
+                paras = text.split('\n\n') #textwrap.fill(text, width=30, replace_whitespace=False, subsequent_indent='  ').splitlines()
+
+                height, width = self.controller.completion_doc_plane_size
+
+
+                lines = '\n'.join(textwrap.fill(para, width=width - 3, fix_sentence_endings=True, subsequent_indent='  ') for para in paras).splitlines()
+
+                self.controller.completion_doc_lines = [AttributedString(r) for r in lines]
+            notification_center.post(msg)
+
+        pool.apply_async(
+            call_method, 
+            [
+                PythonCompleter,
+                '_complete_thd'
+            ], 
+            {
+                'mode': 'follow_definition',
+                'comp_idx': self.completion_indices[comp_idx]
+            },
+            callback=callback
+        )
+
     def _refilter(self, pattern):
         logging.info('filter pattern: %r', pattern)
         expr = '.*?'.join(map(re.escape, pattern.lower()))
         rgx = re.compile(expr)
 
-        self.controller.view.completions = sorted([
-            t for t in self.words
-            if rgx.match(t[0].lower()) is not None
-            ], key=lambda x: len(x[0]))
+
+        sorted_pairs = sorted(
+            [
+                (i, t) for (i, t) in enumerate(self.words)
+                if rgx.match(t[0].lower()) is not None
+            ],
+            key=lambda x: len(x[1][0])
+        )
+
+
+        self.completion_indices, self.controller.view.completions = \
+            zip(*sorted_pairs) if sorted_pairs \
+            else ([], [])
 
     def _find_start(self):
         logging.debug('_find_start')
@@ -157,7 +209,7 @@ class PythonCompleter(object):
 
 
                 self.words = result
-                self.controller.view.completions = sorted_result
+                #self.controller.view.completions = sorted_result
                 self._refilter_typed()
 
                 self.controller.view.show_completions()
@@ -177,9 +229,13 @@ class PythonCompleter(object):
         
     def _refilter_typed(self):
         if self.start_curs is not None:
-            start_curs = self.controller.canonical_cursor.clone().move(*self.start_curs)
-            text = start_curs.text_to(self.controller.canonical_cursor)
-            self._refilter(text)
+            try:
+                start_curs = self.controller.canonical_cursor.clone().move(*self.start_curs)
+            except IndexError:
+                self.start_curs = None
+            else:
+                text = start_curs.text_to(self.controller.canonical_cursor)
+                self._refilter(text)
 
         
     def _on_user_changed_buffer(self, chg):

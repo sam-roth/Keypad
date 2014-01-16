@@ -15,7 +15,7 @@ from ..core.key                 import *
 
 
 class Controller(Tagged):
-    def __init__(self, view, buff):
+    def __init__(self, view, buff, provide_interaction_mode=True):
         '''
         :type view: codeedit.qt.view.TextView
         :type buff: codeedit.buffers.Buffer
@@ -30,15 +30,52 @@ class Controller(Tagged):
         self.canonical_cursor   = Cursor(self.manipulator)
         self.anchor_cursor      = None
 
-        self.interaction_mode   = CUAInteractionMode(self)
+        if provide_interaction_mode:
+            self.interaction_mode = CUAInteractionMode(self)
+        else:
+            self.interaction_mode = None
 
         self.view.scrolled                  += self._on_view_scrolled
         self.manipulator.executed_change    += self.user_changed_buffer
         self.view.completion_done           += self.completion_done
-        buff.text_modified                  += self.buffer_was_changed
-
+        buff.text_modified                  += self.buffer_was_changed 
+        buff.text_modified                  += self._after_buffer_modification
+        self.view.completion_row_changed    += self.completion_row_changed
 
         self._prev_region = Region()
+        self._is_modified = False
+
+    def _after_buffer_modification(self, chg):
+        self.is_modified = True
+        
+    @property
+    def is_modified(self):
+        return self._is_modified
+
+    @is_modified.setter
+    def is_modified(self, val):
+        if val != self._is_modified:
+            self._is_modified = val
+            self.modified_was_changed(val)
+            print('modified changed:', val)
+
+    
+    @Signal
+    def modified_was_changed(self, val):
+        pass
+
+
+    @property
+    def completion_doc_lines(self):
+        return self.view.completion_doc_lines
+
+    @completion_doc_lines.setter
+    def completion_doc_lines(self, val):
+        self.view.completion_doc_lines = val
+
+    @property
+    def completion_doc_plane_size(self):
+        return self.view.completion_doc_plane_size
 
     @property
     def history(self):
@@ -75,6 +112,8 @@ class Controller(Tagged):
         self.clear()
         self.append_from_path(path)
         self.add_tags(path=path)
+        self.is_modified = True
+
         self.canonical_cursor.move(0,0)
 
         self.loaded_from_path(path)
@@ -89,6 +128,7 @@ class Controller(Tagged):
         with write_atomically(path) as f:
             f.write(self.buffer.text.encode())
         self.wrote_to_path(path)
+        self.is_modified = False
     
     
     @Signal
@@ -125,11 +165,16 @@ class Controller(Tagged):
         pass
 
     @Signal
+    def completion_row_changed(self, index):
+        pass
+    
+    @Signal
     def user_requested_help(self):
         pass
 
     def _on_view_scrolled(self, start_line):
         self.view.start_line = start_line
+        self.refresh_view(full=True)
 
     def refresh_view(self, full=False):
         self.view.lines = self.buffer.lines

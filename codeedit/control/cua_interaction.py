@@ -151,7 +151,8 @@ class CUAInteractionMode(object):
         self.pres.view.mouse_move_char.connect(self._on_mouse_move)
 
     def _on_view_scrolled(self, start_line):
-        self.pres.refresh_view(full=True)
+        pass
+        #self.pres.refresh_view(full=True)
         #y, x = self.curs.pos
         #max_y = start_line + self.pres.view.buffer_lines_visible
         #new_y = util.clamp(start_line, max_y, y)
