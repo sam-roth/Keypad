@@ -5,6 +5,12 @@ from collections import defaultdict
 def identity(x): return x
 
 def bound(coll, value, compare, key=identity):
+    '''
+    See `lower_bound` and `upper_bound`.
+
+    Credit: Based on the implementations of the functions of the same names from
+    http://en.cppreference.com/w/cpp/algorithm/lower_bound.
+    '''
     first = 0
     count = len(coll)
 
@@ -26,16 +32,62 @@ def bound(coll, value, compare, key=identity):
 
 
 def lower_bound(coll, value, key=identity):
-    'Find the first element in `coll` greater than or equal to `value`.'
+    '''
+    Find the index of the first element in `coll` equal to or greater than
+    `value`. 
+    
+    The collection must be partitioned with respect to `_ < value`.
+    (Sorting it will suffice for this requirement.)
+
+    Complexity: ``O(log(len(coll)))``.
+    
+    >>> lower_bound(list(range(10)), 5)
+    5
+    >>> lower_bound([1,2,9,10], 5)
+    2
+    '''
     return bound(coll, value, compare=lambda x, y: x < y, key=key)
     
 def upper_bound(coll, value, key=identity):
-    'Find the first element in `coll` greater than `value`.'
+    '''
+    Find the index of the first element in `coll` greater than `value`.
+
+    The collection must be partitioned with respect to `_ >= value`.
+    (Sorting it will suffice for this requirement.)
+
+    Complexity: ``O(log(len(coll)))``.
+
+    >>> upper_bound(list(range(10)), 5)
+    6
+    >>> upper_bound([1,2,9,10], 5)
+    2
+    '''
     return bound(coll, value, compare=lambda x, y: y >= x, key=key)
     
 from collections import namedtuple
 
 class RangeDict(object):
+    '''
+    A mapping from an integer interval to a value.
+
+    Non-standard interface alerts:
+        1.  The container does not distinguish between `None` and the absence of
+            an item.
+        2.  In `self[n:m] = v`, `v` is not a `RangeDict`, but a value instead.
+        3.  `self[n:m] = v` is valid, but `v = self[n:m]` is invalid (and
+            meaningless). Use `v = self[n]` instead.
+
+    >>> d = RangeDict(length=10)
+    >>> d[0:3] = 1
+    >>> d[3:]  = 2
+    >>> d[0]
+    1
+    >>> [d[n] for n in range(10)]
+    [1, 1, 1, 2, 2, 2, 2, 2, 2, 2]
+    >>> del d[6:]
+    >>> [d[n] for n in range(10)]
+    [1, 1, 1, 2, 2, 2, None, None, None, None]
+    '''
 
     SpanInfo = namedtuple('SpanInfo', 'start end value')
 
@@ -49,10 +101,28 @@ class RangeDict(object):
 
     @length.setter
     def length(self, value):
+        '''
+        Resize the RangeDict by removing ranges from the end or smearing the last range
+        to the new length.
+
+        >>> rd = RangeDict(length=3)
+        >>> rd[0:2] = 1
+        >>> rd[2:] = 2
+        >>> [rd[n] for n in range(len(rd))]
+        [1, 1, 2]
+        >>> rd.length=10
+        >>> [rd[n] for n in range(len(rd))]
+        [1, 1, 2, 2, 2, 2, 2, 2, 2, 2]
+        >>> rd.length=2
+        >>> [rd[n] for n in range(len(rd))]
+        [1, 1]
+        '''
         if value < self.length:
             del self._data[value:]
         self._length = value
 
+    def __len__(self):
+        return self.length
 
     def span_info(self, idx):
         data_index = upper_bound(self._data, (idx, None), key=lambda x: x[0]) - 1
@@ -98,6 +168,29 @@ class RangeDict(object):
 
 
     def splice(self, index, delta):
+        '''
+        Change the length of `self` by `delta` elements before the given `index`.
+
+        >>> rd = RangeDict(length=3)
+        >>> rd[0:2] = 1
+        >>> [rd[n] for n in range(len(rd))]
+        [1, 1, None]
+        >>> rd[3:] = 2
+        >>> [rd[n] for n in range(len(rd))]
+        [1, 1, None]
+        >>> rd[2:] = 2
+        >>> [rd[n] for n in range(len(rd))]
+        [1, 1, 2]
+        >>> rd.splice(2, 4)
+        >>> [rd[n] for n in range(len(rd))]
+        [1, 1, 1, 1, 1, 1, 2]
+        >>> rd.splice(2, -4)
+        >>> [rd[n] for n in range(len(rd))]
+        [1, 1, 2]
+        >>> rd.splice(3, 4)
+        >>> [rd[n] for n in range(len(rd))]
+        [1, 1, 2, 2, 2, 2, 2]
+        '''
         if delta < 0:
             self._set(slice(index, index-delta), None, delonly=True)
             
@@ -111,7 +204,42 @@ class RangeDict(object):
         return repr(self._data)
 
 class AttributedString(object):
+    '''
+    A mutable string-like datatype that stores a string and a parallel mapping
+    of an attribute ID to a mapping of ranges of indices (automatically
+    updated) to a value for the attribute over that range.
+
+    These objects also contain a dictionary for caching derived data (such as
+    rendered pixmaps of the string). The dictionary is automatically cleared
+    upon modifying the string.
+
+    Beware: String mutation operations are potentially expensive, as the
+    underlying string implementation is immutable; however, they are less
+    expensive than constructing an entirely new AttributedString for all
+    operations.
+
+    Note: The dicts in the __repr__ shown only include changes between each
+    chunk.
+
+    >>> astr = AttributedString('Hello, world!', italic=True)
+    >>> astr
+    AttributedString(('Hello, world!', {'italic': True}))
+    >>> astr.set_attribute(-6, None, 'italic', False)
+    >>> astr
+    AttributedString(('Hello, ', {'italic': True}), ('world!', {'italic': False}))
+    >>> astr.set_attribute(-6, -1, 'color', 'blue')
+    >>> astr
+    AttributedString(('Hello, ', {'italic': True}), ('world', {'italic': False, 'color': 'blue'}), ('!', {'color': None}))
+
+
+
+    '''
+
     def __init__(self, text='', **attrs):
+        '''
+        Construct an AttributedString with the given text and attributes. The
+        attributes cover the entire length of the string.
+        '''
         self._text = text
         self._attributes = defaultdict(RangeDict)
         self.caches = {}
@@ -139,6 +267,13 @@ class AttributedString(object):
 
 
     def set_attribute(self, *args, **kw):
+        '''
+        set_attribute(begin=0, end=None, key, value)
+
+        Set the attribute `key` to `value` starting at `begin` and ending
+        before `end`. If `end` is `None`, set the attribute to the end of
+        the string.
+        '''
         try:
             def signature1(begin, end, key, value):
                 pass
@@ -176,6 +311,15 @@ class AttributedString(object):
         return deltas
 
     def iterchunks(self):
+        '''
+        Return an iterator over the "chunks" (regions without attribute
+        changes) in the string. 
+
+        Each yielded value is a pair containing the text in the chunk and any
+        changed attributes as a dictionary since the last chunk. If the
+        attributes were not changed since the last chunk, the changed
+        attributes dictionary will be empty.
+        '''
         last_idx = 0
         last_attrs = {}
         for delta_idx, delta_attrs in sorted(self.find_deltas().items(), key=lambda x: x[0]):
@@ -188,21 +332,26 @@ class AttributedString(object):
             
     @property
     def text(self):
+        '''
+        The unformatted text as a string.
+        '''
         return self._text
 
-#    @text.setter
-#    def text(self, value):
-#        self.invalidate()
-#        self._text = value
-#        self._attributes.clear()
-#
+
     def insert(self, index, text):
+        '''
+        Insert text before the index specified.
+
+        :type text: AttributedString or str
+        '''
 
         if isinstance(text, AttributedString):
             astr = text
             text = astr.text
+            assert not isinstance(text, AttributedString)
         else:
             astr = None
+
 
         self.invalidate()
         left = self._text[:index]
@@ -232,11 +381,19 @@ class AttributedString(object):
                 offset += len(chunk)
 
     def append(self, text):
+        '''
+        Insert text at the end of the string.
+
+        :type text: AttributedString or str
+        '''
         self.insert(None, text)
 
                 
     
     def remove(self, start, stop):
+        '''
+        Remove text in ``(start..stop]``.
+        '''
         start, stop, _ = slice(start, stop).indices(len(self))
 
         self.invalidate()
@@ -252,27 +409,73 @@ class AttributedString(object):
     
     @classmethod
     def join(cls, sep_or_strings, strings=None):
+        '''
+        join(separator='', strings)
+        
+        attributed string formed by the concatenation of the elements of the
+        second argument, separated by the given separator
+               
+
+        >>> s1=AttributedString('Hello,', color='green')
+        >>> s2=AttributedString(' world!', color='blue')
+        >>> s1, s2
+        (AttributedString(('Hello,', {'color': 'green'})), AttributedString((' world!', {'color': 'blue'})))
+        >>> AttributedString.join([s1,s2])
+        AttributedString(('Hello,', {'color': 'green'}), (' world!', {'color': 'blue'}))
+        '''
         if strings is None:
             sep, strings = '', sep_or_strings
         else:
             sep, strings = sep_or_strings, strings
 
-        # TODO improve efficiency
-        result = AttributedString('')
-        first = True
-        for string in strings:
-            if first:
-                first = False
+        def text(s):
+            if isinstance(s, AttributedString):
+                return s.text
             else:
-                result.append(sep)
-            result.append(string)
+                return s
+        
+        def gen():
+            for i, part in enumerate(strings):
+                if i != 0:
+                    yield sep
+                yield part
+        
+
+        parts = list(gen())
+
+        result = AttributedString(''.join(map(text, parts)))
+        
+        accumulated_len = 0
+        for part in parts:
+            part_end   = accumulated_len + len(part)
+
+            if isinstance(part, AttributedString):
+                for chunk, deltas in part.iterchunks():
+                    for key, value in deltas.items():
+                        result.set_attribute(
+                            accumulated_len,
+                            part_end,
+                            key,
+                            value
+                        )
+                    accumulated_len += len(chunk)
+            else:
+                accumulated_len += len(part)
+
+
         return result
 
     def clone(self):
+        '''
+        Make a copy of the string. It will not change with this string.
+        '''
         result = AttributedString()
         result.append(self)
         return result
 
+
+    def __repr__(self):
+        return 'AttributedString(' + ', '.join(map(str, self.iterchunks())) + ')'
 
     
 
