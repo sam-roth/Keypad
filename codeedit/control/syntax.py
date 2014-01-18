@@ -42,6 +42,7 @@ def python_syntax(buff):
     for line in buff.lines:
         if not line.caches.get('polished', False):
             line.set_attribute('color', None)
+            line.set_attribute('bgcolor', None)
 
             _python_kw_highlighter(line, color='#859900')
             _python_func_highlighter(line, color='#268bd2')

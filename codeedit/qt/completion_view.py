@@ -36,6 +36,25 @@ QTreeView {{
 
 }}
 
+
+QScrollBar,QScrollBar::add-page,QScrollBar::sub-page {{
+    border: none;
+    background: {settings.bgcolor};
+}}
+
+QScrollBar::handle {{
+    background: {selbg};
+}}
+
+QScrollBar::add-line, QScrollBar::sub-line {{
+    width: 0px;
+    height: 0px;
+}}
+
+QSizeGrip {{
+    width:0px;
+    height:0px;
+}}
 """
 
 
@@ -169,6 +188,7 @@ class CompletionView(QWidget):
         self._listWidget.setModel(self.model)
         self._listWidget.setItemDelegate(CompletionListItemDelegate(settings))
         self._listWidget.selectionModel().currentRowChanged.connect(self.after_current_row_change)
+        self._listWidget.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
         self.setFocusProxy(self._listWidget)
         self._listWidget.installEventFilter(self)
@@ -227,14 +247,17 @@ class CompletionView(QWidget):
     def after_current_row_change(self, current, previous):
         self.row_changed(current.row())
 
+    def _event_filter_check(self, receiver):
+        return receiver is self._listWidget or receiver is self._docs
+
     def eventFilter(self, receiver, event):
-        if event.type() == QEvent.KeyPress and (receiver is self._listWidget or receiver is self._docs):
+
+        if event.type() == QEvent.KeyPress and self._event_filter_check(receiver):
             
             ignored_keys = [
                 Qt.Key_Down, Qt.Key_Up,
                 Qt.Key_PageUp, Qt.Key_PageDown,
                 Qt.Key_Home, Qt.Key_End
-                #Qt.Key_Enter, Qt.Key_Return, Qt.Key_Escape
             ]
 
             if event.key() in ignored_keys:

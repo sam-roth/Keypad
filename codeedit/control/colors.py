@@ -51,6 +51,8 @@ class Solarized(object):
     docstrings      = _violet
     
 
+    search_bg       = _yellow
+
     
     grays = [
         _base03,

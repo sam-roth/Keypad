@@ -83,10 +83,19 @@ def render_attr_text(text, cfg):
         bgcolor = None
         italic = False
         underline = False
-    
+        sel_bgcolor = None
+        sel_color = None
+
         for string, deltas in text.iterchunks():
             color = deltas.get('color', color) or cfg.q_fgcolor
             bgcolor = deltas.get('bgcolor', bgcolor)
+            sel_bgcolor = deltas.get('sel_bgcolor', sel_bgcolor)
+            sel_color = deltas.get('sel_color', sel_color)
+        
+            actual_color = sel_color or color
+            actual_bgcolor = sel_bgcolor or bgcolor
+
+
             new_italic = deltas.get('italic', italic)
             new_underline = deltas.get('underline', underline)
 
@@ -106,13 +115,13 @@ def render_attr_text(text, cfg):
 
 
             # draw background
-            if bgcolor is not None:
+            if actual_bgcolor is not None:
                 painter.fillRect(
                     QRectF(xc, 0, width, fm.lineSpacing()),
-                    QColor(bgcolor)
+                    QColor(actual_bgcolor)
                 )
             
-            painter.setPen(QColor(color))
+            painter.setPen(QColor(actual_color))
             painter.drawText(QPointF(xc, yc), tab_expanded_string)# string)
 
             xc += width

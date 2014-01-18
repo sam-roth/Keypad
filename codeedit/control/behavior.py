@@ -7,7 +7,8 @@ from .controller    import Controller
 from ..core.tag     import autoconnect, autoextend
 from ..core         import notification_center, AttributedString
 from ..core.attributed_string import upper_bound
-from ..buffers      import Cursor
+from ..buffers      import Cursor, Span
+from . import colors
 
 import logging
 
@@ -73,6 +74,7 @@ class PythonCompleter(object):
         self.controller.user_requested_help  += self._on_user_requested_help
         self.controller.completion_row_changed += self._on_row_changed
         self.start_curs = None
+        self._complete_index = None
 
 
     def _on_user_requested_help(self):
@@ -137,6 +139,7 @@ class PythonCompleter(object):
             traceback.print_exc()
 
     def _on_row_changed(self, comp_idx):
+        self._complete_index = comp_idx
         def callback(result):
             def msg():
                 text = '\n\n'.join(result)
@@ -226,35 +229,69 @@ class PythonCompleter(object):
             col,
             self.controller.tags.get('path')
         ], callback=callback)
+
+    @property
+    def _start_cursor(self):
+        return self.controller.canonical_cursor.clone().move(*self.start_curs)
+
         
     def _refilter_typed(self):
         if self.start_curs is not None:
             try:
-                start_curs = self.controller.canonical_cursor.clone().move(*self.start_curs)
+                start_curs = self._start_cursor
+                span = Span(start_curs, self.controller.canonical_cursor)
+                span.set_attributes(
+                    sel_bgcolor=colors.scheme.search_bg,
+                    sel_color=colors.scheme.bg
+                )
             except IndexError:
                 self.start_curs = None
             else:
                 text = start_curs.text_to(self.controller.canonical_cursor)
                 self._refilter(text)
 
+    def _reset_color(self):
+        Span(self._start_cursor, self.controller.canonical_cursor).set_attributes(
+            sel_bgcolor=None,
+            sel_color=None
+        )
+
+
+    @property
+    def _edit_cursor(self):
+        return Cursor(self.controller.buffer).move(*self.controller.canonical_cursor.pos)
         
     def _on_user_changed_buffer(self, chg):
         if chg.insert.endswith('.'):
+            if self.start_curs is not None:
+                self._insert_result(self._complete_index)
+                ec = self._edit_cursor
+                ec.insert('.')
+                self.controller.canonical_cursor.move(*ec.pos)
+
+                self._reset_color()
+                self.start_curs = None
             self._on_completion_requested()
+
         self._refilter_typed()
+
+    def _insert_result(self, index):
+        start_curs = self._start_cursor
+        compl = self.controller.view.completions[index][0]
+        start_curs.remove_to(self.controller.canonical_cursor)
+        self.controller.canonical_cursor.insert(compl)
+
+
 
     def _on_completion_done(self, index):
         if index is None:
+            self._reset_color()
             self.start_curs = None
         elif self.start_curs is not None:
-            start_curs = self.controller.canonical_cursor.clone().move(*self.start_curs)
             with self.controller.manipulator.history.transaction():
-                compl = self.controller.view.completions[index][0]
-                start_curs.remove_to(self.controller.canonical_cursor)
-                self.controller.canonical_cursor.insert(compl)
-
-                self.controller.refresh_view()
-            
+                self._insert_result(index)
+            self.controller.refresh_view()
+            self._reset_color()
             self.start_curs = None
             
 pool = multiprocessing.Pool(processes=1)

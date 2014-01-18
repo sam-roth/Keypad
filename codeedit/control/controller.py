@@ -205,8 +205,8 @@ class Controller(Tagged):
         # region
         removed_region  = previous_region - selected_region
         
-        removed_region.set_attributes(bgcolor=None)
-        added_region.set_attributes(bgcolor='#666')
+        removed_region.set_attributes(sel_bgcolor=None)
+        added_region.set_attributes(sel_bgcolor='#666')
 
 
         self._prev_region = selected_region
