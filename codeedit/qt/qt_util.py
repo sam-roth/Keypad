@@ -4,6 +4,9 @@ from collections import namedtuple
 import contextlib
 
 
+
+import abc
+
 KeyEvent = namedtuple('KeyEvent', 'key text')
 
 @contextlib.contextmanager
@@ -26,10 +29,26 @@ def qcolor_marshaller(attrname):
     def fget(self):
         # QColor::name() actually returns an HTML-style hex string like
         # #AABBCC.
-        return getattr(self, attrname).name()
+        color = getattr(self, attrname)
+        if color.alpha() != 255:
+            return 'rgba({}, {}, {}, {})'.format(
+                color.red(),
+                color.green(),
+                color.blue(),
+                color.alpha()
+            )
+        else:
+            return color.name()
 
     def fset(self, value):
         setattr(self, attrname, QColor(value))
     
     return property(fget, fset)
+
+
+
+class ABCWithQtMeta(pyqtWrapperType, abc.ABCMeta):
+    pass
+    #def __new__(cls, *args, **kw):
+    #    return super().__new__(cls, *args, **kw)
 

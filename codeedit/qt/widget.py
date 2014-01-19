@@ -11,9 +11,8 @@ class TextWidget(view.TextView):
     def __init__(
             self, 
             parent=None, 
-            provide_completion_view=True,
             provide_interaction_mode=True):
-        super().__init__(parent, provide_completion_view=provide_completion_view)
+        super().__init__(parent)
 
         self.buffer = buffers.Buffer()
         self.controller = control.Controller(self, self.buffer, provide_interaction_mode=provide_interaction_mode)

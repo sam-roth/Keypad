@@ -5,17 +5,17 @@ import copy
 from PyQt4.Qt               import *
 
 from .text_rendering        import TextViewSettings, draw_attr_text
-from .qt_util               import KeyEvent
+from .qt_util               import KeyEvent, ABCWithQtMeta
 from ..core                 import AttributedString, Signal
 from ..core.key             import SimpleKeySequence, Keys, KeySequenceDict
+from ..abstract.completion  import AbstractCompletionView
 
 
 
 completion_view_stylesheet = r"""
 
-QWidget#container {{
-
-    background-color:       {settings.bgcolor};
+QWidget#outer_container {{
+    background-color:       {settings.completion_bgcolor};
     border-radius:          10px;
     padding-top:            10px;
     padding-bottom:         10px;
@@ -29,7 +29,8 @@ TextView {{
 QTreeView {{
 
     border:                 none;
-    background-color:       {settings.bgcolor};
+    background-color:       rgba(0,0,0,0);
+    /*background-color:       {settings.completion_bgcolor};*/
     color:                  {settings.fgcolor};
     selection-background-color: {selbg};
     font:                   13pt "Menlo";
@@ -51,10 +52,12 @@ QScrollBar::add-line, QScrollBar::sub-line {{
     height: 0px;
 }}
 
-QSizeGrip {{
-    width:0px;
-    height:0px;
+/*
+PopupSizeGrip {{
+    padding-right: 5px;
+    padding-bottom: 5px;
 }}
+*/
 """
 
 
@@ -67,7 +70,7 @@ class CompletionListItemDelegate(QItemDelegate):
         sset = self.selected_settings = copy.copy(settings)
         sch = nset.scheme
         
-        sset.bgcolor = sch.emphasize(nset.bgcolor, 1)
+        sset.bgcolor = sch.emphasize(nset.q_bgcolor.name(), 1)
         sset.fgcolor = sch.emphasize(nset.fgcolor, 1)
 
         for s in (self.settings, self.selected_settings):
@@ -138,9 +141,48 @@ class CompletionListModel(QAbstractTableModel):
             return None
 
 
+def qt_prop(getter, setter):
 
 
-class CompletionView(QWidget):
+    def fget(self):
+        return getattr(self, getter)()
+
+    def fset(self, val):
+        getattr(self, setter)(val)
+
+    return property(fget, fset)
+
+
+
+
+
+class PopupSizeGrip(QWidget):
+    '''
+    QSizeGrip doesn't work correctly on popups. This should.
+    '''
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        curs = self.cursor()
+        curs.setShape(Qt.SizeFDiagCursor)
+        self.setCursor(curs)
+
+
+        self.setMinimumSize(10, 10)
+        
+        self.setSizePolicy(QSizePolicy.Minimum, QSizePolicy.Minimum)
+
+    def mouseDownEvent(self, event):
+        event.accept()
+
+    def mouseMoveEvent(self, event):
+        win = self.window()
+
+        geom = win.frameGeometry()
+        geom.setBottomRight(event.globalPos())
+        win.resize(geom.size())
+
+class CompletionView(QWidget, AbstractCompletionView, metaclass=ABCWithQtMeta):
 
     
     def __init__(self, settings=None, parent=None):
@@ -149,26 +191,52 @@ class CompletionView(QWidget):
 
         if settings is None:
             settings = TextViewSettings()
+        else:
+            settings = copy.copy(settings)
+
+
+        settings.q_bgcolor = settings.q_completion_bgcolor
         scheme = settings.scheme
         
-        self.setContentsMargins(0, 0, 0, 0)
-        self._outer_layout = QHBoxLayout(self)
-        self._container = QWidget(self)
+        self._outer_layout = QVBoxLayout(self)
+
+        self._outer_container = QWidget(self)
+        self._outer_container.setObjectName('outer_container')
+        self._outer_container_layout = QVBoxLayout(self._outer_container)
+        self._outer_container_layout.setContentsMargins(0,10,0,0)
+        self._container = QSplitter(Qt.Vertical, self._outer_container)
         self._container.setObjectName('container')
         self._container.setContentsMargins(0,0,0,0)
-        self._outer_layout.addWidget(self._container)
+        self._outer_layout.addWidget(self._outer_container)
+        self._outer_layout.setContentsMargins(0,0,0,0)
+        self._outer_container_layout.addWidget(self._container)
 
         self._listWidget = QTreeView(self._container)
-        self._docs = view.TextView(self._container, provide_completion_view=False)
+        self._docs = view.TextView(self._container)
         self._docs.update_plane_size()
         self._docs.disable_partial_update = True
+        self._docs.settings = settings
 
-        self._layout = QVBoxLayout(self._container)
-        self._layout.addWidget(self._listWidget)
-        self._layout.addWidget(self._docs)
+        self._container.addWidget(self._listWidget)
+        self._container.addWidget(self._docs)
+
+        #self._layout = QVBoxLayout(self._container)
+        #self._layout.addWidget(self._listWidget)
+        #self._layout.addWidget(self._docs)
+
+        self._size_grip = PopupSizeGrip(self._outer_container)
+        
+        self._sg_sublayout = QHBoxLayout()
+        self._outer_container_layout.addLayout(self._sg_sublayout)
+        self._sg_sublayout.addStretch()
+        self._sg_sublayout.addWidget(self._size_grip)
+        
+
+        self._outer_container_layout.addWidget(self._size_grip)
         
 
         self.setWindowFlags(Qt.Popup)
+        
         #self.setAttribute(Qt.WA_TranslucentBackground)
         self.setAttribute(Qt.WA_NoSystemBackground)
         #self.setAttribute(Qt.WA_OpaquePaintEvent, True)
@@ -176,7 +244,7 @@ class CompletionView(QWidget):
         self._listWidget.setAttribute(Qt.WA_MacShowFocusRect, False)
         self._listWidget.setHeaderHidden(True)
 
-        self._docs.scrolled.connect(self._on_scroll)
+        #self._docs.scrolled.connect(self._on_scroll)
         
 
         self.setStyleSheet(completion_view_stylesheet.format(
@@ -200,23 +268,73 @@ class CompletionView(QWidget):
         self.model.modelReset.connect(self.on_model_reset)
 
         self.resize(400, 400)
+        self._pos_locked = self.pos()
 
-    def _on_scroll(self, start_line):
-        self._docs.start_line = start_line
-        self._docs.full_redraw()
+    #def _on_scroll(self, start_line):
+    #    self._docs.start_line = start_line
+    #    self._docs.full_redraw()
+
+
+    
+    visible = qt_prop('isVisible', 'setVisible')
+
+    def move_(self, *args, **kw):
+        try:
+            self._pos_locked = None
+            print('will move', *args)
+            self.move(*args, **kw)
+            print('did move')
+        finally:
+            self._pos_locked = self.pos()
+
+
+    def moveEvent(self, event):
+        print('moved', event.pos(), event.oldPos(), self._pos_locked)
+        if self._pos_locked is not None and event.pos() != self._pos_locked:
+            self.move(self._pos_locked)
+        else:
+            super().moveEvent(event)
+
+    @property
+    def current_row(self): 
+        return self._listWidget.selectionModel().currentIndex().row()
+    
+
+    @property
+    def completions(self): 
+        return self.model.completions
+    
+    @completions.setter
+    def completions(self, value): 
+        self.model.completions = value
+
+    
+    @property
+    def anchor(self): 
+        return self._anchor
+    
+    @anchor.setter
+    def anchor(self, value): 
+        self._anchor = value
 
 
     @Signal
     def key_press(self, event):
         pass
 
-    @Signal
-    def done(self, comp_idx):
-        pass
 
-    @Signal
-    def row_changed(self, comp_idx):
-        pass
+    @property
+    def doc_view_visible(self): 
+        return self._docs.isVisible()
+    
+    @doc_view_visible.setter
+    def doc_view_visible(self, value): 
+        self._docs.setVisible(value)
+
+    
+    @property
+    def doc_view(self): return self._docs
+
 
     @property
     def doc_lines(self):
@@ -283,6 +401,9 @@ class CompletionView(QWidget):
                         modifiers=event.modifiers() & ~Qt.KeypadModifier,
                         keycode=event.key()),
                     text=event.text().replace('\r', '\n')))
+
+
+
 
 __all__ = ['CompletionView']
 

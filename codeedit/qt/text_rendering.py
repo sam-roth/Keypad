@@ -13,6 +13,9 @@ class TextViewSettings(object):
         self.q_font    = QFont('Menlo')
         self.q_font.setPixelSize(13)
             
+        self.q_completion_bgcolor = QColor(self.scheme.bg)
+        self.q_completion_bgcolor.setAlphaF(0.7)
+
         self.q_bgcolor = QColor(self.scheme.bg) #QColor.fromRgb(0, 43, 54)
         self.q_fgcolor = QColor(self.scheme.fg)
         #QColor.fromRgb(131, 148, 150) 
@@ -21,6 +24,7 @@ class TextViewSettings(object):
 
 
 
+    completion_bgcolor = qcolor_marshaller('q_completion_bgcolor')
     bgcolor = qcolor_marshaller('q_bgcolor')
     fgcolor = qcolor_marshaller('q_fgcolor')
 

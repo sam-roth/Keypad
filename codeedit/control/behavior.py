@@ -51,7 +51,7 @@ def autoindent(controller, chg):
 import jedi
 import multiprocessing
 import textwrap
-
+from ..abstract.completion import AbstractCompletionView
 
 
 def call_method(obj, method_name, *args, **kw):
@@ -66,13 +66,21 @@ class PythonCompleter(object):
         '''
     
         import keyword
+        
+        self.cview = cview = controller.view.completion_view
+
+
+
+
         self.words = [(w,) for w in keyword.kwlist]
+
         self.controller = controller
-        self.controller.completion_requested += self._on_completion_requested
-        self.controller.user_changed_buffer  += self._on_user_changed_buffer
-        self.controller.completion_done      += self._on_completion_done
-        self.controller.user_requested_help  += self._on_user_requested_help
-        self.controller.completion_row_changed += self._on_row_changed
+        self.controller.completion_requested    += self._on_completion_requested
+        self.controller.user_changed_buffer     += self._on_user_changed_buffer
+        cview.done                              += self._on_completion_done
+        self.controller.user_requested_help     += self._on_user_requested_help
+        cview.row_changed                       += self._on_row_changed
+
         self.start_curs = None
         self._complete_index = None
 
@@ -122,7 +130,7 @@ class PythonCompleter(object):
                 try:
                     defns = PythonCompleter.last_completion_info[comp_idx].follow_definition()
                 except:
-                    return ['error']
+                    return ['[no documentation available]']
                 else:
                     return [defn.doc for defn in defns]
 
@@ -145,12 +153,13 @@ class PythonCompleter(object):
                 text = '\n\n'.join(result)
                 paras = text.split('\n\n') #textwrap.fill(text, width=30, replace_whitespace=False, subsequent_indent='  ').splitlines()
 
-                height, width = self.controller.completion_doc_plane_size
+                height, width = self.cview.doc_view.plane_size
 
 
                 lines = '\n'.join(textwrap.fill(para, width=width - 3, fix_sentence_endings=True, subsequent_indent='  ') for para in paras).splitlines()
 
-                self.controller.completion_doc_lines = [AttributedString(r) for r in lines]
+                self.cview.doc_view.lines = [AttributedString(r) for r in lines]
+                self.cview.doc_view.full_redraw()
             notification_center.post(msg)
 
         pool.apply_async(
@@ -168,7 +177,7 @@ class PythonCompleter(object):
 
     def _refilter(self, pattern):
         logging.info('filter pattern: %r', pattern)
-        expr = '.*?'.join(map(re.escape, pattern.lower()))
+        expr = '.*?' + '.*?'.join(map(re.escape, pattern.lower()))
         rgx = re.compile(expr)
 
 
@@ -181,7 +190,7 @@ class PythonCompleter(object):
         )
 
 
-        self.completion_indices, self.controller.view.completions = \
+        self.completion_indices, self.cview.completions = \
             zip(*sorted_pairs) if sorted_pairs \
             else ([], [])
 
@@ -215,6 +224,7 @@ class PythonCompleter(object):
                 #self.controller.view.completions = sorted_result
                 self._refilter_typed()
 
+                #self.cview.visible = True
                 self.controller.view.show_completions()
 
 

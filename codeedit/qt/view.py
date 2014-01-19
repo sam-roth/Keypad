@@ -30,7 +30,7 @@ class TextView(QAbstractScrollArea):
 
     
 
-    def __init__(self, parent=None, provide_completion_view=True):
+    def __init__(self, parent=None):
         super().__init__(parent)
         self.setAttribute(Qt.WA_OpaquePaintEvent, True)
         self.viewport().setAttribute(Qt.WA_OpaquePaintEvent, True)
@@ -59,21 +59,37 @@ class TextView(QAbstractScrollArea):
         mouse_cursor.setShape(Qt.IBeamCursor)
         self.setCursor(mouse_cursor)
 
-        if provide_completion_view:
-            self._completion_view = CompletionView(parent=self, settings=self.settings)
-            self._completion_view.hide()
-
-            self._completion_view.key_press += self.key_press
-            self._completion_view.done      += self.completion_done
-            self._completion_view.row_changed += self.completion_row_changed
-        else:
-            self._completion_view = None
+        #if provide_completion_view:
+        #    self._completion_view = CompletionView(parent=self, settings=self.settings)
+        #    self._completion_view.hide()
+        #
+        #    self._completion_view.key_press += self.key_press
+        #    self._completion_view.done      += self.completion_done
+        #    self._completion_view.row_changed += self.completion_row_changed
+        #else:
+        self._completion_view = None
 
 
         #self._last_paint_time = 0
         #self._update_rate_limit = 1.0/30
         self.disable_partial_update = False
         
+
+    @property
+    def completion_view(self):
+        '''
+        Get the completion view for this TextView, creating one if it doesn't
+        already exist.
+        '''
+        
+        if self._completion_view is None:
+            self._completion_view = CompletionView(parent=self, settings=self.settings)
+            self._completion_view.key_press += self.key_press
+
+
+        return self._completion_view
+
+
 
     @property
     def completion_doc_lines(self):
@@ -114,13 +130,10 @@ class TextView(QAbstractScrollArea):
         if self._completion_view is not None:
             x,y = self.map_from_plane(*self.cursor_pos)
 
-            self._completion_view.move(self.mapToGlobal(QPoint(x, y)))
+            self._completion_view.move_(self.mapToGlobal(QPoint(x, y + self.line_height)))
             self._completion_view.show()
 
 
-    @signal.Signal
-    def completion_done(self, index):
-        pass
 
 
     def beep(self):
@@ -223,8 +236,6 @@ class TextView(QAbstractScrollArea):
     @signal.Signal
     def key_press(self, event): pass
 
-    @signal.Signal
-    def completion_row_changed(self, comp_idx): pass
 
     def resizeEvent(self, event):
         super().resizeEvent(event)

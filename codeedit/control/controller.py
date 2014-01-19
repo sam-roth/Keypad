@@ -22,7 +22,7 @@ class Controller(Tagged):
         '''
         super().__init__()
 
-        self.view               = view
+        self._view              = view
         self.buffer             = buff
         self.view.lines         = self.buffer.lines
         self.view.keep          = self
@@ -37,13 +37,17 @@ class Controller(Tagged):
 
         self.view.scrolled                  += self._on_view_scrolled
         self.manipulator.executed_change    += self.user_changed_buffer
-        self.view.completion_done           += self.completion_done
+        #self.view.completion_done           += self.completion_done
         buff.text_modified                  += self.buffer_was_changed 
         buff.text_modified                  += self._after_buffer_modification
-        self.view.completion_row_changed    += self.completion_row_changed
+        #self.view.completion_row_changed    += self.completion_row_changed
 
         self._prev_region = Region()
         self._is_modified = False
+
+    @property
+    def view(self): 
+        return self._view
 
     def _after_buffer_modification(self, chg):
         self.is_modified = True
@@ -64,18 +68,6 @@ class Controller(Tagged):
     def modified_was_changed(self, val):
         pass
 
-
-    @property
-    def completion_doc_lines(self):
-        return self.view.completion_doc_lines
-
-    @completion_doc_lines.setter
-    def completion_doc_lines(self, val):
-        self.view.completion_doc_lines = val
-
-    @property
-    def completion_doc_plane_size(self):
-        return self.view.completion_doc_plane_size
 
     @property
     def history(self):
@@ -158,14 +150,6 @@ class Controller(Tagged):
 
     @Signal
     def completion_requested(self):
-        pass
-
-    @Signal
-    def completion_done(self, index):
-        pass
-
-    @Signal
-    def completion_row_changed(self, index):
         pass
     
     @Signal
