@@ -8,7 +8,7 @@ from .                          import syntax
 from .cua_interaction           import CUAInteractionMode
 from ..                         import util
 from ..buffers                  import Cursor, BufferManipulator, Buffer, Span, Region
-from ..core                     import AttributedString, errors, Signal, write_atomically, command
+from ..core                     import AttributedString, errors, Signal, write_atomically, commands
 from ..core.tag                 import Tagged, autoconnect
 from ..core.attributed_string   import lower_bound
 from ..core.key                 import *
@@ -51,7 +51,7 @@ class Controller(Tagged, Responder):
         view.controller = self
 
     
-    @responds(command.save_cmd)
+    @responds(commands.save_cmd)
     def save(self):
         if self.path is not None:
             self.write_to_path(self.path)

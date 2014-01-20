@@ -23,7 +23,7 @@ class Responder(object):
 
     def __init__(self, *args, **kw):
         super().__init__(*args, **kw)
-        self.next_responder = None
+        self._next_responders = set()
         
         cls = type(self)
         if getattr(cls, '_responder_derived', None) is not cls:
@@ -36,22 +36,42 @@ class Responder(object):
             cls._method_for_command = dict(gen_method_for_command())
             cls._responder_derived = cls
 
-    @property
-    def next_responder(self): 
-        return self._next_responder
     
-    @next_responder.setter
-    def next_responder(self, value): 
-        old_responder = getattr(self, '_next_responder', None)
-        if old_responder is not None:
-            old_responder.responder_chain_changed.disconnect(self.responder_chain_changed)
-        
-        self._next_responder = value
-        if value is not None:
-            value.responder_chain_changed.connect(self.responder_chain_changed)
+    def add_next_responders(self, *responders):
+        new_responders = set(responders) - self._next_responders
+        for responder in new_responders:
+            responder.responder_chain_changed.connect(self.responder_chain_changed)
+        self._next_responders.update(new_responders)
 
         self.responder_chain_changed()
 
+
+    def remove_next_responders(self, *responders):
+        for responder in responders:
+            self._next_responders.remove(responder)
+            responder.responder_chain_changed.disconnect(self.responder_chain_changed)
+
+        self.responder_chain_changed()
+
+    def clear_next_responders(self):
+        self.remove_next_responders(*self._next_responders)
+
+    @property
+    def next_responders(self):
+        yield from self._next_responders
+    
+
+    @property
+    def next_responder(self): 
+        if self._next_responders:
+            return next(iter(self._next_responders))
+        else:
+            return None
+    
+    @next_responder.setter
+    def next_responder(self, value): 
+        self.clear_next_responders()
+        self.add_next_responders(value)
     
     def perform_or_forward(self, command, *args):
         cls = type(self)
@@ -61,7 +81,8 @@ class Responder(object):
                 logging.warning('No responder for %r.', command)
                 return False
             else:
-                return self.next_responder.perform_or_forward(command, *args)
+                return any(next_responder.perform_or_forward(command, *args) 
+                           for next_responder in self.next_responders)
         else:
             if _should_add_command(method):
                 method(self, command, *args)
@@ -74,8 +95,9 @@ class Responder(object):
         cls = type(self)
         result = set(cls._method_for_command.keys()) 
 
-        if self.next_responder is not None:
-            result.update(self.next_responder.responder_known_commands)
+        
+        for next_responder in self.next_responders:
+            result.update(next_responder.responder_known_commands)
 
         return result
         
@@ -85,10 +107,9 @@ class Responder(object):
 
     def any_responds_to(self, command):
         return (
-            self.responds_to(command) or (
-                self.next_responder is not None and 
-                self.next_responder.any_responds_to(command)
-            )
+            self.responds_to(command) or 
+            any(next_responder.any_responds_to(command)
+                for next_responder in self.next_responders)
         )
 
     @Signal

@@ -234,7 +234,11 @@ class TextView(QAbstractScrollArea):
     def mouse_move_char(self, buttons, line, col): pass
 
     @signal.Signal
-    def key_press(self, event): pass
+    def key_press(self, event: KeyEvent): pass
+
+    @signal.Signal
+    def should_override_app_shortcut(self, event: KeyEvent): pass
+
 
 
     def resizeEvent(self, event):
@@ -285,20 +289,30 @@ class TextView(QAbstractScrollArea):
         if event.type() == QEvent.KeyPress:
             self.keyPressEvent(event)
             return True
+        elif event.type() == QEvent.ShortcutOverride:
+            ce_evt = marshal_key_event(event)
+            self.should_override_app_shortcut(ce_evt)
+            if ce_evt.is_intercepted:
+                event.accept()
+                return True
+            else:
+                return super().event(event)
         else:
             return super().event(event)
 
     def keyPressEvent(self, event):
         event.accept()
-        self.key_press(
-            KeyEvent(
-                key=SimpleKeySequence(
-                    modifiers=event.modifiers() & ~Qt.KeypadModifier,
-                    keycode=event.key()
-                ),
-                text=event.text().replace('\r', '\n')
-            )
-        )
+
+        self.key_press(marshal_key_event(event))
+#        self.key_press(
+#            KeyEvent(
+#                key=SimpleKeySequence(
+#                    modifiers=event.modifiers() & ~Qt.KeypadModifier,
+#                    keycode=event.key()
+#                ),
+#                text=event.text().replace('\r', '\n')
+#            )
+#        )
 
     
     def scrollContentsBy(self, dx, dy):

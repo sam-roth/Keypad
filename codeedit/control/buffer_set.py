@@ -4,7 +4,7 @@ import types
 from ..buffers import Buffer
 from ..qt.buffer_set import BufferSetView
 from ..core.responder import Responder, responds
-from ..core import command
+from ..core import commands
 from . import behavior
 
 
@@ -33,7 +33,7 @@ class BufferSetController(Responder):
     def _after_buffer_modified_changed(self, val=None):
         self.view.modified = self._active_buffer_controller.is_modified
     
-    @responds(command.new_cmd)
+    @responds(commands.new_cmd)
     def open(self, path=None):
         bcontr = self.find(path) if path is not None else None
         if bcontr is None:
@@ -54,7 +54,7 @@ class BufferSetController(Responder):
         self.add_buffer_controller(bcontr)
         return bcontr
 
-    @responds(command.set_tag)
+    @responds(commands.set_tag)
     def set_tag(self):
         tag_str = self.view.show_input_dialog('Set tags (DEBUGGING ONLY!!!). Use Python kwargs-style expression.')
         if tag_str:
@@ -63,7 +63,7 @@ class BufferSetController(Responder):
 
 
     
-    @responds(command.open_cmd)
+    @responds(commands.open_cmd)
     def run_open_dialog(self):
         path = self.view.run_open_dialog()
         if path:
