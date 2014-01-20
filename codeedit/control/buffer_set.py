@@ -37,9 +37,9 @@ class BufferSetController(Responder):
     def open(self, path=None):
         bcontr = self.find(path) if path is not None else None
         if bcontr is None:
-            from . import controller
+            from . import buffer_controller
             view = self.view.add_buffer_view()
-            bcontr = controller.Controller(view, Buffer())
+            bcontr = buffer_controller.BufferController(view, Buffer())
             bcontr.modified_was_changed.connect(self._after_buffer_modified_changed)
 
             if path is not None:

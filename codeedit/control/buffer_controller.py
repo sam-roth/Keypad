@@ -16,7 +16,7 @@ from ..core.responder           import Responder, responds
 
 
 
-class Controller(Tagged, Responder):
+class BufferController(Tagged, Responder):
     def __init__(self, view, buff, provide_interaction_mode=True):
         '''
         :type view: codeedit.qt.view.TextView
