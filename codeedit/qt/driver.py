@@ -66,8 +66,6 @@ class MainWindow(QMainWindow):
             self.setWindowModified(modified)
 
 
-        
-    
     def open(self, path=None):
         if path is None:
             path = QFileDialog.getOpenFileName(
@@ -140,9 +138,16 @@ class MainWindow(QMainWindow):
             
 
 from ..core import notification_center
+from ..control.buffer_set import BufferSetController
+from .buffer_set import BufferSetView
 
 
 class _ProcessPosted(QEvent):
+    '''
+    Distributes `notification_center` messages. Do not post this manually.
+    Instead use ``notification_center.post(msg)``.
+
+    '''
     ProcessPostedType = QEvent.registerEventType()
     
     def __init__(self):
@@ -157,10 +162,13 @@ class Application(QApplication):
         
         self.setWheelScrollLines(10)
 
+        controller = BufferSetController(BufferSetView())
+        controller.view.show()
+        controller.view.raise_()
 
-        mw = MainWindow()
-        mw.show()
-        mw.raise_()
+        #mw = MainWindow()
+        #mw.show()
+        #mw.raise_()
         
         
 
