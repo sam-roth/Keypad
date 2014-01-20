@@ -8,7 +8,8 @@ import weakref
 import functools
 
 class Tagged(object):
-    def __init__(self):
+    def __init__(self, *args, **kw):
+        super().__init__(*args, **kw)
         self.__tags = {}
         self.extensions = {}
 

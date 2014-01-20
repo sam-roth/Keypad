@@ -2,17 +2,16 @@
 
 import weakref, types, re
 
-from .              import syntax
-from .controller    import Controller
-from ..core.tag     import autoconnect, autoextend
-from ..core         import notification_center, AttributedString
-from ..core.attributed_string import upper_bound
-from ..buffers      import Cursor, Span
-from . import colors
+from .                          import syntax, colors
+from .buffer_controller         import BufferController
+from ..core.tag                 import autoconnect, autoextend
+from ..core                     import notification_center, AttributedString
+from ..core.attributed_string   import upper_bound
+from ..buffers                  import Cursor, Span
 
 import logging
 
-@autoconnect(Controller.loaded_from_path)
+@autoconnect(BufferController.loaded_from_path)
 def setup_buffer(controller, path):
     if path.suffix == '.py':
         controller.add_tags(
@@ -23,12 +22,12 @@ def setup_buffer(controller, path):
         controller.refresh_view()
 
 
-@autoconnect(Controller.buffer_needs_highlight,
+@autoconnect(BufferController.buffer_needs_highlight,
              lambda tags: tags.get('syntax') == 'python')
 def python_syntax_highlighting(controller):
     syntax.python_syntax(controller.buffer)
 
-@autoconnect(Controller.user_changed_buffer, 
+@autoconnect(BufferController.user_changed_buffer, 
              lambda tags: tags.get('autoindent'))
 def autoindent(controller, chg):
     if chg.insert.endswith('\n'):
@@ -42,7 +41,7 @@ def autoindent(controller, chg):
 
 
 
-#@autoconnect(Controller.buffer_was_changed,
+#@autoconnect(BufferController.buffer_was_changed,
 #             lambda tags: tags.get('softtabstop'))
 #def softtabstop(controller, chg):
     
@@ -57,12 +56,12 @@ from ..abstract.completion import AbstractCompletionView
 def call_method(obj, method_name, *args, **kw):
     return getattr(obj, method_name)(*args, **kw)
 
-@autoextend(Controller, lambda tags: tags.get('syntax') == 'python')
+@autoextend(BufferController, lambda tags: tags.get('syntax') == 'python')
 class PythonCompleter(object):
     last_completion_info = None
     def __init__(self, controller):
         '''
-        :type controller: codeedit.control.Controller
+        :type controller: codeedit.control.BufferController
         '''
     
         import keyword

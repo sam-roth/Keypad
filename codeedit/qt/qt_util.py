@@ -4,10 +4,37 @@ from collections import namedtuple
 import contextlib
 
 
+from ..core.key import SimpleKeySequence
 
 import abc
 
-KeyEvent = namedtuple('KeyEvent', 'key text')
+class KeyEvent(namedtuple('KeyEvent', 'key text')):
+    
+    def __new__(cls, *args, **kw):
+        self = super().__new__(cls, *args, **kw)
+        self._is_intercepted = False
+        return self
+    
+    @property
+    def is_intercepted(self): return self._is_intercepted
+
+    def intercept(self):
+        self._is_intercepted = True
+
+
+
+def marshal_key_event(event):
+    return KeyEvent(
+        key=SimpleKeySequence(
+            modifiers=event.modifiers() & ~Qt.KeypadModifier,
+            keycode=event.key()
+        ),
+        text=event.text().replace('\r', '\n')
+    )
+
+
+
+
 
 @contextlib.contextmanager
 def ending(painter):
