@@ -17,7 +17,7 @@ from ..core.responder           import Responder, responds
 
 
 class BufferController(Tagged, Responder):
-    def __init__(self, view, buff, provide_interaction_mode=True):
+    def __init__(self, buffer_set, view, buff, provide_interaction_mode=True):
         '''
         :type view: codeedit.qt.view.TextView
         :type buff: codeedit.buffers.Buffer
@@ -43,7 +43,7 @@ class BufferController(Tagged, Responder):
         buff.text_modified                  += self.buffer_was_changed 
         buff.text_modified                  += self._after_buffer_modification
         #self.view.completion_row_changed    += self.completion_row_changed
-        self.buffer_set = None
+        self.buffer_set = buffer_set
 
         self._prev_region = Region()
         self._is_modified = False

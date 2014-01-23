@@ -5,6 +5,7 @@ from .signal                import Signal
 from .struct                import Struct
 from .swapfile              import write_atomically
 from .command               import Command
+from .key                   import Keys
 
 
 from . import errors, commands

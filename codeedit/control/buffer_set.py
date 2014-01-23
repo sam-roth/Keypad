@@ -6,8 +6,21 @@ from ..qt.buffer_set import BufferSetView
 from ..core.responder import Responder, responds
 from ..core import commands
 from . import behavior
+from .command_line_interaction import CommandLineInteractionMode
 
+import sys
+import logging
 
+class Tracer(object):
+    def __init__(self):
+        self.f = open('/tmp/codeedit-dump.txt', 'w')
+
+    def __call__(self, frame, event, arg):
+        self.f.write('%s, %r:%d\n' % (event, frame.f_code.co_filename, frame.f_lineno))
+        self.f.flush()
+
+    def set(self):
+        sys.settrace(self)
 
 class BufferSetController(Responder):
     def __init__(self, view):
@@ -15,38 +28,107 @@ class BufferSetController(Responder):
 
         self._buffer_controllers = set()
         self._active_buffer_controller = None
+        self._last_active_buffer_controller = None
+        
+
         self.view = view
         view.next_responder = self
 
-        self.view.active_tab_changed.connect(self._after_active_tab_change)
+        self.view.active_view_changed.connect(self._after_active_view_change)
 
-            
 
-    def _after_active_tab_change(self, view):
+        from .buffer_controller import BufferController
+        self._command_line_controller = BufferController(
+            self,
+            self.view.command_line_view, 
+            Buffer(),
+            provide_interaction_mode=False
+        )
+        cl_imode = self._command_line_controller.interaction_mode = \
+                CommandLineInteractionMode(self._command_line_controller)
+        cl_imode.accepted.connect(self._after_cmdline_accepted)
+        
+        self.view.will_close.connect(self._before_view_close)
+
+    def _before_view_close(self, event):
+        
+        try:
+            paths = [c.path for c in self._buffer_controllers if c.is_modified]
+            if paths:
+                non_none_paths = [p for p in paths if p is not None]
+                result = self.view.show_save_all_prompt(non_none_paths, len(paths)-len(non_none_paths))
+                if result == 'save-all':
+                    for bc in self._buffer_controllers:
+                        raise NotImplementedError()
+                elif result == 'discard-all':
+                    for bc in self._buffer_controllers:
+                        if bc.is_modified:
+                            bc.is_modified = False
+                            bc.remove_tags(['path'])
+                            bc.view.close()
+                else:
+                    event.intercept()
+
+        except Exception as exc:
+            self.view.show_internal_failure_msg()
+            event.intercept()
+
+
+
+        
+        
+
+    def _after_active_view_change(self, view):
         print('active tab change', view)
         if view is not None:
-            self.next_responder = view.controller
+            self._last_active_buffer_controller = self._active_buffer_controller
+
+            self.view.next_responder = view.controller
+            view.controller.next_responder = self
+
             self._active_buffer_controller = view.controller
             self._after_buffer_modified_changed()
             self.view.path = view.controller.path
 
+        else:
+            self.view.next_responder = self
+
     def _after_buffer_modified_changed(self, val=None):
         self.view.modified = self._active_buffer_controller.is_modified
+
+    def _after_cmdline_accepted(self):
+
+        text = self._command_line_controller.buffer.text
+
+        print('got command', self._command_line_controller.buffer.text)
+        if self._last_active_buffer_controller is not None:
+            self.view.active_view = self._last_active_buffer_controller.view
+
+
+    @responds(commands.set_trace)
+    def set_trace(self):
+        Tracer().set()
+        logging.warning('Tracer set')
+        
     
+    @responds(commands.activate_cmdline)
+    def activate_cmdline(self):
+        self.view.active_view = self._command_line_controller.view
+        
     @responds(commands.new_cmd)
     def open(self, path=None):
         bcontr = self.find(path) if path is not None else None
         if bcontr is None:
             from . import buffer_controller
             view = self.view.add_buffer_view()
-            bcontr = buffer_controller.BufferController(view, Buffer())
+            bcontr = buffer_controller.BufferController(self, view, Buffer())
             bcontr.modified_was_changed.connect(self._after_buffer_modified_changed)
 
             if path is not None:
                 with bcontr.history.ignoring():
                     bcontr.replace_from_path(path)
 
-            self._after_active_tab_change(view)
+            self._after_active_view_change(view)
 
         else:
             self.view.active_view = bcontr.view

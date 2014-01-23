@@ -17,9 +17,9 @@ def isprint(ch):
 
 
 class CUAInteractionMode(object):
-    def __init__(self, pres):
-        self.pres = pres
-        self.view = pres.view
+    def __init__(self, controller):
+        self.controller = controller
+        self.view = controller.view
 
         self.modeline = AttributedString()
         self.view.modelines.append(self.modeline)
@@ -27,10 +27,10 @@ class CUAInteractionMode(object):
         def cursor_move(fn):
             def result(evt):
                 if evt.key.modifiers & Modifiers.Shift:
-                    if self.pres.anchor_cursor is None:
-                        self.pres.anchor_cursor = self.curs.clone()
+                    if self.controller.anchor_cursor is None:
+                        self.controller.anchor_cursor = self.curs.clone()
                 else:
-                    self.pres.anchor_cursor = None
+                    self.controller.anchor_cursor = None
                 fn()
             return result
         
@@ -38,9 +38,9 @@ class CUAInteractionMode(object):
         
         def remove(n):
             def result(evt):
-                if self.pres.anchor_cursor is not None:
-                    self.curs.remove_to(self.pres.anchor_cursor)
-                    self.pres.anchor_cursor = None
+                if self.controller.anchor_cursor is not None:
+                    self.curs.remove_to(self.controller.anchor_cursor)
+                    self.controller.anchor_cursor = None
                 else:
                     self.curs.delete(n)
 
@@ -57,8 +57,8 @@ class CUAInteractionMode(object):
             c = self.curs
             c.move(0, 0)
             other = c.clone()
-            other.move(*self.pres.buffer.end_pos)
-            self.pres.anchor_cursor = other
+            other.move(*self.controller.buffer.end_pos)
+            self.controller.anchor_cursor = other
 
 
         def advance_word(n):
@@ -96,11 +96,11 @@ class CUAInteractionMode(object):
         def delete_word(n):
             advance = advance_word(n)
             def result(evt):
-                if self.pres.anchor_cursor is None:
-                    self.pres.anchor_cursor = self.curs.clone()
+                if self.controller.anchor_cursor is None:
+                    self.controller.anchor_cursor = self.curs.clone()
                     advance()
-                self.curs.remove_to(self.pres.anchor_cursor)
-                self.pres.anchor_cursor = None
+                self.curs.remove_to(self.controller.anchor_cursor)
+                self.controller.anchor_cursor = None
             return result
 
 
@@ -108,7 +108,7 @@ class CUAInteractionMode(object):
 
         manip = self.curs.manip
 
-        pres.view.completions = [(str(x),) for x in range(100)]
+        controller.view.completions = [(str(x),) for x in range(100)]
         
         self.keybindings = KeySequenceDict(
             (Keys.left      .optional(Shift),   cursor_move(self.curs.left)), 
@@ -145,10 +145,10 @@ class CUAInteractionMode(object):
         kb[Ctrl.right.optional(Shift)]  = kb[Keys.end]
 
 
-        self.pres.view.key_press.connect(self._on_key_press)
-        self.pres.view.scrolled.connect(self._on_view_scrolled)
-        self.pres.view.mouse_down_char.connect(self._on_mouse_down)
-        self.pres.view.mouse_move_char.connect(self._on_mouse_move)
+        self.controller.view.key_press.connect(self._on_key_press)
+        self.controller.view.scrolled.connect(self._on_view_scrolled)
+        self.controller.view.mouse_down_char.connect(self._on_mouse_down)
+        self.controller.view.mouse_move_char.connect(self._on_mouse_move)
 
     def _on_view_scrolled(self, start_line):
         pass
@@ -165,24 +165,24 @@ class CUAInteractionMode(object):
         #self.pres.refresh_view(full=True)
 
     def _on_mouse_down(self, line, col):
-        self.pres.anchor_cursor = None
+        self.controller.anchor_cursor = None
         self.curs.move(0,0).down(line).right(col)
         self._show_default_modeline()
-        self.pres.refresh_view()
+        self.controller.refresh_view()
 
     def _on_mouse_move(self, buttons, line, col):
-        if buttons & self.pres.view.MouseButtons.Left:
-            if self.pres.anchor_cursor is None:
-                self.pres.anchor_cursor = self.curs.clone()
+        if buttons & self.controller.view.MouseButtons.Left:
+            if self.controller.anchor_cursor is None:
+                self.controller.anchor_cursor = self.curs.clone()
             self.curs.move(0,0).down(line).right(col)
             self._show_default_modeline()
-            self.pres.refresh_view()
+            self.controller.refresh_view()
 
 
 
     @property
     def curs(self):
-        return self.pres.canonical_cursor
+        return self.controller.canonical_cursor
 
 
     def show_modeline(self, text):
@@ -205,9 +205,9 @@ class CUAInteractionMode(object):
                 binding = self.keybindings[evt.key]
             except KeyError:
                 if isprint(evt.text):
-                    if self.pres.anchor_cursor is not None:
-                        self.curs.remove_to(self.pres.anchor_cursor)
-                        self.pres.anchor_cursor = None
+                    if self.controller.anchor_cursor is not None:
+                        self.curs.remove_to(self.controller.anchor_cursor)
+                        self.controller.anchor_cursor = None
                     self.curs.insert(evt.text)
             else:
                 try:
@@ -215,7 +215,7 @@ class CUAInteractionMode(object):
                 except errors.UserError as exc:
                     logging.exception(exc)
                     
-                    self.pres.view.beep()
+                    self.controller.view.beep()
                     self.modeline.remove(0, None)
                     self.modeline.append(str(exc) + ' [' + type(exc).__name__ + ']')
                     self.modeline.set_attribute('bgcolor', '#dc322f') #'#800')
@@ -226,7 +226,7 @@ class CUAInteractionMode(object):
             if success:
                 self._show_default_modeline()
 
-        plane_height, plane_width = self.pres.view.plane_size
+        plane_height, plane_width = self.controller.view.plane_size
 
         
         full_redraw_needed = False
@@ -238,6 +238,6 @@ class CUAInteractionMode(object):
             self.view.scroll_to_line(self.curs.pos[0] - self.view.buffer_lines_visible + 1)
             full_redraw_needed = True
 
-        self.pres.refresh_view(full=full_redraw_needed)
+        self.controller.refresh_view(full=full_redraw_needed)
         
 

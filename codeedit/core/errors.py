@@ -17,5 +17,10 @@ class HistoryExistentialError(ExistentialError):
 
 class CantUndoError(HistoryExistentialError): pass
 class CantRedoError(HistoryExistentialError): pass
+class OldestHistoryItemError(HistoryExistentialError): pass
+class NewestHistoryItemError(HistoryExistentialError): pass
+
+class UnknownCommandError(ExistentialError): pass
+
 
 

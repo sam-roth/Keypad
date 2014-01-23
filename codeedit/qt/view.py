@@ -373,7 +373,7 @@ class TextView(QAbstractScrollArea):
                 if drew_line: lines_drawn += 1
                 if renewed_cache: lines_updated += 1
 
-                if i == cursor_line:
+                if i == cursor_line and self.hasFocus():
                     cursor_x = fm.width(self.settings.expand_tabs(row.text[:cursor_col])) + x
                     painter.drawLine(cursor_x, y + 1, cursor_x, y + height - 2)
 

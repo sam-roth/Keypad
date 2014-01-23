@@ -2,6 +2,7 @@
 import logging
 import weakref
 from .signal import Signal
+import sys
 
 def responds(*commands, add_command=None):
     def result(func):
@@ -23,7 +24,7 @@ class Responder(object):
 
     def __init__(self, *args, **kw):
         super().__init__(*args, **kw)
-        self._next_responders = set()
+        self._next_responders = weakref.WeakSet()
         
         cls = type(self)
         if getattr(cls, '_responder_derived', None) is not cls:
@@ -38,7 +39,7 @@ class Responder(object):
 
     
     def add_next_responders(self, *responders):
-        new_responders = set(responders) - self._next_responders
+        new_responders = weakref.WeakSet(responders) - self._next_responders
         for responder in new_responders:
             responder.responder_chain_changed.connect(self.responder_chain_changed)
         self._next_responders.update(new_responders)
@@ -58,7 +59,7 @@ class Responder(object):
 
     @property
     def next_responders(self):
-        yield from self._next_responders
+        return list(self._next_responders)
     
 
     @property

@@ -35,6 +35,13 @@ def marshal_key_event(event):
 
 
 
+def to_q_key_sequence(key_seq):
+    return QKeySequence(key_seq.keycode | key_seq.modifiers)
+
+
+
+
+
 
 @contextlib.contextmanager
 def ending(painter):

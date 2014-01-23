@@ -3,30 +3,160 @@
 from PyQt4.Qt import *
 import pathlib
 from .view import TextView
+from .qt_util import *
 
 from ..core import Signal
 from ..core.command import Command
 from ..core.responder import Responder, responds
 
+
 import logging
+
+
+class CloseEvent(object):
+    def __init__(self):
+        self.is_intercepted = False
+
+    def intercept(self):
+        self.is_intercepted = True
 
 class BufferSetView(Responder, QMainWindow):
 
     def __init__(self):
         super().__init__()
         
+        self.setAttribute(Qt.WA_QuitOnClose, False)
+        
         self._menus_by_hier = {}
         self._command_for_action = {}
+        self._active_view = None
 
-        m = self._mdi = QMdiArea(self)
-        self.setCentralWidget(m)
+        self._split = split = QSplitter(Qt.Vertical, self)
+
+        m = self._mdi = QMdiArea(split)
         m.setViewMode(QMdiArea.TabbedView)
         m.setTabsClosable(True)
         m.setTabsMovable(True)
         m.setDocumentMode(True)
         m.subWindowActivated.connect(self._on_subwindow_activated)
+
+        split.addWidget(m)
+
+        self.setCentralWidget(split)
     
         self.responder_chain_changed.connect(self.rebuild_menus)
+        self._command_line_view = None
+        qApp.focusChanged.connect(self.__app_focus_change)
+
+    
+    def __app_focus_change(self, old, new):
+
+        active_tab = self._mdi.activeSubWindow()
+        active_tab_view = active_tab.widget() if active_tab else None
+        
+        if new is active_tab_view or new is self._command_line_view:
+            self._active_view = new
+            self.active_view_changed(new)
+
+
+    @Signal
+    def will_close(self, event):
+        pass
+
+    def closeEvent(self, event):
+        ce = CloseEvent()
+        self.will_close(ce)
+        if ce.is_intercepted:
+            event.ignore()
+            return
+
+        # prevents SIGSEGV on window close
+        # (This object doesn't exist when subviews are destroyed normally, but
+        # Python doesn't know that.)
+        for win in self._mdi.subWindowList():
+            win.close()
+
+        super().closeEvent(event)
+            
+
+    def show_save_all_prompt(self, unsaved_list, n_untitled):
+        msgbox = QMessageBox(self)
+        msgbox.setText('There are {} unsaved buffers.'.format(n_untitled + len(unsaved_list)))
+        msgbox.setInformativeText("Do you want to save your changes?")
+        
+        def gen():
+            yield 'The following buffers are unsaved:\n'
+            if n_untitled:
+                yield '- {} untitled documents\n'.format(n_untitled)
+            for item in unsaved_list:
+                yield str(item) + '\n'
+
+        msgbox.setDetailedText('\n'.join(gen()))
+        msgbox.setStandardButtons(QMessageBox.SaveAll | QMessageBox.Discard | QMessageBox.Cancel)
+        msgbox.setDefaultButton(QMessageBox.SaveAll)
+        ret = msgbox.exec_()
+
+        if ret == QMessageBox.SaveAll:
+            return 'save-all'
+        elif ret == QMessageBox.Discard:
+            return 'discard-all'
+        else:
+            return None
+
+
+
+    def show_internal_failure_msg(self):
+        
+        msgbox = QMessageBox(self)
+        msgbox.setText('An error has occurred from which this application cannot recover.')
+        msgbox.setInformativeText(
+            'The application may behave unpredictably until it is restarted; continue its use at your own risk.\n' 
+            'Please save buffers manually and then close the application.\n'
+            'If this message occurs after buffers are saved, click "Terminate Application". For debugging '
+            'details, click "Show Details...".'
+        )
+
+        import traceback
+
+        msgbox.setIcon(QMessageBox.Critical)
+
+        try:
+            logging.exception('Internal failure message presented to user.')
+            msgbox.setDetailedText(traceback.format_exc())
+        except:
+            msgbox.setDetailedText(traceback.format_exc())
+
+
+        ret_to_app = msgbox.addButton('Return to Unstable Application', QMessageBox.AcceptRole)
+        term_app = msgbox.addButton('Terminate Application', QMessageBox.DestructiveRole)
+        
+        msgbox.setDefaultButton(ret_to_app)
+
+        result = msgbox.exec_()
+
+
+
+        if msgbox.clickedButton() == term_app:
+            import os
+            logging.fatal('User terminated application from internal failure message.')
+            os._exit(10)
+        else:
+            logging.warning('User returned to application from internal failure message.')
+            
+
+
+
+
+
+
+
+    @property 
+    def command_line_view(self):
+        if self._command_line_view is None:
+            self._command_line_view = TextView(self)
+            self._split.addWidget(self._command_line_view)
+
+        return self._command_line_view
 
     def show_input_dialog(self, prompt):
         result, ok = QInputDialog.getText(self, prompt, prompt)
@@ -48,7 +178,8 @@ class BufferSetView(Responder, QMainWindow):
             
             action = QAction(cmd.name, menu)
             if cmd.keybinding is not None:
-                action.setShortcut(QKeySequence(str(cmd.keybinding)))
+                action.setShortcut(to_q_key_sequence(cmd.keybinding))
+                        #QKeySequence(cmd.keybinding.keycode | cmd.keybinding.modifiers))
             action.triggered.connect(self._on_action_triggered)
             menu.addAction(action)
             self._command_for_action[action] = cmd
@@ -59,19 +190,23 @@ class BufferSetView(Responder, QMainWindow):
         self.perform_or_forward(self._command_for_action[self.sender()])
 
     def _on_subwindow_activated(self, window):
-        self.active_tab_changed(window.widget() if window is not None else None)
+        self.active_view_changed(window.widget() if window is not None else None)
 
     @property
     def active_view(self): 
-        return self._mdi.activeSubWindow().widget()
+        return self._active_view
     
     @active_view.setter
     def active_view(self, value): 
-        for win in self._mdi.subWindowList():
-            if win.widget() is value:
-                self._mdi.setActiveSubWindow(win)
-                self._on_subwindow_activated(win)
-                return
+        if value is self._command_line_view:
+            value.setFocus(Qt.OtherFocusReason)
+        else:
+            for win in self._mdi.subWindowList():
+                if win.widget() is value:
+                    self._mdi.setActiveSubWindow(win)
+                    self._on_subwindow_activated(win)
+                    win.widget().setFocus(Qt.OtherFocusReason)
+                    return
 
     @property
     def path(self):
@@ -91,8 +226,9 @@ class BufferSetView(Responder, QMainWindow):
     def modified(self, value): 
         self.setWindowModified(value)
 
+
     @Signal
-    def active_tab_changed(self, view):
+    def active_view_changed(self, view):
         pass
     
     def _get_menu(self, hier):
@@ -129,7 +265,7 @@ class BufferSetView(Responder, QMainWindow):
             return None
     
     def add_buffer_view(self):
-        view = TextView()
+        view = TextView(self)
         win = self._mdi.addSubWindow(view)
         win.setWindowState(Qt.WindowMaximized)
         self._on_subwindow_activated(win)
