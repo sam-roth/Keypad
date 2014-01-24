@@ -1,6 +1,6 @@
 
 from ..             import util
-from ..core         import errors
+from ..core         import errors, Signal
 
 from contextlib     import contextmanager
 import warnings
@@ -52,7 +52,11 @@ class BufferHistory(object):
             self._changesets.append(self._transaction_changes)
             self._changesets_reversed.clear()
         self._transaction_changes = None
+        self.transaction_committed()
 
+    @Signal
+    def transaction_committed(self):
+        pass
     
     @contextmanager
     def ignoring(self):

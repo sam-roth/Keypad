@@ -7,6 +7,9 @@ from ..core.responder import Responder, responds
 from ..core import commands
 from . import behavior
 from .command_line_interaction import CommandLineInteractionMode
+from .command_line_interpreter import CommandLineInterpreter
+
+from . import buffer_commands
 
 import sys
 import logging
@@ -29,6 +32,7 @@ class BufferSetController(Responder):
         self._buffer_controllers = set()
         self._active_buffer_controller = None
         self._last_active_buffer_controller = None
+        self._command_line_interpreter = CommandLineInterpreter()
         
 
         self.view = view
@@ -74,10 +78,6 @@ class BufferSetController(Responder):
             event.intercept()
 
 
-
-        
-        
-
     def _after_active_view_change(self, view):
         print('active tab change', view)
         if view is not None:
@@ -104,6 +104,8 @@ class BufferSetController(Responder):
         if self._last_active_buffer_controller is not None:
             self.view.active_view = self._last_active_buffer_controller.view
 
+
+        self._command_line_interpreter.exec(self.view, text)
 
     @responds(commands.set_trace)
     def set_trace(self):
@@ -142,7 +144,6 @@ class BufferSetController(Responder):
         if tag_str:
             tags = eval('dict({})'.format(tag_str))
             self._active_buffer_controller.add_tags(**tags)
-
 
     
     @responds(commands.open_cmd)

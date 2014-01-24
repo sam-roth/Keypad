@@ -42,6 +42,8 @@ class BufferController(Tagged, Responder):
         #self.view.completion_done           += self.completion_done
         buff.text_modified                  += self.buffer_was_changed 
         buff.text_modified                  += self._after_buffer_modification
+
+        self.history.transaction_committed  += self._after_history_transaction_committed
         #self.view.completion_row_changed    += self.completion_row_changed
         self.buffer_set = buffer_set
 
@@ -63,6 +65,9 @@ class BufferController(Tagged, Responder):
 
     def _after_buffer_modification(self, chg):
         self.is_modified = True
+
+    def _after_history_transaction_committed(self):
+        self.refresh_view()
         
     @property
     def is_modified(self):

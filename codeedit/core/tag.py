@@ -40,7 +40,10 @@ class Tagged(object):
         tag_kv = {}
         
         for k in tags:
-            tag_kv[k] = self.__tags.pop(k)
+            try:
+                tag_kv[k] = self.__tags.pop(k)
+            except KeyError:
+                pass
 
         self.tags_removed(self, tag_kv)
 
