@@ -13,6 +13,8 @@ import threading
 
 class SignalBase(object): pass
 
+
+
 def makeInstanceSignal(proto_func, chain=None, sender=None):
     class InstanceSignal(SignalBase):
         def __init__(self):
@@ -21,6 +23,7 @@ def makeInstanceSignal(proto_func, chain=None, sender=None):
             self._observer_objects = weakref.WeakKeyDictionary()
             self._chain = chain
             self._sender = sender
+            self.errors = []
 
         def __iadd__(self, observer):
             self.connect(observer)
@@ -61,6 +64,11 @@ def makeInstanceSignal(proto_func, chain=None, sender=None):
             if self._chain is not None:
                 self._chain(*args, **kw)
 
+            self.errors = []
+            def handle_exception(exc):
+                logging.exception("Error in signal handler")
+                self.errors.append(exc)
+
             # use list(...) to strengthen refs prior to iteration
             for observer_self, observer_funcs in list(self._observer_methods.items()):
                 for add_sender, observer_func in observer_funcs:
@@ -70,7 +78,7 @@ def makeInstanceSignal(proto_func, chain=None, sender=None):
                         else:
                             observer_func(observer_self, *args, **kw)
                     except Exception as exc:
-                        logging.exception(exc)
+                        handle_exception(exc)
 
             for observer, add_sender in list(self._observer_objects.items()):
                 try:
@@ -79,7 +87,7 @@ def makeInstanceSignal(proto_func, chain=None, sender=None):
                     else:
                         observer(*args, **kw)
                 except Exception as exc:
-                    logging.exception(exc)
+                    handle_exception(exc)
 
     return InstanceSignal()
 

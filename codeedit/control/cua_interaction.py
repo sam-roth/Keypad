@@ -197,6 +197,15 @@ class CUAInteractionMode(object):
         self.modeline.append('{:<20} [{}]'.format(self.curs.pos, type(self).__name__))
         self.modeline.set_attribute('color', '#268bd2')
 
+
+    def show_error(self, text):
+        self.controller.view.beep()
+        self.show_modeline(AttributedString(
+            text,
+            bgcolor='#dc322f',
+            color='#fdf6e3'
+        ))
+
     
     def _on_key_press(self, evt):
         success = True
@@ -214,12 +223,14 @@ class CUAInteractionMode(object):
                     binding(evt)
                 except errors.UserError as exc:
                     logging.exception(exc)
+
+                    self.show_error(str(exc) + ' [' + type(exc).__name__ + ']')
                     
-                    self.controller.view.beep()
-                    self.modeline.remove(0, None)
-                    self.modeline.append(str(exc) + ' [' + type(exc).__name__ + ']')
-                    self.modeline.set_attribute('bgcolor', '#dc322f') #'#800')
-                    self.modeline.set_attribute('color', '#fdf6e3')
+                    #self.controller.view.beep()
+                    #self.modeline.remove(0, None)
+                    #self.modeline.append(str(exc) + ' [' + type(exc).__name__ + ']')
+                    #self.modeline.set_attribute('bgcolor', '#dc322f') #'#800')
+                    #self.modeline.set_attribute('color', '#fdf6e3')
                     #self.modeline.set_attribute('color', '#FFF')
                     success = False
 

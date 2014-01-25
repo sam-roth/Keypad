@@ -102,6 +102,9 @@ class Cursor(object):
         
         return self
 
+    def advance(self, n=1):
+        self.pos = self.buffer.calculate_pos(self.pos, n)
+        return self
 
     def delete(self, n=1):
         start_pos = self.buffer.calculate_pos(self.pos, n)
@@ -171,6 +174,11 @@ class Cursor(object):
         self.pos = y, x
         self._col_affinity = col_affinity
 
+        return self
+
+    def last_line(self):
+        y, _ = self.pos
+        self.down(len(self.buffer.lines)-(y + 1))
         return self
 
     def up(self, n=1):

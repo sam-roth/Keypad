@@ -51,8 +51,15 @@ class BufferSetController(Responder):
         cl_imode = self._command_line_controller.interaction_mode = \
                 CommandLineInteractionMode(self._command_line_controller)
         cl_imode.accepted.connect(self._after_cmdline_accepted)
-        
+        cl_imode.cancelled.connect(self.__after_cmdline_cancelled)
+
+
         self.view.will_close.connect(self._before_view_close)
+        
+    def __after_cmdline_cancelled(self):
+        if self._last_active_buffer_controller is not None:
+            self.view.active_view = self._last_active_buffer_controller.view
+
 
     def _before_view_close(self, event):
         
@@ -98,9 +105,9 @@ class BufferSetController(Responder):
 
     def _after_cmdline_accepted(self):
 
-        text = self._command_line_controller.buffer.text
+        text = self._command_line_controller.interaction_mode.current_cmdline
 
-        print('got command', self._command_line_controller.buffer.text)
+        
         if self._last_active_buffer_controller is not None:
             self.view.active_view = self._last_active_buffer_controller.view
 

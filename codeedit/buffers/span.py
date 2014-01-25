@@ -5,23 +5,23 @@ from itertools import zip_longest
 
 
 
-class Span(object):
+class BasicSpan(object):
 
     Range = namedtuple('Range', 'y line start_x end_x')
 
-    def __init__(self, start_curs, end_curs):
-        assert isinstance(start_curs, Cursor)
-        assert isinstance(end_curs, Cursor)
+    def __init__(self, start_curs): #, end_curs):
+        #assert isinstance(start_curs, Cursor)
+        #assert isinstance(end_curs, Cursor)
     
 
-        start_curs = start_curs.clone()
-        end_curs   = end_curs.clone()
+        #start_curs = start_curs.clone()
+        #end_curs   = end_curs.clone()
 
-        if end_curs.pos < start_curs.pos:
-            start_curs, end_curs = end_curs, start_curs
+        #if end_curs.pos < start_curs.pos:
+        #    start_curs, end_curs = end_curs, start_curs
 
         self.start_curs = start_curs
-        self.end_curs = end_curs
+        #self.end_curs = end_curs
 
         
     def __contains__(self, pos):
@@ -29,6 +29,13 @@ class Span(object):
             pos = pos.pos
         
         return self.start_curs.pos <= pos < self.end_curs.pos
+
+    def contains_inclusive(self, pos):
+        if isinstance(pos, Cursor):
+            pos = pos.pos
+
+        return self.start_curs.pos <= pos <= self.end_curs.pos
+
 
     @property
     def ranges(self):
@@ -66,6 +73,20 @@ class Span(object):
     def text(self):
         return self.start_curs.text_to(self.end_curs)
 
+class Span(BasicSpan):
+    def __init__(self, start_curs, end_curs):
+        assert isinstance(start_curs, Cursor)
+        assert isinstance(end_curs, Cursor)
+
+        start_curs = start_curs.clone()
+        end_curs   = end_curs.clone()
+
+        if end_curs.pos < start_curs.pos:
+            start_curs, end_curs = end_curs, start_curs
+
+        super().__init__(start_curs)
+        self.end_curs = end_curs
+
 import logging
 
 class Region(object):
@@ -84,6 +105,9 @@ class Region(object):
     def __contains__(self, pos):
         return any(pos in x for x in self.spans)
     
+
+    def contains_inclusive(self, pos):
+        return any(x.contains_inclusive(pos) for x in self.spans)
 
     def __repr__(self):
         return 'Region{!r}'.format(self.spans)

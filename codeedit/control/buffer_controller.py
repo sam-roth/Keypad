@@ -270,6 +270,15 @@ def eval_python(first_responder: object, *python_code):
 
     print(code)
 
+
+@interactive('pwd')
+def getpwd(first_responder: object):
+    from .command_line_interaction import writer
+    import os.path
+    
+    writer.write(str(os.path.abspath(os.path.curdir)))
+
+
 import ast
 
 @interactive('tag')
@@ -283,6 +292,11 @@ def rem_tag(buff: BufferController, key):
 @interactive('dumptags')
 def dumptags(buff: BufferController):
     import pprint
-    pprint.pprint(dict(buff.tags))
+    from .command_line_interaction import writer
+
+    fmt = pprint.pformat(dict(buff.tags))
+
+    writer.write(fmt)
+
 
 
