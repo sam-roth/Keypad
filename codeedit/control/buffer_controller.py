@@ -224,7 +224,38 @@ class BufferController(Tagged, Responder):
             self.view.partial_redraw()
 
 
+from ..abstract.application import app
 
+@interactive('show_error')
+def show_error(buff: BufferController, error):
+    buff.view.beep()
+    buff.interaction_mode.show_error(str(error) + ' [' + type(error).__name__ + ']')
+
+
+@interactive('clipboard_copy')
+def clipboard_copy(buff: BufferController):
+    if buff.anchor_cursor is not None:
+        text = buff.anchor_cursor.text_to(buff.canonical_cursor)
+        app().clipboard_value = text
+
+@interactive('clipboard_paste')
+def clipboard_paste(buff: BufferController):
+    clip_val = app().clipboard_value
+    if clip_val is None:
+        return
+
+    with buff.history.transaction():
+        if buff.anchor_cursor is not None:
+            text = buff.anchor_cursor.remove_to(buff.canonical_cursor)
+        buff.canonical_cursor.insert(clip_val)
+
+@interactive('undo')
+def undo(buff: BufferController):
+    buff.history.undo()
+
+@interactive('redo')
+def redo(buff: BufferController):
+    buff.history.redo()
 
 
 @interactive('write')
@@ -241,6 +272,9 @@ def gui_write(buff: BufferController):
         print('path was', path)
         buff.write_to_path(path)
         buff.add_tags(path=path)
+        return True
+    else:
+        return False
 
 @interactive('gui_save', 'gsave', 'gsv')
 def gui_save(buff: BufferController):

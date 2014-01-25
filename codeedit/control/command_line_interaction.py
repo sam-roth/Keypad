@@ -101,11 +101,13 @@ class CommandLineInteractionMode(CUAInteractionMode):
 
         self.__current_cmdline = ''
 
+        self.controller.history.clear()
 
     def accept(self):
         if not self.__current_cmdline:
             self.cancelled()
             return
+        
 
         self.__wrote_newline = False
         self.push_history_item(self.__current_cmdline)
@@ -124,9 +126,9 @@ class CommandLineInteractionMode(CUAInteractionMode):
             from ..core import notification_center
             def error_shower():
                 self.show_error('{} [{}]'.format(str(error), type(error).__name__))
-                self.controller.refresh_view()
 
             notification_center.post(error_shower)
+
 
 
 

@@ -205,6 +205,7 @@ class CUAInteractionMode(object):
             bgcolor='#dc322f',
             color='#fdf6e3'
         ))
+        self.controller.refresh_view()
 
     
     def _on_key_press(self, evt):

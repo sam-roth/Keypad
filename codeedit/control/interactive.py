@@ -67,6 +67,7 @@ class InteractiveDispatcher(object):
 
 
 
+
 class Menu(object):
     def __init__(self, inline=False):
         self._items = {}

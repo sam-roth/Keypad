@@ -206,7 +206,11 @@ class BufferSetView(Responder, QMainWindow):
     def _on_action_triggered(self):
         from ..control import interactive
         item = self._item_for_action[self.sender()]
-        interactive.dispatcher.dispatch(self, item.interactive_name, *item.interactive_args)
+
+        try:
+            interactive.dispatcher.dispatch(self, item.interactive_name, *item.interactive_args)
+        except Exception as exc:
+            interactive.dispatcher.dispatch(self, 'show_error', exc)
         #self.perform_or_forward(self._command_for_action[self.sender()])
 
     def _on_subwindow_activated(self, window):

@@ -80,6 +80,7 @@ class BufferHistory(object):
 
         self._changesets.pop()
         self._changesets_reversed.append(cs)
+        self.transaction_committed()
 
     def redo(self):
         if not self._changesets_reversed:
@@ -91,11 +92,16 @@ class BufferHistory(object):
                 self.buff.execute(chg)
         self._changesets_reversed.pop()
         self._changesets.append(cs)
+        self.transaction_committed()
 
     
     def clear(self):
+        '''
+        Clear the buffer history (ends the current transaction).
+        '''
         self._changesets.clear()
         self._changesets_reversed.clear()
+        self._transaction_changes = None
 
 
     @contextmanager

@@ -11,6 +11,9 @@ from ..control.buffer_set import BufferSetController
 from .buffer_set import BufferSetView
 
 from .. import config
+from ..abstract.application import Application as AbstractApplication
+
+from .qt_util import ABCWithQtMeta
 
 
 class _ProcessPosted(QEvent):
@@ -25,7 +28,7 @@ class _ProcessPosted(QEvent):
         super().__init__(_ProcessPosted.ProcessPostedType)
 
 
-class Application(QApplication):
+class Application(AbstractApplication, QApplication, metaclass=ABCWithQtMeta):
 
     def __init__(self, args):
         try:
