@@ -9,7 +9,7 @@ from . import behavior
 from .command_line_interaction import CommandLineInteractionMode
 from .command_line_interpreter import CommandLineInterpreter
 
-from . import buffer_commands
+from .interactive import interactive
 
 import sys
 import logging
@@ -154,6 +154,10 @@ class BufferSetController(Responder):
         else:
             return None
 
+    def run_save_dialog(self, initial):
+        return self.view.run_save_dialog(initial)
+            
+
     def find(self, path):
         for c in self._buffer_controllers:
             print(c.path, path)
@@ -171,6 +175,29 @@ class BufferSetController(Responder):
     @property
     def buffer_controllers(self): return frozenset(self._buffer_controllers)
     
+
+
+
+@interactive('new')
+def new(bufs: BufferSetController):
+    bufs.open()
+
+@interactive('gui_edit', 'gedit', 'ged')
+def gui_edit(bufs: BufferSetController):
+    bufs.run_open_dialog()
+import ast, pathlib
+
+@interactive('edit', 'e')
+def edit(bufs: BufferSetController, path):
+    if path.startswith('"') or path.startswith("'"):
+        path = ast.literal_eval(path)        
+
+    path = pathlib.Path(path)
+    bufs.open(path)
+
+@interactive('activate_cmdline')
+def activate_cmdline(bufs: BufferSetController):
+    bufs.activate_cmdline()
 
 
 def main():

@@ -15,6 +15,7 @@ from ..core.key                 import *
 from ..core.responder           import Responder, responds
 
 
+from .interactive import interactive
 
 class BufferController(Tagged, Responder):
     def __init__(self, buffer_set, view, buff, provide_interaction_mode=True):
@@ -223,5 +224,65 @@ class BufferController(Tagged, Responder):
             self.view.partial_redraw()
 
 
+
+
+
+@interactive('write')
+def write(buff: BufferController, path: str=None):
+    path = buff.path if path is None else pathlib.Path(path)
+    buff.write_to_path(path)
+    buff.add_tags(path=path)
+
+
+@interactive('gui_write', 'gwrite', 'gwr')
+def gui_write(buff: BufferController):
+    path = buff.buffer_set.run_save_dialog(buff.path)
+    if path:
+        print('path was', path)
+        buff.write_to_path(path)
+        buff.add_tags(path=path)
+
+@interactive('gui_save', 'gsave', 'gsv')
+def gui_save(buff: BufferController):
+    if not buff.path:
+        gui_write(buff)
+    else:
+        write(buff)
+
+
+
+@interactive('clear')
+def clear(buff: BufferController, path: str=None):
+    with buff.history.transaction():
+        buff.clear()
+
+
+@interactive('lorem')
+def lorem(buff: BufferController):
+    from . import lorem
+    with buff.history.transaction():
+        buff.canonical_cursor.insert(lorem.text_wrapped)
+
+
+@interactive('py')
+def eval_python(first_responder: object, *python_code):
+    code = ' '.join(python_code)
+
+    print(code)
+
+import ast
+
+@interactive('tag')
+def add_tag(buff: BufferController, key, value):
+    buff.add_tags(**{key: ast.literal_eval(value)})
+
+@interactive('untag', 'unt')
+def rem_tag(buff: BufferController, key):
+    buff.remove_tags([key])
+
+@interactive('dumptags')
+def dumptags(buff: BufferController):
+    import pprint
+    pprint.pprint(dict(buff.tags))
 
 

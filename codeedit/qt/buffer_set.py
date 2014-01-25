@@ -29,6 +29,7 @@ class BufferSetView(Responder, QMainWindow):
         
         self._menus_by_hier = {}
         self._command_for_action = {}
+        self._item_for_action = {}
         self._active_view = None
 
         self._split = split = QSplitter(Qt.Vertical, self)
@@ -44,9 +45,11 @@ class BufferSetView(Responder, QMainWindow):
 
         self.setCentralWidget(split)
     
-        self.responder_chain_changed.connect(self.rebuild_menus)
+        #self.responder_chain_changed.connect(self.rebuild_menus)
         self._command_line_view = None
         qApp.focusChanged.connect(self.__app_focus_change)
+
+        self.rebuild_menus()
 
     
     def __app_focus_change(self, old, new):
@@ -173,21 +176,38 @@ class BufferSetView(Responder, QMainWindow):
 
         self._menus_by_hier.clear()
 
-        for cmd in self.responder_known_commands:
-            menu = self._get_menu(cmd.menu_hier)
+        from ..control import interactive
+        
+        def create_menu(qt_menu, ce_menu):
+            for name, item in ce_menu:
+                if isinstance(item, interactive.MenuItem):
+                    action = qt_menu.addAction(name)
+                    action.setShortcut(to_q_key_sequence(item.keybinding))
+                    self._item_for_action[action] = item
+                    action.triggered.connect(self._on_action_triggered)
+                else:
+                    submenu = qt_menu.addMenu(name)
+                    create_menu(submenu, item)
             
-            action = QAction(cmd.name, menu)
-            if cmd.keybinding is not None:
-                action.setShortcut(to_q_key_sequence(cmd.keybinding))
-                        #QKeySequence(cmd.keybinding.keycode | cmd.keybinding.modifiers))
-            action.triggered.connect(self._on_action_triggered)
-            menu.addAction(action)
-            self._command_for_action[action] = cmd
+        create_menu(self.menuBar(), interactive.root_menu)
+        #for cmd in self.responder_known_commands:
+        #    menu = self._get_menu(cmd.menu_hier)
+        #    
+        #    action = QAction(cmd.name, menu)
+        #    if cmd.keybinding is not None:
+        #        action.setShortcut(to_q_key_sequence(cmd.keybinding))
+        #                #QKeySequence(cmd.keybinding.keycode | cmd.keybinding.modifiers))
+        #    action.triggered.connect(self._on_action_triggered)
+        #    menu.addAction(action)
+        #    self._command_for_action[action] = cmd
    
 
                      
     def _on_action_triggered(self):
-        self.perform_or_forward(self._command_for_action[self.sender()])
+        from ..control import interactive
+        item = self._item_for_action[self.sender()]
+        interactive.dispatcher.dispatch(self, item.interactive_name, *item.interactive_args)
+        #self.perform_or_forward(self._command_for_action[self.sender()])
 
     def _on_subwindow_activated(self, window):
         self.active_view_changed(window.widget() if window is not None else None)
@@ -259,6 +279,17 @@ class BufferSetView(Responder, QMainWindow):
     def run_open_dialog(self):
         file_name = QFileDialog.getOpenFileName(self, 'Open File')
 
+        if file_name:
+            return pathlib.Path(file_name)
+        else:
+            return None
+
+    def run_save_dialog(self, initial):
+        initial = pathlib.Path(initial) if initial else None
+        if initial is not None and not initial.is_dir:
+            initial = initial.parent
+        file_name = QFileDialog.getSaveFileName(self, 'Save File', initial.as_posix() if initial is not None else None)
+        
         if file_name:
             return pathlib.Path(file_name)
         else:

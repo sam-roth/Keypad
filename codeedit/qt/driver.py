@@ -10,6 +10,8 @@ from ..core import notification_center
 from ..control.buffer_set import BufferSetController
 from .buffer_set import BufferSetView
 
+from .. import config
+
 
 class _ProcessPosted(QEvent):
     '''

@@ -18,7 +18,7 @@ import inspect
 # write_buffer.__annotations__
 
 
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 from ..core import responder, errors
 
 
@@ -62,11 +62,98 @@ class InteractiveDispatcher(object):
                     return False
         
         if not rec_helper(responder):
-            raise errors.UserError('No match for command. Tried: ' + ', '.join(map(str, tried)))
+            raise errors.UserError('No match for command ' + name + '. Tried: ' + ', '.join(map(str, tried)))
 
+
+
+
+class Menu(object):
+    def __init__(self, inline=False):
+        self._items = {}
+        self.inline = inline
+
+    def add_item(self, name, priority, item):
+        self._items[name] = priority, item
+    
+    def remove_item(self, name):
+        del self._items[name]
+
+    def set_item_priority(self, name, priority):
+        item = self.get_item(name, insert=True)
+        self._items[name] = priority, item
+
+    def get_item(self, name, insert=False):
+        try:
+            return self._items[name][1]
+        except KeyError:
+            if not insert:
+                raise
+            
+            result = Menu()
+            self.add_item(name, priority=100000, item=result)
+            return result
+
+
+    def __iter__(self):
+        for name, (priority, item) in sorted(self._items.items(), 
+                                             key=lambda x: x[1][0],
+                                             reverse=False):
+            yield name, item
+
+
+class MenuItem(object):
+    def __init__(self, keybinding, interactive_name, *args):
+        self.keybinding = keybinding
+        self.interactive_name = interactive_name
+        self.interactive_args = args
+
+
+MenuPath = namedtuple('MenuPath', 'hier priority')
+
+def _add_menu_by_hier(menu, item, hier_parts, priority):
+    if len(hier_parts) == 1:
+        menu.add_item(hier_parts[0], priority, item)
+    else:
+        _add_menu_by_hier(menu.get_item(hier_parts[0]), item, hier_parts[1:], priority)
+
+
+def _set_priority_by_path(menu, path_parts, priority):
+    if len(path_parts) == 1:
+        menu.set_item_priority(path_parts[0], priority)
+    else:
+        _set_priority_by_path(menu.get_item(hier_parts[0]), path_parts[1:], priority)
+        
+
+def _get_item_by_path(menu, path_parts):
+    if len(path_parts) == 1:
+        return menu.get_item(path_parts[0], insert=True)
+    else:
+        return _get_item_by_path(menu.get_item(path_parts[0]), path_parts[1:], priority)
 
 
 dispatcher = InteractiveDispatcher()
+
+root_menu = Menu()
+
+def menu(priority, path, interactive_name, *args, keybinding=None):
+    _add_menu_by_hier(
+        root_menu,
+        MenuItem(
+            keybinding,
+            interactive_name,
+            *args
+        ),
+        path.split('/'),
+        priority
+    )
+
+
+def submenu(priority, path):
+    _set_priority_by_path(root_menu, path.split('/'), priority)
+
+def get_menu_item(path):
+    return _get_item_by_path(root_menu, path.split('/'))
+
 
 def interactive(*names):
     def result(func):
