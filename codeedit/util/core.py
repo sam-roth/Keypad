@@ -36,6 +36,13 @@ def clamp(lo, hi, val):
         return val
 
 
+def default(x, y):
+    if x is None:
+        return y
+    else:
+        return x
+
+
 
 
 class FatalError(BaseException):

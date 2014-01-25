@@ -22,5 +22,12 @@ class NewestHistoryItemError(HistoryExistentialError): pass
 
 class UnknownCommandError(ExistentialError): pass
 
+class BufferModifiedError(UserError):
+    '''
+    Buffer was closed without being saved. To close a modified buffer use :destroy.
+    '''
+
+
+class NoBufferActiveError(ExistentialError): pass
 
 

@@ -80,6 +80,12 @@ class BufferSetView(Responder, QMainWindow):
             win.close()
 
         super().closeEvent(event)
+
+    def close_subview(self, view):
+        for win in self._mdi.subWindowList():
+            if win.widget() is view:
+                self._mdi.removeSubWindow(win)
+                break
             
 
     def show_save_all_prompt(self, unsaved_list, n_untitled):
@@ -106,6 +112,28 @@ class BufferSetView(Responder, QMainWindow):
         else:
             return None
 
+
+    def show_save_prompt(self, path=None):
+        msgbox = QMessageBox(self)
+        if path:
+            msgbox.setText('This buffer contains unsaved changes to {!r}.'.format(path.as_posix()))
+        else:
+            msgbox.setText('This buffer is unsaved.')
+
+        msgbox.setWindowFlags(Qt.Sheet)
+        msgbox.setWindowModality(Qt.WindowModal)
+        msgbox.setInformativeText('Do you want to save your changes?')
+        msgbox.setStandardButtons(QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel)
+
+        ret = msgbox.exec_()
+
+        outcomes = {
+            QMessageBox.Save: 'save',
+            QMessageBox.Cancel: 'cancel',
+            QMessageBox.Discard: 'discard'
+        }
+
+        return outcomes.get(ret, 'cancel')
 
 
     def show_internal_failure_msg(self):

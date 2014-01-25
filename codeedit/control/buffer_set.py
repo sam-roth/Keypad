@@ -1,4 +1,5 @@
 
+from ..core import errors
 
 import types
 from ..buffers import Buffer
@@ -145,6 +146,35 @@ class BufferSetController(Responder):
         self.add_buffer_controller(bcontr)
         return bcontr
 
+
+
+    def close_buffer(self, controller=None):
+        controller = self.required_active_buffer_controller(controller)
+        if controller.is_modified:
+            raise errors.BufferModifiedError('Buffer is modified. To discard, use :destroy.')
+        else:
+            self.remove_buffer_controller(controller)
+
+    def gui_close_buffer(self, controller=None):
+        controller = self.required_active_buffer_controller(controller)
+        if controller.is_modified:
+            answer = self.view.show_save_prompt(controller.path)
+            
+            if answer == 'save':
+                from . import buffer_controller
+                buffer_controller.gui_save(controller)
+                self.close_buffer(controller)
+            elif answer == 'discard':
+                controller.is_modified = False
+                self.close_buffer(controller)
+            # otherwise, do nothing.
+
+
+        else:
+            self.close_buffer(controller)
+
+
+
     @responds(commands.set_tag)
     def set_tag(self):
         tag_str = self.view.show_input_dialog('Set tags (DEBUGGING ONLY!!!). Use Python kwargs-style expression.')
@@ -161,6 +191,8 @@ class BufferSetController(Responder):
         else:
             return None
 
+    
+
     def run_save_dialog(self, initial):
         return self.view.run_save_dialog(initial)
             
@@ -176,13 +208,26 @@ class BufferSetController(Responder):
         buffer_controller.buffer_set = self
 
     def remove_buffer_controller(self, buffer_controller):
+        self.view.close_subview(buffer_controller.view)
         self._buffer_controllers.remove(buffer_controller)
         buffer_controller.buffer_set = None
+
 
     @property
     def buffer_controllers(self): return frozenset(self._buffer_controllers)
     
+    @property
+    def active_buffer_controller(self):
+        return self._active_buffer_controller
 
+    def required_active_buffer_controller(self, override=None):
+        '''
+        :rtype: codeedit.control.buffer_controller.BufferController
+        '''
+        controller = override or self._active_buffer_controller
+        if not controller or controller is self._command_line_controller:
+            raise errors.NoBufferActiveError('No buffer active.')
+        return controller
 
 
 @interactive('new')
@@ -201,6 +246,22 @@ def edit(bufs: BufferSetController, path):
 
     path = pathlib.Path(path)
     bufs.open(path)
+
+@interactive('quit', 'q')
+def quit_buffer(bufs: BufferSetController):
+    bufs.close_buffer()
+
+@interactive('gui_quit', 'gquit', 'gq')
+def gui_quit_buffer(bufs: BufferSetController):
+    bufs.gui_close_buffer()
+
+@interactive('destroy')
+def destroy_buffer(bufs: BufferSetController):
+    bc = bufs.active_buffer_controller
+    if bc is None:
+        raise errors.NoBufferActiveError('No buffer active.')
+    bc.is_modified = False
+    bufs.close_buffer(bc)
 
 @interactive('activate_cmdline')
 def activate_cmdline(bufs: BufferSetController):
