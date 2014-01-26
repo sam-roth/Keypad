@@ -56,7 +56,7 @@ from ..abstract.completion import AbstractCompletionView
 def call_method(obj, method_name, *args, **kw):
     return getattr(obj, method_name)(*args, **kw)
 
-@autoextend(BufferController, lambda tags: tags.get('syntax') == 'python')
+#@autoextend(BufferController, lambda tags: tags.get('syntax') == 'python')
 class PythonCompleter(object):
     last_completion_info = None
     def __init__(self, controller):
