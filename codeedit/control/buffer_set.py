@@ -92,7 +92,7 @@ class BufferSetController(Responder):
             self._last_active_buffer_controller = self._active_buffer_controller
 
             self.view.next_responder = view.controller
-            view.controller.next_responder = self
+            view.controller.add_next_responders(self)
 
             self._active_buffer_controller = view.controller
             self._after_buffer_modified_changed()

@@ -9,6 +9,14 @@ _post_handlers = set()
 _lock = threading.Lock()
 
 
+def via_notification_center(func):
+    def result(*args, **kw):
+        def callback():
+            return func(*args, **kw)
+        post(callback)
+    return result
+
+
 def process_events():
     size = _notification_queue.qsize()
 

@@ -301,8 +301,7 @@ def lorem(buff: BufferController):
 @interactive('py')
 def eval_python(first_responder: object, *python_code):
     code = ' '.join(python_code)
-
-    print(code)
+    eval(code)
 
 
 @interactive('pwd')
