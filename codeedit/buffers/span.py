@@ -23,7 +23,11 @@ class BasicSpan(object):
         self.start_curs = start_curs
         #self.end_curs = end_curs
 
-        
+    
+    @property
+    def buffer(self):
+        return self.start_curs.buffer
+
     def __contains__(self, pos):
         if isinstance(pos, Cursor):
             pos = pos.pos

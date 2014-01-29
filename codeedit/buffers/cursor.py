@@ -24,6 +24,7 @@ class Cursor(object):
         chg_y, chg_x = change.pos
         end_y, end_x = change.insert_end_pos
 
+        t=None
 
         if change.insert:
 
@@ -42,18 +43,25 @@ class Cursor(object):
 
             # cursor was outside of the removed region
             else:
-
+                
                 # cursor was on the last line of the removed region, but outside
                 # of the removed region
                 if self_y == end_y and self_x >= end_x:
                     self_x = chg_x + (self_x - end_x)
                     self_y = chg_y
-                    
+                    t = 'last line outside'    
                 # cursor was after the last line of the removed region
                 elif self_y > end_y:
-                    self_y -= chg_y 
-
-        self.pos = self_y, self_x
+                    self_y -= end_y - chg_y 
+                    t = 'after last line'
+        
+        try:
+            self.pos = self_y, self_x
+        except:
+            import logging
+            import pprint
+            logging.exception('t=%r pos=%r self_y=%r, self_x=%r, locals=%s', t, self.pos, self_y, self_x, pprint.pprint(locals()))
+            raise
 
     @property
     def pos(self):

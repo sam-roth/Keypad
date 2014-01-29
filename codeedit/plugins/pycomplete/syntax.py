@@ -4,89 +4,11 @@ import keyword
 import logging
 
 from codeedit.api import BufferController, autoconnect
-
-def highlight_kw(kwds):
-    return highlight_regex('|'.join(r'\b' + k + r'\b' for k in kwds))
-
-
-def highlight_regex(regex, flags=0):
-    rgx = re.compile(regex, flags)
-
-    def result(astr, **attrs):
-        for match in rgx.finditer(astr.text):
-            for attr, val in attrs.items():
-                astr.set_attribute(match.start(), match.end(), attr, val)
-
-    return result
-
+from codeedit.plugins.semantics.syntax import SyntaxHighlighter, lazy
 
 _python_kwlist = frozenset(keyword.kwlist) - frozenset('from import None False True'.split())
-_python_kw_highlighter = highlight_kw(_python_kwlist)
-_d_string_highlighter = highlight_regex(r'"([^"]|\\")*"')
-_q_string_highlighter = highlight_regex(r"'([^']|\\')*'")
-_python_func_highlighter = highlight_regex(
-    r"""
-      (?<= def  ) \s+\w+        
-    | (?<= class) \s+\w+
-    | (?<= @    ) (\w|\.)+      # decorators
-    """,
-    re.VERBOSE
-)
-_python_morefunc_highlighter = highlight_kw('None False True'.split())
-_python_import_highlighter = highlight_regex(r'\bfrom\b|\bimport\b|@')
 
 
-def python_syntax(buff):
-    last_line_state = None
-    rehighlight_count = 0
-    for line in buff.lines:
-        if not (line.caches.get('polished', False) and line.caches.get('last_line_state') 
-                == last_line_state):
-            rehighlight_count += 1
-            line.set_attribute('lexcat', None)
-
-            _python_kw_highlighter       (line, lexcat='keyword')
-            _python_func_highlighter     (line, lexcat='function')
-            _python_morefunc_highlighter (line, lexcat='function')
-            _python_import_highlighter   (line, lexcat='preprocessor')
-            _d_string_highlighter        (line, lexcat='literal')
-            _q_string_highlighter        (line, lexcat='literal')
-            
-            line_state = last_line_state
-
-            start = 0
-            for match in re.finditer(r"'''", line.text):
-                if line_state == 'single_string':
-                    line_state = None
-                    line.set_attribute(start, match.end(), 'lexcat', 'literal')
-                else:
-                    line_state = 'single_string'
-                    start = match.start()
-
-            if line_state == 'single_string':
-                line.set_attribute(start, None, 'lexcat', 'literal')
-
-            for match in re.finditer(r'#.*', line.text):
-                attrs = dict(line.attributes(match.start()))
-                if attrs.get('lexcat') is None:
-                    line.set_attribute(match.start(), match.end(), 'lexcat', 'comment')
-
-
-            line.caches['last_line_state'] = last_line_state
-            line.caches['polished'] = True
-            last_line_state = line_state
-            line.caches['line_state'] = line_state
-        else:
-            last_line_state = line.caches.get('line_state')
-    
-#@autoconnect(BufferController.buffer_needs_highlight,
-#             lambda tags: tags.get('syntax') == 'python')
-def python_syntax_highlighting(controller):
-    python_syntax(controller.buffer)
-
-
-
-from codeedit.plugins.semantics.syntax import SyntaxHighlighter, lazy
 
 @lazy
 def pylexer():

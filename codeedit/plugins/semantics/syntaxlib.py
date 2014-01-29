@@ -162,7 +162,10 @@ class Tokenizer(object):
                 start = fg_stop
 
 def keyword(kws, attrs=None):
-    return RegexLexer('|'.join(map(re.escape, kws)), attrs)
+    return RegexLexer('|'.join(
+        r'\b' + re.escape(x) + r'\b' 
+        for x in kws),
+        attrs)
 
 regex = RegexLexer
 region = RegionLexer

@@ -20,6 +20,12 @@ def setup_buffer(controller, path):
         )
 
         controller.refresh_view()
+    elif path.suffix in ('.cpp', '.hpp'):
+        controller.add_tags(
+            syntax='c++',
+            autoindent=True
+        )
+        controller.refresh_view()
 
 
 #@autoconnect(BufferController.buffer_needs_highlight,

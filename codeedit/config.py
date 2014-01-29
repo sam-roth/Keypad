@@ -3,11 +3,11 @@
 from .api import *
 
 from .plugins import pycomplete
-from .plugins.cpp import completer
+from .plugins.cpp import completer, syntax
 from .plugins import cmdline_history
 from .plugins.qprint import pageview
 from .plugins.semantics import syntax
-
+from .plugins import indent
 
 submenu(0, 'File')
 
@@ -24,6 +24,11 @@ menu(10,    'Edit/Copy',    'clipboard_copy',   keybinding=Keys.ctrl.c)
 menu(20,    'Edit/Paste',   'clipboard_paste',  keybinding=Keys.ctrl.v)
 
 menu(40,    'Edit/Complete','complete',         keybinding=Keys.meta.space)
+
+menu(50,    'Edit/Indent',  'indent_block',     keybinding=Keys.tab)
+menu(51,    'Edit/Dedent',  'indent_block', -1, keybinding=Keys.shift.tab)
+
+menu(55,    'Edit/Toggle Comment', 'comment_toggle', keybinding=Keys.ctrl.slash)
 
 submenu(30, 'Window')
 

@@ -201,18 +201,21 @@ class BufferController(Tagged, Responder):
         else:
             selected_region = Region()
 
-        previous_region = self._prev_region
+        if full:
+            selected_region.set_attributes(sel_bgcolor='#666')
+        else:
+            previous_region = self._prev_region
 
-        # areas in the currently selected region not in the previously
-        # selected region
-        added_region    = selected_region - previous_region
+            # areas in the currently selected region not in the previously
+            # selected region
+            added_region    = selected_region - previous_region
 
-        # areas in the previously selected region not in the currently selected
-        # region
-        removed_region  = previous_region - selected_region
-        
-        removed_region.set_attributes(sel_bgcolor=None)
-        added_region.set_attributes(sel_bgcolor='#666')
+            # areas in the previously selected region not in the currently selected
+            # region
+            removed_region  = previous_region - selected_region
+            
+            removed_region.set_attributes(sel_bgcolor=None)
+            added_region.set_attributes(sel_bgcolor='#666')
 
 
         self._prev_region = selected_region

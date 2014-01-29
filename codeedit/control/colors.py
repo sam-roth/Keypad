@@ -77,6 +77,7 @@ class Solarized(object):
             literal             = dict(color=self.literals),
             escape              = dict(color=self.escapes),
             todo                = dict(color=self.todos),
+            docstring           = dict(color=self.docstrings)
         )
 
 
