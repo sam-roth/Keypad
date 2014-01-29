@@ -21,7 +21,10 @@ def pylexer():
     
     ESCAPE      = dict(lexcat='escape')
     STRING      = dict(lexcat='literal')
-    
+    COMMENT     = dict(lexcat='comment')
+
+    Comment     = regex(r'#.*', COMMENT)
+
     HEX         = r'[a-fA-F0-9]'
 
     Esc1        = regex(r'''\\[abfnrtv'"\\]''', ESCAPE)
@@ -105,7 +108,8 @@ def pylexer():
         RSQString,
         RDQString,
         IntLiteral,
-        FloatLiteral
+        FloatLiteral,
+        Comment
     ]
 
     DQDoctest.contains = tuple(PythonLexers)
