@@ -22,8 +22,8 @@ def setup_buffer(controller, path):
         controller.refresh_view()
 
 
-@autoconnect(BufferController.buffer_needs_highlight,
-             lambda tags: tags.get('syntax') == 'python')
+#@autoconnect(BufferController.buffer_needs_highlight,
+#             lambda tags: tags.get('syntax') == 'python')
 def python_syntax_highlighting(controller):
     syntax.python_syntax(controller.buffer)
 

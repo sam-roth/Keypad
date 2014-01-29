@@ -1,8 +1,11 @@
 
 
-from .control import keybinding
+from .control import keybinding, BufferController
+from .control.buffer_set import BufferSetController
 from .control.interactive import interactive, menu, submenu
 from .core import Keys
+from .core.tag import autoextend, autoconnect
+
 
 
 def bind(key, interactive_command_name):
@@ -12,9 +15,6 @@ def unbind(key):
     keybinding.controller.remove_binding(key)
 
 
-
-
-
 __all__ = '''
     bind
     unbind
@@ -22,6 +22,8 @@ __all__ = '''
     menu
     submenu
     Keys
+    autoextend
+    autoconnect
 '''.split()
 
 

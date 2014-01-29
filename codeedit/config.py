@@ -2,8 +2,11 @@
 
 from .api import *
 
-from .plugins.pycomplete import completer
-
+from .plugins import pycomplete
+from .plugins.cpp import completer
+from .plugins import cmdline_history
+from .plugins.qprint import pageview
+from .plugins.semantics import syntax
 
 
 submenu(0, 'File')

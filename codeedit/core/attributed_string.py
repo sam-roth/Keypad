@@ -247,6 +247,32 @@ class AttributedString(object):
         for attr, val in attrs.items():
             self.set_attribute(attr, val)
 
+    def split_every(self, chars):
+        '''
+        Return an iterator over all adjacent substrings no more than `chars` characters long.
+        '''
+
+        start = 0
+        end = chars
+
+        while start < len(self):
+            yield self[start:end]
+            start = end
+            end += chars
+
+
+    def __getitem__(self, index):
+        if isinstance(index, slice):
+            start, stop, stride = index.indices(len(self))
+            copy = self.clone()
+            copy.remove(0, start)
+            copy.remove(stop, None)
+
+            return copy
+        else:
+            return self.text[index]
+
+
     def __len__(self):
         return len(self._text)
 
@@ -265,6 +291,10 @@ class AttributedString(object):
                 attr.length = len(self._text)
             attr[begin:end] = value
 
+
+    def set_attributes(self, begin=0, end=None, **kw):
+        for k, v in kw.items():
+            self.set_attribute_range(begin, end, k, v)
 
     def set_attribute(self, *args, **kw):
         '''

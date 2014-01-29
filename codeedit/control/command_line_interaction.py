@@ -6,6 +6,8 @@ from ..core import Signal, Keys, errors
 from ..buffers import Cursor, Span
 from ..buffers.buffer_protector import BufferProtector
 import logging
+import types
+from ..util import ImmutableListView
 
 class PromptWriter(object):
     def write(self, text):
@@ -161,6 +163,10 @@ class CommandLineInteractionMode(CUAInteractionMode):
             else:
                 item = self.__command_history[self.__history_pos]
             self.__set_last_line(item)
+
+    @property
+    def command_history(self):
+        return ImmutableListView(self.__command_history)
 
     @Signal
     def accepted(self):

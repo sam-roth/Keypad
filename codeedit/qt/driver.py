@@ -40,7 +40,22 @@ class Application(AbstractApplication, QApplication, metaclass=ABCWithQtMeta):
                 # Workaround for QTBUG-32789
                 QFont.insertSubstitution('.Lucida Grande UI', 'Lucida Grande')
 
+        
         super().__init__(args)
+
+
+    @property
+    def clipboard_value(self):
+        '''
+        The current system clipboard value, or an internal clipboard's
+        value if there is no access to the system clipboard, or it does not
+        exist.
+        '''
+        return self.clipboard().text()
+
+    @clipboard_value.setter
+    def clipboard_value(self, value):
+        self.clipboard().setText(value)
 
     def exec_(self):
         

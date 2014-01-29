@@ -1,4 +1,3 @@
-
 from codeedit.core.tag import autoextend
 from codeedit.control import BufferController
 from codeedit.abstract.completion import AbstractCompletionView
@@ -11,13 +10,24 @@ from codeedit.control import colors
 import re
 import textwrap
 
+import abc
 
 def make_fuzzy_pattern(pattern):
     expr = '.*?' + '.*?'.join(map(re.escape, pattern.lower()))
     return re.compile(expr)
 
 
-class AbstractCompleter(Responder):
+class AbstractCompleter(Responder, metaclass=abc.ABCMeta):
+    '''
+    The only private methods subclassers need to care about here are
+    
+    * :py:meth:`._request_completions()`
+    * :py:meth:`._request_docs()`
+
+
+    .. automethod:: _request_completions
+    .. automethod:: _request_docs
+    '''
 
     def __init__(self, buf_ctl):
         super().__init__()
@@ -33,6 +43,23 @@ class AbstractCompleter(Responder):
         cview.done.connect(self._on_completion_done)
         self._selected_index = 0
     
+
+    @abc.abstractmethod
+    def _request_completions(self):
+        '''
+        Called when the subclass should start the completion process.
+        
+        '''
+        ...
+
+    @abc.abstractmethod
+    def _request_docs(self, index):
+        '''
+        Called when documentation is requested for the completion at a given
+        index. The index is into the most recently provided completion list.
+        '''
+        ...
+
     def _finish_completion(self, index):
         cs = self.completion_span
         cs.set_attributes(sel_bgcolor=None, sel_color=None)
@@ -62,10 +89,10 @@ class AbstractCompleter(Responder):
         cs = self.completion_span
         if cs is not None:
             self.refilter_typed()
-            cs.set_attributes(
-                sel_bgcolor=colors.scheme.search_bg,
-                sel_color=colors.scheme.bg
-            )
+            #cs.set_attributes(
+            #    sel_bgcolor=colors.scheme.search_bg,
+            #    sel_color=colors.scheme.bg
+            #)
         
     def _on_completion_done(self, index):
         cs = self.completion_span
@@ -174,10 +201,6 @@ class AbstractCompleter(Responder):
         if cs is not None:
             self.refilter(cs.text)
                 
-
-    def _request_completions(self): abstract
-    def _request_docs(self, index): abstract
-
     def complete(self):
         self._start_pos = self._find_start().pos
 

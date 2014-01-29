@@ -67,6 +67,18 @@ class Solarized(object):
     
     inv_grays = list(reversed(grays))
 
+    
+
+    def __init__(self):
+        self.lexical_categories = dict(
+            keyword             = dict(color=self.keywords),
+            function            = dict(color=self.functions),
+            preprocessor        = dict(color=self.preprocessor),
+            literal             = dict(color=self.literals),
+            escape              = dict(color=self.escapes),
+            todo                = dict(color=self.todos),
+        )
+
 
     def inverse(self, color):
         try:
@@ -106,6 +118,12 @@ class SolarizedDark(Solarized):
     bg = S._base03
 
     comments        = S._base01
+
+    def __init__(self):
+        super().__init__()
+        self.lexical_categories.update(
+            comment=dict(color=self.comments)
+        )
     
     
 scheme = SolarizedDark()

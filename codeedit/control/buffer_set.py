@@ -55,6 +55,9 @@ class BufferSetController(Responder):
         cl_imode.cancelled.connect(self.__after_cmdline_cancelled)
 
 
+        self._command_line_controller.add_tags(cmdline=True)
+
+
         self.view.will_close.connect(self._before_view_close)
         
     def __after_cmdline_cancelled(self):
