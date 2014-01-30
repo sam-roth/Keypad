@@ -64,6 +64,9 @@ class Buffer(object):
         return util.ImmutableListView(self._lines)
     
     def insert(self, pos, text):
+        if not text:
+            return
+
         y, x = pos
         
         text_lines = text.split('\n')
@@ -98,6 +101,9 @@ class Buffer(object):
 
 
     def remove(self, pos, length):
+        if length == 0:
+            return
+
         sy, sx = pos
         ey, ex = self.calculate_pos(pos, length)
         text = self.span_text(pos, end_pos=(ey, ex))

@@ -52,10 +52,11 @@ class BufferHistory(object):
         if self._clear_at_end_of_transaction:
             self._clear_at_end_of_transaction = False
             self._changesets.clear()
+            self._changesets_reversed.clear()
         elif self._transaction_changes:
             self._changesets.append(self._transaction_changes)
+            self._changesets_reversed.clear()
 
-        self._changesets_reversed.clear()
         self._transaction_changes = None
         self.transaction_committed()
 

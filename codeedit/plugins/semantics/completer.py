@@ -6,9 +6,11 @@ from codeedit.core.responder import Responder
 from codeedit.core import notification_center, AttributedString
 from codeedit.buffers import Span, Cursor
 from codeedit.control import colors
+import logging
 
 import re
 import textwrap
+
 
 import abc
 
@@ -32,6 +34,7 @@ class AbstractCompleter(Responder, metaclass=abc.ABCMeta):
     def __init__(self, buf_ctl):
         super().__init__()
         self._start_pos = None
+        self.completions = []
         cview = self.cview = buf_ctl.view.completion_view
         buf_ctl.add_tags(completer=self)
         self.buf_ctl = buf_ctl
@@ -73,8 +76,23 @@ class AbstractCompleter(Responder, metaclass=abc.ABCMeta):
         self._start_pos = None
 
     def _after_user_changed_buffer(self, change):
-        match = self.TriggerPattern.search(change.insert)
+        #logging.debug('user changed buffer %r', change)
+        chg_y, chg_x = change.insert_end_pos
+        line = Cursor(self.buf_ctl.buffer)\
+            .move(chg_y, chg_x)\
+            .line
+        
+        match = None
+        if change.insert:
+            for cand_match in self.TriggerPattern.finditer(line.text):
+                if cand_match.end() == chg_x:
+                    match = cand_match
+                    break
+            
+
+        
         if match is not None:
+            #logging.debug('matched at %r, text %r, pos %r', match.start(), match.group(0), (chg_y, chg_x))
             trigger_text = match.group(0)
             if self._start_pos is not None:
                 self._finish_completion(self._selected_index)
@@ -174,6 +192,9 @@ class AbstractCompleter(Responder, metaclass=abc.ABCMeta):
         
         self._worker_indices = indices
         self.cview.completions = completions
+
+        if not completions:
+            self.cancel()
         
     @property
     def completion_span(self):
@@ -181,15 +202,12 @@ class AbstractCompleter(Responder, metaclass=abc.ABCMeta):
             return None
         else:
             try:
-                # Use a copy of the canonical cursor, because the canonical
-                # cursor is associated with the buffer manipulator rather than
-                # the buffer. This means that it is technically invalid to use
-                # canonical_cursor.text_to(Cursor(buffer).move(12,33)), for
-                # instance.
+                direct_end = Cursor(self.buf_ctl.buffer)\
+                    .move(*self.buf_ctl.canonical_cursor.pos)
+                direct_start = Cursor(self.buf_ctl.buffer)\
+                    .move(*self._start_pos)
 
-                start_curs = self.buf_ctl.canonical_cursor.clone()\
-                        .move(*self._start_pos)
-                span = Span(start_curs, self.buf_ctl.canonical_cursor)
+                span = Span(direct_start, direct_end)
             except IndexError:
                 self._start_pos = None
                 return None
@@ -209,6 +227,10 @@ class AbstractCompleter(Responder, metaclass=abc.ABCMeta):
 
 
         self._request_completions()
+
+    def cancel(self):
+        self._start_pos = None
+        self.cview.visible = False
 
 
             

@@ -281,9 +281,7 @@ class CompletionView(QWidget, AbstractCompletionView, metaclass=ABCWithQtMeta):
     def move_(self, *args, **kw):
         try:
             self._pos_locked = None
-            print('will move', *args)
             self.move(*args, **kw)
-            print('did move')
         finally:
             self._pos_locked = self.pos()
 

@@ -13,7 +13,7 @@ class TextViewSettings(object):
         self.scheme    = colors.scheme
 
         self.q_font    = QFont('Menlo')
-        self.q_font.setPointSize(13)
+        self.q_font.setPointSizeF(12)
             
         self.q_completion_bgcolor = QColor(self.scheme.bg)
         self.q_completion_bgcolor.setAlphaF(0.7)
@@ -115,7 +115,7 @@ def paint_attr_text(painter, text, bounding_rect, cfg):
         # draw background
         if actual_bgcolor is not None:
             painter.fillRect(
-                QRectF(xc, 0, width, fm.lineSpacing()),
+                QRectF(xc, 0, width, fm.lineSpacing()+1),
                 QColor(actual_bgcolor)
             )
         

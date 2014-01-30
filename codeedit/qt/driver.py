@@ -69,7 +69,6 @@ class Application(AbstractApplication, QApplication, metaclass=ABCWithQtMeta):
         #mw.show()
         #mw.raise_()
         
-        print('font family: %r' % QFont().lastResortFamily())
         
 
         notification_center.register_post_handler(self._on_post)

@@ -20,6 +20,32 @@ import inspect
 
 from collections import defaultdict, namedtuple
 from ..core import responder, errors
+from ..abstract.application import app
+import threading
+import contextlib
+
+class _DynamicScope(threading.local): 
+    
+    @contextlib.contextmanager
+    def let(self, **bindings):
+        sentinel = object()
+        
+        existing_bindings = {attr: getattr(self, attr, sentinel) for attr in bindings.keys()}
+        
+        for attr, binding in bindings.items():
+            setattr(self, attr, binding)
+
+        try:
+            yield
+        finally:
+            for attr, binding in existing_bindings.items():
+                if binding is not sentinel:
+                    setattr(self, attr, binding)
+                else:
+                    delattr(self, attr)
+
+
+Dynamic = _DynamicScope()
 
 
 class InteractiveDispatcher(object):
@@ -39,7 +65,6 @@ class InteractiveDispatcher(object):
         #self._registry[name].append((annots[0], impl))
     
     def dispatch(self, responder, name, *args):
-        
         handlers = self._registry[name]
 
         tried = set()
@@ -162,3 +187,7 @@ def interactive(*names):
             dispatcher.register(name, func)
         return func
     return result
+
+
+def run(name, *args):
+    dispatcher.dispatch(app().next_responder, name, *args)

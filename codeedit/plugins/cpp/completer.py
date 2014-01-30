@@ -39,7 +39,7 @@ def lt(responder: object):
             lambda tags: tags.get('syntax') == 'c++')
 class CXXCompleter(AbstractCompleter):
 
-    TriggerPattern = re.compile(r'\.$')
+    TriggerPattern = re.compile(r'\.|::|->')
     WordChar       = re.compile(r'[\w\d]')
 
     def __init__(self, buf_ctl):

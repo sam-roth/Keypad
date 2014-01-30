@@ -182,7 +182,7 @@ class TextView(QAbstractScrollArea):
         
 
         self.char_width = metrics.width('m')
-        self.line_height = metrics.lineSpacing() + 1
+        self.line_height = int(metrics.lineSpacing() + 2)
 
 
         width_chars   = size.width() / self.char_width
@@ -380,7 +380,7 @@ class TextView(QAbstractScrollArea):
                     cursor_x = fm.width(self.settings.expand_tabs(row.text[:cursor_col])) + x
                     painter.drawLine(cursor_x, y + 1, cursor_x, y + height - 2)
 
-                y += height
+                y += int(height)
                 if y >= self.height():
                     break
 

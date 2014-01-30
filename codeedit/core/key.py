@@ -1,5 +1,6 @@
 
 import collections.abc
+import re
 
 class Modifiers:
     Shift = 0x02000000
@@ -23,11 +24,33 @@ class Modifiers:
         ('Shift', Shift),
     )
 
+    lowercase_values = {k.lower(): v for (k, v) in values.items()}
+
 class SimpleKeySequence(object):
     def __init__(self, modifiers, keycode, optional_modifiers=0):
         self._modifiers = int(modifiers) & Modifiers.All
         self._keycode = keycode
         self._optional_modifiers = optional_modifiers
+
+
+    @classmethod
+    def parse(cls, text):
+        if isinstance(text, cls):
+            return text
+        else:
+            parts = re.split(r'[+-]', text)
+            
+            mods = 0
+            
+            for i, part in enumerate(parts):
+                if part.lower() in Modifiers.lowercase_values:
+                    mods |= Modifiers.lowercase_values[part]
+                elif i == len(parts) - 1:
+                    return cls(mods, _key_codes[part.lower()])
+                else:
+                    raise ValueError('Key sequence has too many non-modifer keys: {!r}'.format(text))
+            else:
+                raise ValueError('Key sequence has no non-modifier keys: {!r}'.format(text))
 
 
     @property

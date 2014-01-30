@@ -1,4 +1,5 @@
 from codeedit.api import interactive, BufferController
+from codeedit.control.interactive import run as run_interactive
 from codeedit.buffers import Cursor, Span
 import re
 
@@ -15,12 +16,14 @@ get_tabstop         = buftag_getter('tabstop', TABSTOP)
 get_shiftwidth      = buftag_getter('shiftwidth', TABSTOP)
 get_commentchar     = buftag_getter('commentchar', '#')
 
-def _change_line_indent(line, delta):
+def _change_line_indent(line, delta, *, absolute=None):
     # TODO tab support
     
     def replacement(match):
         indentation = match.group(0)
-        if delta < 0:
+        if absolute is not None:
+            indentation = ' ' * absolute
+        elif delta < 0:
             indentation = indentation[:delta]
         else:
             indentation += ' ' * delta
@@ -50,6 +53,48 @@ def indent_block(bctl: BufferController, levels=1):
             bctl.canonical_cursor.pos = cc.pos
             bctl.anchor_cursor.pos = pos
             bctl.refresh_view(True)
+
+
+@interactive('align')
+def align(bctl: BufferController):
+    cc = Cursor(bctl.buffer).move(*bctl.canonical_cursor.pos)
+    if cc.pos[0] == 0:
+        return
+
+    cc.up()
+
+    leading_spaces = 0
+    unmatched_parens = []
+    for i, ch in enumerate(cc.line.text):
+        if ch.isspace():
+            leading_spaces += 1
+        elif ch in '({[':
+            unmatched_parens.append(i + 1)
+        elif ch in ')}]':
+            if unmatched_parens:
+                unmatched_parens.pop()
+    
+    if unmatched_parens:
+        align_column = unmatched_parens[-1]
+    else:
+        align_column = leading_spaces
+    
+    with bctl.history.rec_transaction():
+        cc.down().home()
+        ac = cc.clone()
+        cc.end()
+        line = _change_line_indent(ac.text_to(cc), delta=None, absolute=align_column)
+        ac.remove_to(cc)
+        ac.insert(line)
+
+
+@interactive('newline_aligned')
+def newline_aligned(bctl: BufferController):
+    with bctl.history.transaction():
+        bctl.canonical_cursor.insert('\n')
+        align(bctl)
+        bctl.canonical_cursor.home()
+    run_interactive('cursor', 'move', 'advance_word')
 
 
 def is_commented(span, comment_char):

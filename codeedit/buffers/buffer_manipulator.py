@@ -20,11 +20,12 @@ class BufferManipulator(object):
         return self._history
 
     def execute(self, change):
-        intercept = Intercepter()
-        self.will_execute_change(change, intercept)
-        if not intercept.intercepted:
-            self.buffer.execute(change)
-            self.executed_change(change)
+        if change.insert or change.remove: # don't create empty changes
+            intercept = Intercepter()
+            self.will_execute_change(change, intercept)
+            if not intercept.intercepted:
+                self.buffer.execute(change)
+                self.executed_change(change)
 
     @Signal
     def will_execute_change(self, change, intercept):

@@ -340,3 +340,109 @@ def dumptags(buff: BufferController):
 
 
 
+advance_word_regex = re.compile(
+    r'''
+      \b 
+    | $ 
+    | ^ 
+    | _                     # for snake_case idents
+    | (?<= _ ) \w           #  -> match after "_" too
+    | (?<= [a-z] ) [A-Z]    # for camelCase and PascalCase idents
+    | ['"]                  # match strings
+    | (?<= ['"] ) .         # match after strings
+    ''',
+    re.VERBOSE
+)
+
+
+def advance_to(curs, rgx, count):
+
+    line, col = curs.pos
+    posns = [match.start() for match in 
+             rgx.finditer(curs.line.text)]
+    idx = lower_bound(posns, col)
+    idx += count
+
+    if 0 <= idx < len(posns):
+        new_col = posns[idx]
+        curs.right(new_col - col)
+    elif idx < 0:
+        curs.up().end()
+    else:
+        curs.down().home()
+
+
+def page_down(bctl, count):
+    height, width = bctl.view.plane_size
+    self.curs.down(count * height - 1)
+
+
+
+
+@interactive('cursor')
+def cursor_motion(bctl: BufferController, move_select, motion, count=1):
+    '''
+    cursor <motion_type> <motion> <count=1>
+    
+    <motion>        -- one of left, right, up, down, advance_word, all, home, end, page_down, page_up
+    <motion_type>   -- one of move, select, delete
+
+
+    cursor move right           --> move cursor one position right
+    cursor select right         --> select one position right
+    
+    cursor move right 10        --> move cursor ten positions right
+
+    cursor move advance_word    --> advance by one word
+
+    cursor select all           --> select all
+    '''
+        
+    if move_select not in ('move', 'select', 'delete'):
+        raise errors.UserError("Expected either 'move', 'select', or 'delete' for second argument to 'cursor'.")
+
+    
+    curs = bctl.canonical_cursor
+
+    
+    # hold anchor cursor if selecting
+    if move_select in ('select', 'delete'):
+        if bctl.anchor_cursor is None:
+            bctl.anchor_cursor = curs.clone()
+    else:
+        bctl.anchor_cursor = None
+
+
+    if motion == 'left':
+        curs.left(count)
+    elif motion == 'right':
+        curs.right(count)
+    elif motion == 'up':
+        curs.up(count)
+    elif motion == 'down':
+        curs.down(count)
+    elif motion == 'advance_word':
+        advance_to(curs, advance_word_regex, count)
+    elif motion == 'all':
+        if move_select != 'select':
+            raise errors.UserError('motion "all" only available with motion_type "select".')
+        
+        bctl.anchor_cursor.move(0,0)
+        curs.last_line().end()
+    elif motion == 'home':
+        curs.home()
+    elif motion == 'end':
+        curs.end()
+    elif motion == 'page_down':
+        page_down(bctl, count)
+    elif motion == 'page_up':
+        page_down(bctl, -count)
+    else:
+        raise errors.UserError('Unknown motion {!r}'.format(motion))
+    
+    if move_select == 'delete':
+        with bctl.history.transaction():
+            bctl.anchor_cursor.remove_to(curs)
+            bctl.anchor_cursor = None
+    
+    bctl.refresh_view(full=False)

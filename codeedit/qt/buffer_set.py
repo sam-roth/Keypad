@@ -51,6 +51,17 @@ class BufferSetView(Responder, QMainWindow):
 
         self.rebuild_menus()
 
+
+
+    def next_tab(self, n_tabs=1):
+        if n_tabs > 0:
+            for _ in range(n_tabs):
+                self._mdi.activateNextSubWindow()
+        else:
+            for _ in range(-n_tabs):
+                self._mdi.activatePreviousSubWindow()
+                
+
     
     def __app_focus_change(self, old, new):
 
@@ -243,6 +254,8 @@ class BufferSetView(Responder, QMainWindow):
 
     def _on_subwindow_activated(self, window):
         self.active_view_changed(window.widget() if window is not None else None)
+        if window:
+            window.setWindowState(Qt.WindowMaximized)
 
     @property
     def active_view(self): 
@@ -267,6 +280,11 @@ class BufferSetView(Responder, QMainWindow):
     
     @path.setter
     def path(self, val):
+        if self._mdi.activeSubWindow():
+            if val:
+                self._mdi.activeSubWindow().setWindowTitle(val.name)
+            else:
+                self._mdi.activeSubWindow().setWindowTitle('[unsaved]')
         self.setWindowFilePath(str(val))
 
 

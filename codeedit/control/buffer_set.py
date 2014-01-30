@@ -9,6 +9,7 @@ from ..core import commands
 from . import behavior
 from .command_line_interaction import CommandLineInteractionMode
 from .command_line_interpreter import CommandLineInterpreter
+from ..abstract.application import app
 
 from .interactive import interactive
 
@@ -37,6 +38,7 @@ class BufferSetController(Responder):
         
 
         self.view = view
+        app().next_responder = self.view
         view.next_responder = self
 
         self.view.active_view_changed.connect(self._after_active_view_change)
@@ -103,7 +105,10 @@ class BufferSetController(Responder):
             self.view.next_responder = self
 
     def _after_buffer_modified_changed(self, val=None):
-        self.view.modified = self._active_buffer_controller.is_modified
+        if self._active_buffer_controller:
+            self.view.modified = self._active_buffer_controller.is_modified
+        else:
+            self.view.modified = False
 
     def _after_cmdline_accepted(self):
 
@@ -267,6 +272,11 @@ def destroy_buffer(bufs: BufferSetController):
 def activate_cmdline(bufs: BufferSetController):
     bufs.activate_cmdline()
 
+@interactive('next_tab')
+def next_tab(bufs: BufferSetController, n_tabs=1):
+    if isinstance(n_tabs, str):
+        n_tabs = ast.literal_eval(n_tabs)
+    bufs.view.next_tab(n_tabs)
 
 def main():
 

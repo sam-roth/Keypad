@@ -5,7 +5,9 @@ import logging
 from ..core                     import AttributedString, errors
 from ..core.key                 import KeySequenceDict, Keys, Ctrl, Alt, Shift, Meta, Modifiers
 from ..core.attributed_string   import lower_bound
-
+from ..core.responder           import Responder
+from .interactive               import interactive
+from ..buffers                  import Cursor
 
 import unicodedata
 
@@ -16,9 +18,13 @@ def isprint(ch):
         return False
 
 
-class CUAInteractionMode(object):
+class CUAInteractionMode(Responder):
     def __init__(self, controller):
+        super().__init__()
+
         self.controller = controller
+        self.controller.add_next_responders(self)
+
         self.view = controller.view
 
         self.modeline = AttributedString()
@@ -256,3 +262,6 @@ class CUAInteractionMode(object):
         self.controller.refresh_view(full=full_redraw_needed)
         
 
+#@interactive('imode_map', 'mmap')
+#def imode_map(imode: CUAInteractionMode, seq, *cmd):
+    

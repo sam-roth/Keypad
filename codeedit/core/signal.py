@@ -75,12 +75,12 @@ def makeInstanceSignal(proto_func, chain=None, sender=None):
 
             self.errors = []
             def handle_exception(exc):
-                logging.exception("Error in signal handler")
+                logging.exception("Error in signal handler %r", proto_func.__name__)
                 self.errors.append(exc)
 
             # use list(...) to strengthen refs prior to iteration
             for observer_self, observer_funcs in list(self._observer_methods.items()):
-                for add_sender, observer_func in observer_funcs:
+                for add_sender, observer_func in list(observer_funcs):
                     try:
                         if add_sender:
                             observer_func(observer_self, self._sender, *args, **kw)
