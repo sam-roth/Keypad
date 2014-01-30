@@ -21,15 +21,17 @@ class HistoryWatcher(object):
         try:
             with histpath.open('r') as f:
                 for line in f:
-                    self.imode.push_history_item(line)
+                    line = line.strip()
+                    if line:
+                        self.imode.push_history_item(line)
         except IOError:
             pass
 
-        self.file = histpath.open('w+')
     
     def __after_cmdline_accepted(self):
         hist = self.imode.command_history
         if hist:
-            with self.histpath.open('w+') as f:
-                f.write(hist[-1])
+            with self.histpath.open('a') as f:
+                f.write(hist[-1] + '\n')
+
 

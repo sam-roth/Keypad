@@ -33,10 +33,6 @@ class BufferController(Tagged, Responder):
         self.canonical_cursor   = Cursor(self.manipulator)
         self.anchor_cursor      = None
 
-        if provide_interaction_mode:
-            self.interaction_mode = CUAInteractionMode(self)
-        else:
-            self.interaction_mode = None
 
         self.view.scrolled                  += self._on_view_scrolled
         self.manipulator.executed_change    += self.user_changed_buffer
@@ -53,6 +49,10 @@ class BufferController(Tagged, Responder):
 
         view.controller = self
 
+        if provide_interaction_mode:
+            self.interaction_mode = CUAInteractionMode(self)
+        else:
+            self.interaction_mode = None
     
     @responds(commands.save_cmd)
     def save(self):
@@ -317,12 +317,16 @@ def getpwd(first_responder: object):
 
 import ast
 
-@interactive('tag')
-def add_tag(buff: BufferController, key, value):
+@interactive('tag', 'set')
+def add_tag(buff: BufferController, key, value="True"):
+    if buff.tags.get('cmdline', False):
+        raise errors.NoBufferActiveError('Can\'t set tag on command line buffer.')
     buff.add_tags(**{key: ast.literal_eval(value)})
 
-@interactive('untag', 'unt')
+@interactive('untag', 'unt', 'unset')
 def rem_tag(buff: BufferController, key):
+    if buff.tags.get('cmdline', False):
+        raise errors.NoBufferActiveError('Can\'t unset tag on command line buffer.')
     buff.remove_tags([key])
 
 @interactive('dumptags')

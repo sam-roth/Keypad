@@ -20,7 +20,7 @@ def setup_buffer(controller, path):
         )
 
         controller.refresh_view()
-    elif path.suffix in ('.cpp', '.hpp'):
+    elif path.suffix in ('.cpp', '.hpp', '.cc', '.hh', '.h'):
         controller.add_tags(
             syntax='c++',
             autoindent=True

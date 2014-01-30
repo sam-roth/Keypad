@@ -21,7 +21,6 @@ class Tagged(object):
         self.tags_added(self, {})
         self.needs_init()
 
-
     @signal.ClassSignal
     def tags_added(cls, instance, tags):
         pass
@@ -46,7 +45,6 @@ class Tagged(object):
                 pass
 
         self.tags_removed(self, tag_kv)
-
 
 
 

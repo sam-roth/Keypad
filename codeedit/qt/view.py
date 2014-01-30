@@ -73,7 +73,8 @@ class TextView(QAbstractScrollArea):
         #self._last_paint_time = 0
         #self._update_rate_limit = 1.0/30
         self.disable_partial_update = False
-        
+        self.controller = None        
+
 
     @property
     def completion_view(self):
@@ -323,6 +324,8 @@ class TextView(QAbstractScrollArea):
     def _paint_to(self, device):
         painter = QPainter(device)
         painter.setFont(self.font())
+    
+        should_draw_cursor = self.hasFocus() or (self.completion_view and self.completion_view.hasFocus())
 
         if self._prevent_partial_redraw or self.disable_partial_update:
             self._partial_redraw_ok = False
@@ -373,7 +376,7 @@ class TextView(QAbstractScrollArea):
                 if drew_line: lines_drawn += 1
                 if renewed_cache: lines_updated += 1
 
-                if i == cursor_line and self.hasFocus():
+                if i == cursor_line and should_draw_cursor:
                     cursor_x = fm.width(self.settings.expand_tabs(row.text[:cursor_col])) + x
                     painter.drawLine(cursor_x, y + 1, cursor_x, y + height - 2)
 

@@ -3,15 +3,7 @@
 from .buffer            import Buffer, TextModification
 from .buffer_history    import BufferHistory
 from ..core             import Signal
-
-class _Intercepter(object):
-
-    def __init__(self):
-        self.intercepted = False
-
-    def __call__(self):
-        self.intercepted = True
-
+from ..core.signal      import Intercepter
 
 class BufferManipulator(object):
     def __init__(self, buff):
@@ -28,7 +20,7 @@ class BufferManipulator(object):
         return self._history
 
     def execute(self, change):
-        intercept = _Intercepter()
+        intercept = Intercepter()
         self.will_execute_change(change, intercept)
         if not intercept.intercepted:
             self.buffer.execute(change)

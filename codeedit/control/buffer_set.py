@@ -49,14 +49,13 @@ class BufferSetController(Responder):
             Buffer(),
             provide_interaction_mode=False
         )
+
         cl_imode = self._command_line_controller.interaction_mode = \
                 CommandLineInteractionMode(self._command_line_controller)
         cl_imode.accepted.connect(self._after_cmdline_accepted)
         cl_imode.cancelled.connect(self.__after_cmdline_cancelled)
 
-
         self._command_line_controller.add_tags(cmdline=True)
-
 
         self.view.will_close.connect(self._before_view_close)
         
@@ -90,8 +89,7 @@ class BufferSetController(Responder):
 
 
     def _after_active_view_change(self, view):
-        print('active tab change', view)
-        if view is not None:
+        if view is not None and view.controller is not None:
             self._last_active_buffer_controller = self._active_buffer_controller
 
             self.view.next_responder = view.controller
@@ -202,7 +200,6 @@ class BufferSetController(Responder):
 
     def find(self, path):
         for c in self._buffer_controllers:
-            print(c.path, path)
             if c.path == path:
                 return c
 

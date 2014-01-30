@@ -14,6 +14,15 @@ import threading
 class SignalBase(object): pass
 
 
+class Intercepter(object):
+
+    def __init__(self):
+        self.intercepted = False
+
+    def __call__(self):
+        self.intercepted = True
+
+
 
 def makeInstanceSignal(proto_func, chain=None, sender=None):
     class InstanceSignal(SignalBase):

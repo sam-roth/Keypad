@@ -97,6 +97,8 @@ class Application(AbstractApplication, QApplication, metaclass=ABCWithQtMeta):
 if __name__ == '__main__':
     import sys
     import logging
+
+    
     
     logfmt = '[%(asctime)s|%(module)s:%(lineno)d|%(levelname)s]\n  %(message)s'
 

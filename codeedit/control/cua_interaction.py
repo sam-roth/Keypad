@@ -150,6 +150,9 @@ class CUAInteractionMode(object):
         self.controller.view.mouse_down_char.connect(self._on_mouse_down)
         self.controller.view.mouse_move_char.connect(self._on_mouse_move)
 
+        self._show_default_modeline()
+        self.controller.refresh_view(full=True)
+
     def _on_view_scrolled(self, start_line):
         pass
         #self.pres.refresh_view(full=True)
@@ -194,7 +197,7 @@ class CUAInteractionMode(object):
 
     def _show_default_modeline(self):
         self.modeline.remove(0, None)
-        self.modeline.append('{:<20} [{}]'.format(self.curs.pos, type(self).__name__))
+        self.modeline.append('{:<20} [{}]'.format(repr(self.curs.pos), type(self).__name__))
         self.modeline.set_attribute('color', '#268bd2')
 
 

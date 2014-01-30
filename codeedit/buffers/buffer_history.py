@@ -17,6 +17,7 @@ class BufferHistory(object):
         self._transaction_changes = None
         self._changesets = []
         self._changesets_reversed = []
+        self._clear_at_end_of_transaction = False
         self.buff = buff
 
         self.buff.text_modified.connect(self._on_buffer_text_modified)
@@ -48,9 +49,13 @@ class BufferHistory(object):
 
     
     def _commit_transaction(self):
-        if self._transaction_changes:
+        if self._clear_at_end_of_transaction:
+            self._clear_at_end_of_transaction = False
+            self._changesets.clear()
+        elif self._transaction_changes:
             self._changesets.append(self._transaction_changes)
-            self._changesets_reversed.clear()
+
+        self._changesets_reversed.clear()
         self._transaction_changes = None
         self.transaction_committed()
 
@@ -65,6 +70,7 @@ class BufferHistory(object):
             yield
         finally:
             self._ignore_changes = False
+        self.transaction_committed()
 
 
     
@@ -97,12 +103,11 @@ class BufferHistory(object):
     
     def clear(self):
         '''
-        Clear the buffer history (ends the current transaction).
+        Clear the buffer history at the end of the transaction.
         '''
-        self._changesets.clear()
-        self._changesets_reversed.clear()
-        self._transaction_changes = None
 
+        with self.rec_transaction():
+            self._clear_at_end_of_transaction = True
 
     @contextmanager
     def transaction(self):
@@ -112,6 +117,14 @@ class BufferHistory(object):
         finally:
             self._commit_transaction()
 
+    
+    @contextmanager
+    def rec_transaction(self):
+        if self._transaction_changes is not None:
+            yield
+        else:
+            with self.transaction():
+                yield
 
 
 def main():
