@@ -7,7 +7,7 @@ from .qt_util import *
 
 from ..core import Signal
 from ..core.command import Command
-from ..core.responder import Responder, responds
+from ..core.responder import Responder
 
 
 import logging
@@ -229,18 +229,6 @@ class BufferSetView(Responder, QMainWindow):
                     create_menu(submenu, item)
             
         create_menu(self.menuBar(), interactive.root_menu)
-        #for cmd in self.responder_known_commands:
-        #    menu = self._get_menu(cmd.menu_hier)
-        #    
-        #    action = QAction(cmd.name, menu)
-        #    if cmd.keybinding is not None:
-        #        action.setShortcut(to_q_key_sequence(cmd.keybinding))
-        #                #QKeySequence(cmd.keybinding.keycode | cmd.keybinding.modifiers))
-        #    action.triggered.connect(self._on_action_triggered)
-        #    menu.addAction(action)
-        #    self._command_for_action[action] = cmd
-   
-
                      
     def _on_action_triggered(self):
         from ..control import interactive
@@ -250,7 +238,6 @@ class BufferSetView(Responder, QMainWindow):
             interactive.dispatcher.dispatch(self, item.interactive_name, *item.interactive_args)
         except Exception as exc:
             interactive.dispatcher.dispatch(self, 'show_error', exc)
-        #self.perform_or_forward(self._command_for_action[self.sender()])
 
     def _on_subwindow_activated(self, window):
         self.active_view_changed(window.widget() if window is not None else None)

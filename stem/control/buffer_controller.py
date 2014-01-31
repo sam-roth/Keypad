@@ -8,11 +8,11 @@ from .                          import syntax
 from .cua_interaction           import CUAInteractionMode
 from ..                         import util
 from ..buffers                  import Cursor, BufferManipulator, Buffer, Span, Region
-from ..core                     import AttributedString, errors, Signal, write_atomically, commands
+from ..core                     import AttributedString, errors, Signal, write_atomically
 from ..core.tag                 import Tagged, autoconnect
 from ..core.attributed_string   import lower_bound
 from ..core.key                 import *
-from ..core.responder           import Responder, responds
+from ..core.responder           import Responder
 
 
 from .interactive import interactive
@@ -54,7 +54,6 @@ class BufferController(Tagged, Responder):
         else:
             self.interaction_mode = None
     
-    @responds(commands.save_cmd)
     def save(self):
         if self.path is not None:
             self.write_to_path(self.path)

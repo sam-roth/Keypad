@@ -4,7 +4,7 @@ from ..core import errors
 import types
 from ..buffers import Buffer
 from ..qt.buffer_set import BufferSetView
-from ..core.responder import Responder, responds
+from ..core.responder import Responder
 from ..core import commands
 from . import behavior
 from .command_line_interaction import CommandLineInteractionMode
@@ -121,17 +121,14 @@ class BufferSetController(Responder):
 
         self._command_line_interpreter.exec(app(), text)
 
-    @responds(commands.set_trace)
     def set_trace(self):
         Tracer().set()
         logging.warning('Tracer set')
         
     
-    @responds(commands.activate_cmdline)
     def activate_cmdline(self):
         self.view.active_view = self._command_line_controller.view
         
-    @responds(commands.new_cmd)
     def open(self, path=None):
         bcontr = self.find(path) if path is not None else None
         if bcontr is None:
@@ -181,7 +178,6 @@ class BufferSetController(Responder):
 
 
 
-    @responds(commands.set_tag)
     def set_tag(self):
         tag_str = self.view.show_input_dialog('Set tags (DEBUGGING ONLY!!!). Use Python kwargs-style expression.')
         if tag_str:
@@ -189,7 +185,6 @@ class BufferSetController(Responder):
             self._active_buffer_controller.add_tags(**tags)
 
     
-    @responds(commands.open_cmd)
     def run_open_dialog(self):
         path = self.view.run_open_dialog()
         if path:
