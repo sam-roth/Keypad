@@ -20,8 +20,8 @@ from .interactive import interactive
 class BufferController(Tagged, Responder):
     def __init__(self, buffer_set, view, buff, provide_interaction_mode=True):
         '''
-        :type view: codeedit.qt.view.TextView
-        :type buff: codeedit.buffers.Buffer
+        :type view: stem.qt.view.TextView
+        :type buff: stem.buffers.Buffer
         '''
         super().__init__()
 

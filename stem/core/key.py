@@ -118,9 +118,9 @@ class KeySequenceDict(collections.abc.MutableMapping):
     Traceback (most recent call last):
       File "<ipython-input-26-69e4e4544a54>", line 1, in <module>
         k[shift.right]
-      File "./codeedit/key.py", line 101, in __getitem__
+      File "./stem/key.py", line 101, in __getitem__
         _, result = self.find(key)
-      File "./codeedit/key.py", line 96, in find
+      File "./stem/key.py", line 96, in find
         raise KeyError(key)
     KeyError: Shift+Right
 

@@ -195,7 +195,7 @@ def main():
 
     tokenizer = Tokenizer(Kaleidoscope)
 
-    from codeedit.core import AttributedString
+    from stem.core import AttributedString
 
 
     astring = AttributedString('''

@@ -3,7 +3,7 @@ import multiprocessing
 import threading
 import logging
 
-from codeedit.core import AttributedString
+from stem.core import AttributedString
 
 class Worker(object):
     def __init__(self):

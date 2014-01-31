@@ -18,7 +18,7 @@ import logging
 
 class Tracer(object):
     def __init__(self):
-        self.f = open('/tmp/codeedit-dump.txt', 'w')
+        self.f = open('/tmp/stem-dump.txt', 'w')
 
     def __call__(self, frame, event, arg):
         self.f.write('%s, %r:%d\n' % (event, frame.f_code.co_filename, frame.f_lineno))
@@ -227,7 +227,7 @@ class BufferSetController(Responder):
 
     def required_active_buffer_controller(self, override=None):
         '''
-        :rtype: codeedit.control.buffer_controller.BufferController
+        :rtype: stem.control.buffer_controller.BufferController
         '''
         controller = override or self._active_buffer_controller
         if not controller or controller is self._command_line_controller:

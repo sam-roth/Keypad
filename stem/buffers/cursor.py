@@ -17,7 +17,7 @@ class Cursor(object):
         
     def _on_buffer_text_modified(self, change):
         '''
-        :type change: codeedit.buffer.TextModification
+        :type change: stem.buffer.TextModification
         '''
         
         self_y, self_x = self.pos

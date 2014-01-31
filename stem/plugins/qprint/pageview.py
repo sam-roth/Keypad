@@ -2,11 +2,11 @@
 
 from PyQt4.Qt import *
 
-from codeedit.qt.view import TextViewSettings
-from codeedit.qt import text_rendering as rendering
-from codeedit.qt.qt_util import ending
+from stem.qt.view import TextViewSettings
+from stem.qt import text_rendering as rendering
+from stem.qt.qt_util import ending
 
-from codeedit.api import interactive, BufferController
+from stem.api import interactive, BufferController
 
 
 import copy
@@ -15,9 +15,9 @@ def render_buffer_to_printer(buff, printer, settings):
     '''
     Render a buffer to a QPrinter.
 
-    :type buff: codeedit.buffers.Buffer
+    :type buff: stem.buffers.Buffer
     :type printer: PyQt4.Qt.QPrinter
-    :type settings: codeedit.qt.view.TextViewSettings
+    :type settings: stem.qt.view.TextViewSettings
     '''
     
 

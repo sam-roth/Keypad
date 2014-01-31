@@ -156,8 +156,8 @@ def render_attr_text(text, cfg):
     '''
     Renders the `AttributedString` `text` to a pixmap.
 
-    :type text: codeedit.attributed_string.AttributedString
-    :type cfg: codeedit.view.TextViewSettings
+    :type text: stem.attributed_string.AttributedString
+    :type cfg: stem.view.TextViewSettings
     '''
 
     assert isinstance(cfg, TextViewSettings)
@@ -177,8 +177,8 @@ def render_attr_text(text, cfg):
             
 
 def draw_attr_text(painter, rect, text, settings, partial=False):
-    cache_key = 'codeedit.view.draw_attr_text.pixmap'
-    draw_pos_key = 'codeedit.view.draw_attr_text.pos'
+    cache_key = 'stem.view.draw_attr_text.pixmap'
+    draw_pos_key = 'stem.view.draw_attr_text.pos'
     
     pixmap = text.caches.get(cache_key)
 

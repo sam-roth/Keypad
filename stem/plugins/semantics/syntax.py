@@ -70,7 +70,7 @@ class SyntaxHighlighter(object):
 
 
 
-from codeedit.api import autoconnect, BufferController
+from stem.api import autoconnect, BufferController
 import functools
 def lazy(f):
     '''
@@ -122,6 +122,6 @@ def kaleidoscope_lexer():
 #@autoconnect(BufferController.buffer_needs_highlight,
 #             lambda tags: tags.get('syntax') == 'kal')
 def kaleidoscope_syntax(bufctl):
-    hl = SyntaxHighlighter('codeedit.plugins.semantics.syntax.kal', kaleidoscope_lexer(), dict(lexcat=None))
+    hl = SyntaxHighlighter('stem.plugins.semantics.syntax.kal', kaleidoscope_lexer(), dict(lexcat=None))
     hl.highlight_buffer(bufctl.buffer)
 

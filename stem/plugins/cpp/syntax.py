@@ -2,12 +2,12 @@ import re
 import keyword
 import logging
 
-from codeedit.api import BufferController, autoconnect
-from codeedit.plugins.semantics.syntax import SyntaxHighlighter, lazy
+from stem.api import BufferController, autoconnect
+from stem.plugins.semantics.syntax import SyntaxHighlighter, lazy
 
 @lazy
 def cpplexer():
-    from codeedit.plugins.semantics.syntaxlib import keyword, regex, region
+    from stem.plugins.semantics.syntaxlib import keyword, regex, region
     
 
     keywords = '''
@@ -89,7 +89,7 @@ def cpplexer():
              lambda tags: tags.get('syntax') == 'c++')
 def cpp_syntax_highlghting(bufctl):
     highlighter = SyntaxHighlighter(
-        'codeedit.plugins.cpp.syntax',
+        'stem.plugins.cpp.syntax',
         cpplexer(),
         dict(lexcat=None)
     )

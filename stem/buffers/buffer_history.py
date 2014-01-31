@@ -10,7 +10,7 @@ import warnings
 class BufferHistory(object):
     def __init__(self, buff):
         '''
-        :type change: codeedit.buffer.Buffer
+        :type change: stem.buffer.Buffer
         '''
 
         self._ignore_changes = False
@@ -34,7 +34,7 @@ class BufferHistory(object):
     
     def _on_buffer_text_modified(self, change):
         '''
-        :type change: codeedit.buffer.TextModification
+        :type change: stem.buffer.TextModification
         '''
 
         if self._ignore_changes: return

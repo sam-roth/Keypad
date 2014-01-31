@@ -1,14 +1,14 @@
 
-from codeedit.core.tag import autoextend
-from codeedit.control import BufferController
-from codeedit.abstract.completion import AbstractCompletionView
-from codeedit.api import interactive
-from codeedit.core.responder import Responder
-from codeedit.core import notification_center, AttributedString
-from codeedit.control.interactive import dispatcher as interactive_dispatcher
+from stem.core.tag import autoextend
+from stem.control import BufferController
+from stem.abstract.completion import AbstractCompletionView
+from stem.api import interactive
+from stem.core.responder import Responder
+from stem.core import notification_center, AttributedString
+from stem.control.interactive import dispatcher as interactive_dispatcher
 
-from codeedit.buffers import Span, Cursor
-from codeedit.plugins.semantics.completer import AbstractCompleter
+from stem.buffers import Span, Cursor
+from stem.plugins.semantics.completer import AbstractCompleter
 
 import logging
 import multiprocessing.dummy

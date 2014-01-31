@@ -3,8 +3,8 @@ import re
 import keyword
 import logging
 
-from codeedit.api import BufferController, autoconnect
-from codeedit.plugins.semantics.syntax import SyntaxHighlighter, lazy
+from stem.api import BufferController, autoconnect
+from stem.plugins.semantics.syntax import SyntaxHighlighter, lazy
 
 _python_kwlist = frozenset(keyword.kwlist) - frozenset('from import None False True'.split())
 
@@ -12,7 +12,7 @@ _python_kwlist = frozenset(keyword.kwlist) - frozenset('from import None False T
 
 @lazy
 def pylexer():
-    from codeedit.plugins.semantics.syntaxlib import keyword, regex, region
+    from stem.plugins.semantics.syntaxlib import keyword, regex, region
 
     Keyword     = keyword(_python_kwlist, dict(lexcat='keyword'))
     Import      = keyword('from import'.split(), dict(lexcat='preprocessor'))
@@ -130,14 +130,14 @@ def pylexer():
 @autoconnect(BufferController.buffer_needs_highlight,
              lambda tags: tags.get('syntax') == 'python')
 def python_syntax_highlighting(controller):
-    highlighter = SyntaxHighlighter('codeedit.plugins.pycomplete.syntax', pylexer(), dict(lexcat=None))
+    highlighter = SyntaxHighlighter('stem.plugins.pycomplete.syntax', pylexer(), dict(lexcat=None))
     highlighter.highlight_buffer(controller.buffer)
 
 
 def main():
-    from codeedit.plugins.semantics.syntaxlib import Tokenizer
-    from codeedit.core import AttributedString
-    from codeedit.buffers import Buffer
+    from stem.plugins.semantics.syntaxlib import Tokenizer
+    from stem.core import AttributedString
+    from stem.buffers import Buffer
 
     buf = Buffer()
     buf.insert((0,0), "'\\b")

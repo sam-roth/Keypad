@@ -1,6 +1,6 @@
-from codeedit.api import interactive, BufferController
-from codeedit.control.interactive import run as run_interactive
-from codeedit.buffers import Cursor, Span
+from stem.api import interactive, BufferController
+from stem.control.interactive import run as run_interactive
+from stem.buffers import Cursor, Span
 import re
 
 

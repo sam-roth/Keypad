@@ -1,9 +1,9 @@
 
 
-from codeedit.api import autoextend
-from codeedit.options import UserConfigHome
-from codeedit.api import BufferController
-from codeedit.control.command_line_interaction import CommandLineInteractionMode
+from stem.api import autoextend
+from stem.options import UserConfigHome
+from stem.api import BufferController
+from stem.control.command_line_interaction import CommandLineInteractionMode
 
 @autoextend(BufferController, 
             lambda tags: tags.get('cmdline'))
@@ -16,9 +16,11 @@ class HistoryWatcher(object):
         
         self.buf_ctl.add_tags(history_watcher=self)
 
+        UserConfigHome.mkdir(parents=True)
         histpath = self.histpath = UserConfigHome / 'cmdline_history'
 
         try:
+            histpath.mkdir
             with histpath.open('r') as f:
                 for line in f:
                     line = line.strip()
