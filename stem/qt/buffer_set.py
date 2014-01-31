@@ -101,6 +101,8 @@ class BufferSetView(Responder, QMainWindow):
 
     def show_save_all_prompt(self, unsaved_list, n_untitled):
         msgbox = QMessageBox(self)
+        msgbox.setWindowFlags(Qt.Sheet)
+        msgbox.setWindowModality(Qt.WindowModal)
         msgbox.setText('There are {} unsaved buffers.'.format(n_untitled + len(unsaved_list)))
         msgbox.setInformativeText("Do you want to save your changes?")
         
@@ -112,12 +114,13 @@ class BufferSetView(Responder, QMainWindow):
                 yield str(item) + '\n'
 
         msgbox.setDetailedText('\n'.join(gen()))
-        msgbox.setStandardButtons(QMessageBox.SaveAll | QMessageBox.Discard | QMessageBox.Cancel)
-        msgbox.setDefaultButton(QMessageBox.SaveAll)
+        msgbox.setStandardButtons(QMessageBox.Discard | QMessageBox.Cancel)
+        review_chgs = msgbox.addButton('Review Changes…', QMessageBox.AcceptRole)
+        msgbox.setDefaultButton(review_chgs)
         ret = msgbox.exec_()
 
-        if ret == QMessageBox.SaveAll:
-            return 'save-all'
+        if msgbox.defaultButton() is review_chgs:
+            return 'review'
         elif ret == QMessageBox.Discard:
             return 'discard-all'
         else:
@@ -150,17 +153,16 @@ class BufferSetView(Responder, QMainWindow):
     def show_internal_failure_msg(self):
         
         msgbox = QMessageBox(self)
-        msgbox.setText('An error has occurred from which this application cannot recover.')
+        msgbox.setText('This application was not able to quit because of a problem.')
         msgbox.setInformativeText(
-            'The application may behave unpredictably until it is restarted; continue its use at your own risk.\n' 
-            'Please save buffers manually and then close the application.\n'
+            'If you intended to exit the application, please save and close buffers manually and then close the application.\n'
             'If this message occurs after buffers are saved, click "Terminate Application". For debugging '
             'details, click "Show Details...".'
         )
 
         import traceback
 
-        msgbox.setIcon(QMessageBox.Critical)
+        msgbox.setIcon(QMessageBox.Warning)
 
         try:
             logging.exception('Internal failure message presented to user.')
@@ -169,7 +171,7 @@ class BufferSetView(Responder, QMainWindow):
             msgbox.setDetailedText(traceback.format_exc())
 
 
-        ret_to_app = msgbox.addButton('Return to Unstable Application', QMessageBox.AcceptRole)
+        ret_to_app = msgbox.addButton('Return to Application', QMessageBox.AcceptRole)
         term_app = msgbox.addButton('Terminate Application', QMessageBox.DestructiveRole)
         
         msgbox.setDefaultButton(ret_to_app)

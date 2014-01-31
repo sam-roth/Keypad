@@ -10,8 +10,9 @@ from . import behavior
 from .command_line_interaction import CommandLineInteractionMode
 from .command_line_interpreter import CommandLineInterpreter
 from ..abstract.application import app
+from ..core.notification_center import via_notification_center
 
-from .interactive import interactive
+from .interactive import interactive, run
 
 import sys
 import logging
@@ -73,9 +74,12 @@ class BufferSetController(Responder):
             if paths:
                 non_none_paths = [p for p in paths if p is not None]
                 result = self.view.show_save_all_prompt(non_none_paths, len(paths)-len(non_none_paths))
-                if result == 'save-all':
-                    for bc in self._buffer_controllers:
-                        raise NotImplementedError()
+                if result == 'review':
+                    for bc in list(self._buffer_controllers):
+                        if not self.gui_close_buffer(bc):
+                            event.intercept()
+                            break
+                        
                 elif result == 'discard-all':
                     for bc in self._buffer_controllers:
                         if bc.is_modified:
@@ -160,6 +164,7 @@ class BufferSetController(Responder):
 
     def gui_close_buffer(self, controller=None):
         controller = self.required_active_buffer_controller(controller)
+        self.view.active_view = controller.view
         if controller.is_modified:
             answer = self.view.show_save_prompt(controller.path)
             
@@ -167,14 +172,18 @@ class BufferSetController(Responder):
                 from . import buffer_controller
                 buffer_controller.gui_save(controller)
                 self.close_buffer(controller)
+                return True
             elif answer == 'discard':
                 controller.is_modified = False
                 self.close_buffer(controller)
+                return True
             # otherwise, do nothing.
-
+            else:
+                return False
 
         else:
             self.close_buffer(controller)
+            return True
 
 
 
@@ -225,7 +234,7 @@ class BufferSetController(Responder):
         :rtype: stem.control.buffer_controller.BufferController
         '''
         controller = override or self._active_buffer_controller
-        if not controller or controller is self._command_line_controller:
+        if (not controller) or controller is self._command_line_controller:
             raise errors.NoBufferActiveError('No buffer active.')
         return controller
 
@@ -254,6 +263,16 @@ def quit_buffer(bufs: BufferSetController):
 @interactive('gui_quit', 'gquit', 'gq')
 def gui_quit_buffer(bufs: BufferSetController):
     bufs.gui_close_buffer()
+
+@interactive('gui_quit_all', 'gquita', 'gqa')
+def gui_quit_all_buffers(bufs: BufferSetController):
+    try:
+        while bufs.gui_close_buffer():
+            pass
+    except errors.NoBufferActiveError:
+        pass
+
+    bufs.view.close()
 
 @interactive('destroy')
 def destroy_buffer(bufs: BufferSetController):
