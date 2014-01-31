@@ -252,8 +252,6 @@ class CompletionView(QWidget, AbstractCompletionView, metaclass=ABCWithQtMeta):
             selbg=scheme.emphasize(scheme.bg, 1)
         )
         self.setStyleSheet(stylesheet)
-        import logging
-        logging.debug('Stylesheet: %s', stylesheet)
 
         self.model = CompletionListModel()
         self._listWidget.setModel(self.model)

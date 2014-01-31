@@ -6,7 +6,7 @@ from ..control import behavior # module contains autoconnects
 
 import pathlib
 
-from ..core import notification_center
+from ..core import notification_queue
 from ..control.buffer_set import BufferSetController
 from .buffer_set import BufferSetView
 
@@ -73,14 +73,14 @@ class Application(AbstractApplication, QApplication, metaclass=ABCWithQtMeta):
         
         
 
-        notification_center.register_post_handler(self._on_post)
+        notification_queue.register_post_handler(self._on_post)
 
         return super().exec_()
 
     
     def event(self, evt):
         if evt.type() == _ProcessPosted.ProcessPostedType:
-            notification_center.process_events()
+            notification_queue.process_events()
             return True
         else:
             return super().event(evt)

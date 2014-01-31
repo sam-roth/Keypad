@@ -10,7 +10,7 @@ from . import behavior
 from .command_line_interaction import CommandLineInteractionMode
 from .command_line_interpreter import CommandLineInterpreter
 from ..abstract.application import app
-from ..core.notification_center import via_notification_center
+from ..core.notification_queue import in_main_thread
 
 from .interactive import interactive, run
 

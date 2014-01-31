@@ -8,5 +8,6 @@ from .command               import Command
 from .key                   import Keys
 
 
-from . import errors, commands
+from . import errors, commands, notification_queue
+
 

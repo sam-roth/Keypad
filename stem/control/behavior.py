@@ -5,7 +5,7 @@ import weakref, types, re
 from .                          import syntax, colors
 from .buffer_controller         import BufferController
 from ..core.tag                 import autoconnect, autoextend
-from ..core                     import notification_center, AttributedString
+from ..core                     import notification_queue, AttributedString
 from ..core.attributed_string   import upper_bound
 from ..buffers                  import Cursor, Span
 

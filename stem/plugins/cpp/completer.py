@@ -4,7 +4,7 @@ from stem.control import BufferController
 from stem.abstract.completion import AbstractCompletionView
 from stem.api import interactive
 from stem.core.responder import Responder
-from stem.core import notification_center, AttributedString
+from stem.core import notification_queue, AttributedString
 from stem.control.interactive import dispatcher as interactive_dispatcher
 
 from stem.buffers import Span, Cursor
@@ -20,7 +20,7 @@ from xmlrpc.client import ServerProxy
 from xmlrpc.server import SimpleXMLRPCServer
 
 
-via_notification_center = notification_center.via_notification_center
+in_main_thread = notification_queue.in_main_thread
 
 def _as_posix_or_none(x):
     if x is None:
@@ -47,7 +47,7 @@ class CXXCompleter(AbstractCompleter):
 
         address_callback_handler = SimpleXMLRPCServer(('127.0.0.1', 0), allow_none=True)
 
-        @via_notification_center
+        @in_main_thread
         def use_address(addr):
             logging.debug('semantic engine server responded at %r', addr)
             host, port = addr
@@ -106,7 +106,7 @@ class CXXCompleter(AbstractCompleter):
 
 
 
-        @via_notification_center
+        @in_main_thread
         def callback(compls):
             try:
                 conv_compls, doc = self.__convert_compl_results(compls)

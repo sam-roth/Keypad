@@ -1,5 +1,4 @@
 
-
 import queue
 import logging
 import threading
@@ -9,11 +8,11 @@ _post_handlers = set()
 _lock = threading.Lock()
 
 
-def via_notification_center(func):
+def in_main_thread(func):
     def result(*args, **kw):
         def callback():
             return func(*args, **kw)
-        post(callback)
+        run_in_main_thread(callback)
     return result
 
 
@@ -38,7 +37,7 @@ def register_post_handler(h):
 
     return h
 
-def post(n):
+def run_in_main_thread(n):
     _notification_queue.put(n)
     with _lock:
         for h in _post_handlers:

@@ -4,7 +4,7 @@ from stem.control import BufferController
 from stem.abstract.completion import AbstractCompletionView
 from stem.api import interactive
 from stem.core.responder import Responder
-from stem.core import notification_center, AttributedString
+from stem.core import notification_queue, AttributedString
 
 from stem.buffers import Span, Cursor
 from stem.plugins.semantics.completer import AbstractCompleter
@@ -38,7 +38,7 @@ class PythonCompleter(AbstractCompleter):
 
     
     def _request_docs(self, index):
-        @notification_center.via_notification_center
+        @notification_queue.in_main_thread
         def callback(result):
             self.show_documentation(result)
 
@@ -53,7 +53,7 @@ class PythonCompleter(AbstractCompleter):
         line, col = self._start_pos
         source = self.buf_ctl.buffer.text
 
-        @notification_center.via_notification_center
+        @notification_queue.in_main_thread
         def callback(result):
             self.show_completions(result)
 
