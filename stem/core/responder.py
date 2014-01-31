@@ -5,14 +5,21 @@ from .signal import Signal
 import sys
 
 class Responder(object):
+    '''
+    Base class for objects that control the distribution of user interaction
+    (`@interactive`) commands.
+    '''
+    # TODO: Example
 
     def __init__(self, *args, **kw):
         super().__init__(*args, **kw)
         self._next_responders = weakref.WeakSet()
         
-
-    
     def add_next_responders(self, *responders):
+        '''
+        If there's no matching `@interactive` command at this level, try finding one that matches
+        one of these objects.
+        '''
         new_responders = weakref.WeakSet(responders) - self._next_responders
         for responder in new_responders:
             responder.responder_chain_changed.connect(self.responder_chain_changed)
