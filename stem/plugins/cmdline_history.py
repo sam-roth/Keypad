@@ -16,7 +16,8 @@ class HistoryWatcher(object):
         
         self.buf_ctl.add_tags(history_watcher=self)
 
-        UserConfigHome.mkdir(parents=True)
+        if not UserConfigHome.exists():
+            UserConfigHome.mkdir(parents=True)
         histpath = self.histpath = UserConfigHome / 'cmdline_history'
 
         try:

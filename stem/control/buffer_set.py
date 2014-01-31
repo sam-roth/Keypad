@@ -119,7 +119,7 @@ class BufferSetController(Responder):
             self.view.active_view = self._last_active_buffer_controller.view
 
 
-        self._command_line_interpreter.exec(self.view, text)
+        self._command_line_interpreter.exec(app(), text)
 
     @responds(commands.set_trace)
     def set_trace(self):

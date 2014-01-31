@@ -15,7 +15,7 @@ from ..abstract.completion  import AbstractCompletionView
 completion_view_stylesheet = r"""
 
 QWidget#outer_container {{
-    background-color:       {settings.completion_bgcolor};
+    background-color:       {settings.completion_bgcolor.css_rgba};
     border-radius:          10px;
     padding-top:            10px;
     padding-bottom:         10px;
@@ -30,9 +30,9 @@ QTreeView {{
 
     border:                 none;
     background-color:       rgba(0,0,0,0);
-    /*background-color:       {settings.completion_bgcolor};*/
-    color:                  {settings.fgcolor};
-    selection-background-color: {selbg};
+    /*background-color:         {settings.completion_bgcolor.css_rgba};*/
+    color:                      {settings.fgcolor.css_rgba};
+    selection-background-color: {selbg.css_rgba};
     font:                   13pt "Menlo";
 
 }}
@@ -40,11 +40,11 @@ QTreeView {{
 
 QScrollBar,QScrollBar::add-page,QScrollBar::sub-page {{
     border: none;
-    background: {settings.bgcolor};
+    background: {settings.bgcolor.css_rgba};
 }}
 
 QScrollBar::handle {{
-    background: {selbg};
+    background: {selbg.css_rgba};
 }}
 
 QScrollBar::add-line, QScrollBar::sub-line {{
@@ -247,10 +247,13 @@ class CompletionView(QWidget, AbstractCompletionView, metaclass=ABCWithQtMeta):
         #self._docs.scrolled.connect(self._on_scroll)
         
 
-        self.setStyleSheet(completion_view_stylesheet.format(
+        stylesheet = completion_view_stylesheet.format(
             settings=settings,
             selbg=scheme.emphasize(scheme.bg, 1)
-        ))
+        )
+        self.setStyleSheet(stylesheet)
+        import logging
+        logging.debug('Stylesheet: %s', stylesheet)
 
         self.model = CompletionListModel()
         self._listWidget.setModel(self.model)

@@ -3,29 +3,32 @@
 from PyQt4.Qt import *
 from .qt_util import *
 from ..util.cascade_dict import CascadeDict
+from .. import options
 
 import math
 
 class TextViewSettings(object):
-    def __init__(self):
+    def __init__(self, scheme):
         from ..control import colors
 
-        self.scheme    = colors.scheme
+        self.scheme = scheme
 
-        self.q_font    = QFont('Menlo')
-        self.q_font.setPointSizeF(12)
+        fontname, fontsize = options.TextViewFont
+
+        self.q_font    = QFont(fontname)
+        self.q_font.setPointSizeF(fontsize)
             
-        self.q_completion_bgcolor = QColor(self.scheme.bg)
+        self.q_completion_bgcolor = to_q_color(self.scheme.bg)
         self.q_completion_bgcolor.setAlphaF(0.7)
 
-        self.q_bgcolor = QColor(self.scheme.bg) #QColor.fromRgb(0, 43, 54)
-        self.q_fgcolor = QColor(self.scheme.fg)
+        self.q_bgcolor  = to_q_color(self.scheme.bg)
+        self.q_fgcolor  = to_q_color(self.scheme.fg)
+        #self.q_bgcolor = QColor(self.scheme.bg) #QColor.fromRgb(0, 43, 54)
+        #self.q_fgcolor = QColor(self.scheme.fg)
         #QColor.fromRgb(131, 148, 150) 
         self.tab_stop  = 8
 
         self.word_wrap = False
-
-
 
 
     completion_bgcolor = qcolor_marshaller('q_completion_bgcolor')
@@ -82,7 +85,7 @@ def paint_attr_text(painter, text, bounding_rect, cfg):
             lexcat = deltas['lexcat']
             current_lexcat_attributes.clear()
             if lexcat is not None:
-                current_lexcat_attributes.update(cfg.scheme.lexical_categories[lexcat])
+                current_lexcat_attributes.update(cfg.scheme.lexical_category_attrs(lexcat))
         
         color       = attributes.get('color', cfg.q_fgcolor)
         bgcolor     = attributes.get('bgcolor')
@@ -116,10 +119,10 @@ def paint_attr_text(painter, text, bounding_rect, cfg):
         if actual_bgcolor is not None:
             painter.fillRect(
                 QRectF(xc, 0, width, fm.lineSpacing()+1),
-                QColor(actual_bgcolor)
+                to_q_color(actual_bgcolor)
             )
         
-        painter.setPen(QColor(actual_color))
+        painter.setPen(to_q_color(actual_color))
         painter.drawText(QPointF(xc, yc), tab_expanded_string)# string)
 
         xc += width

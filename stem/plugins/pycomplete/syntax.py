@@ -22,6 +22,7 @@ def pylexer():
     ESCAPE      = dict(lexcat='escape')
     STRING      = dict(lexcat='literal')
     COMMENT     = dict(lexcat='comment')
+    FUNCTION    = dict(lexcat='function')
 
     Comment     = regex(r'#.*', COMMENT)
 
@@ -94,7 +95,10 @@ def pylexer():
     NUMBER = dict(lexcat='literal')
 
     FloatLiteral = regex(r'\b\d*\.\d+', NUMBER)
-    IntLiteral   = regex(r'\b\d+L?', NUMBER)
+    IntLiteral   = regex(r'\b(?:0[xbo])?\d+L?', NUMBER)
+
+    FuncDef = regex(r'(?:(?<=def)|(?<=class)|(?<=@))\s*[\w.]+', FUNCTION)
+    CommAt = regex(re.escape('@'), ESCAPE)
     
 
     PythonLexers = [
@@ -109,7 +113,9 @@ def pylexer():
         RDQString,
         IntLiteral,
         FloatLiteral,
-        Comment
+        Comment,
+        FuncDef,
+        CommAt
     ]
 
     DQDoctest.contains = tuple(PythonLexers)

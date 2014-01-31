@@ -15,6 +15,18 @@ def unbind(key):
     keybinding.controller.remove_binding(key)
 
 
+def load_plugins(path, prefix):
+    import logging
+    import pkgutil
+
+    def errh(name):
+        logging.exception('error loading %r', name)
+    for finder, name, is_pkg in pkgutil.walk_packages(path, prefix, errh):
+        logging.info('loading plugin %r', name)
+
+
+
+
 __all__ = '''
     bind
     unbind
@@ -24,6 +36,7 @@ __all__ = '''
     Keys
     autoextend
     autoconnect
+    load_plugins
 '''.split()
 
 

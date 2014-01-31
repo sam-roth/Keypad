@@ -12,7 +12,7 @@ from .text_rendering            import *
 from .completion_view           import CompletionView
 from ..core                     import signal, attributed_string
 from ..core.key                 import SimpleKeySequence
-
+from ..                         import options
 import time
 
 
@@ -31,50 +31,53 @@ class TextView(QAbstractScrollArea):
     
 
     def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setAttribute(Qt.WA_OpaquePaintEvent, True)
-        self.viewport().setAttribute(Qt.WA_OpaquePaintEvent, True)
+        try:
+            super().__init__(parent)
+            self._completion_view = None
+            self.setAttribute(Qt.WA_OpaquePaintEvent, True)
+            self.viewport().setAttribute(Qt.WA_OpaquePaintEvent, True)
 
-        
-        self.settings = TextViewSettings()
-        self.setFont(self.settings.q_font)
+            self.settings = TextViewSettings(options.DefaultColorScheme)
+            self.setFont(self.settings.q_font)
 
-        self._lines = []
-        self._margins = QMargins(4, 4, 4, 4)
+            self._lines = []
+            self._margins = QMargins(4, 4, 4, 4)
 
-        self._plane_size = None
-        self.update_plane_size()
+            self._plane_size = None
+            self.update_plane_size()
 
-        self._img_cache = None
+            self._img_cache = None
 
-        self.cursor_pos = None
+            self.cursor_pos = None
 
-        self.start_line = 0
-        self._partial_redraw_ok = False
-        self._prevent_partial_redraw = False
-        self._last_cursor_line = None
-        self.modelines = []
+            self.start_line = 0
+            self._partial_redraw_ok = False
+            self._prevent_partial_redraw = False
+            self._last_cursor_line = None
+            self.modelines = []
 
-        mouse_cursor = self.cursor()
-        mouse_cursor.setShape(Qt.IBeamCursor)
-        self.setCursor(mouse_cursor)
+            mouse_cursor = self.cursor()
+            mouse_cursor.setShape(Qt.IBeamCursor)
+            self.setCursor(mouse_cursor)
 
-        #if provide_completion_view:
-        #    self._completion_view = CompletionView(parent=self, settings=self.settings)
-        #    self._completion_view.hide()
-        #
-        #    self._completion_view.key_press += self.key_press
-        #    self._completion_view.done      += self.completion_done
-        #    self._completion_view.row_changed += self.completion_row_changed
-        #else:
-        self._completion_view = None
+            #if provide_completion_view:
+            #    self._completion_view = CompletionView(parent=self, settings=self.settings)
+            #    self._completion_view.hide()
+            #
+            #    self._completion_view.key_press += self.key_press
+            #    self._completion_view.done      += self.completion_done
+            #    self._completion_view.row_changed += self.completion_row_changed
+            #else:
 
 
-        #self._last_paint_time = 0
-        #self._update_rate_limit = 1.0/30
-        self.disable_partial_update = False
-        self.controller = None        
+            #self._last_paint_time = 0
+            #self._update_rate_limit = 1.0/30
+            self.disable_partial_update = False
+            self.controller = None        
 
+        except:
+            logging.exception('error initting TextView')
+            raise
 
     @property
     def completion_view(self):
@@ -83,9 +86,12 @@ class TextView(QAbstractScrollArea):
         already exist.
         '''
         
-        if self._completion_view is None:
-            self._completion_view = CompletionView(parent=self, settings=self.settings)
-            self._completion_view.key_press += self.key_press
+        try:
+            if self._completion_view is None:
+                self._completion_view = CompletionView(parent=self, settings=self.settings)
+                self._completion_view.key_press += self.key_press
+        except:
+            raise RuntimeError()
 
 
         return self._completion_view
@@ -332,8 +338,9 @@ class TextView(QAbstractScrollArea):
             self._prevent_partial_redraw = False
 
         with ending(painter):
-            painter.setPen(Qt.white)
-            painter.setBrush(Qt.white)
+            cursor_color = to_q_color(self.settings.scheme.cursor_color)
+            painter.setPen(cursor_color)
+            painter.setBrush(cursor_color)
 
             x = self._margins.left()
 

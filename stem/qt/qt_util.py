@@ -5,6 +5,7 @@ import contextlib
 
 
 from ..core.key import SimpleKeySequence
+from ..core.color import Color
 
 import abc
 
@@ -39,9 +40,11 @@ def to_q_key_sequence(key_seq):
     return QKeySequence(key_seq.keycode | key_seq.modifiers)
 
 
-
-
-
+def to_q_color(color):
+    if isinstance(color, QColor):
+        return color
+    r,g,b,a = Color.from_hex(color)
+    return QColor.fromRgb(r,g,b,a)
 
 @contextlib.contextmanager
 def ending(painter):
@@ -64,18 +67,14 @@ def qcolor_marshaller(attrname):
         # QColor::name() actually returns an HTML-style hex string like
         # #AABBCC.
         color = getattr(self, attrname)
-        if color.alpha() != 255:
-            return 'rgba({}, {}, {}, {})'.format(
-                color.red(),
-                color.green(),
-                color.blue(),
-                color.alpha()
-            )
-        else:
-            return color.name()
+
+        return Color.from_rgb(color.red(),
+                              color.green(),
+                              color.blue(),
+                              color.alpha())
 
     def fset(self, value):
-        setattr(self, attrname, QColor(value))
+        setattr(self, attrname, to_q_color(value))
     
     return property(fget, fset)
 

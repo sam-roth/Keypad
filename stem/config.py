@@ -2,15 +2,10 @@
 
 from .api import *
 
-from .plugins import pycomplete
-from .plugins.cpp import completer, syntax
-from .plugins import cmdline_history
-from .plugins.qprint import pageview
-from .plugins.semantics import syntax
-from .plugins import indent
+import pathlib
 
-
-
+import stem.plugins
+load_plugins(stem.plugins.__path__, 'stem.plugins.')
 
 
 submenu(0, 'File')

@@ -10,11 +10,11 @@ from ..core import notification_center
 from ..control.buffer_set import BufferSetController
 from .buffer_set import BufferSetView
 
-from .. import config
 from ..abstract.application import Application as AbstractApplication
 
 from .qt_util import ABCWithQtMeta
-
+from ..control.interactive import interactive
+import logging
 
 class _ProcessPosted(QEvent):
     '''
@@ -41,7 +41,9 @@ class Application(AbstractApplication, QApplication, metaclass=ABCWithQtMeta):
                 QFont.insertSubstitution('.Lucida Grande UI', 'Lucida Grande')
 
         
+        logging.debug('init app')
         super().__init__(args)
+        logging.debug('init done')
 
 
     @property
@@ -89,18 +91,39 @@ class Application(AbstractApplication, QApplication, metaclass=ABCWithQtMeta):
         self.postEvent(self, _ProcessPosted())
 
 
-
-
-
-
-if __name__ == '__main__':
+def _driver_main():
     import sys
     import logging
-
-    
-    
     logfmt = '[%(asctime)s|%(module)s:%(lineno)d|%(levelname)s]\n  %(message)s'
 
     logging.basicConfig(level=logging.DEBUG,
                         format=logfmt)
+
+    global config
+    from .. import config
     sys.exit(Application(sys.argv).exec_())
+
+
+#@interactive('reload')
+def reload_all(app: Application):
+    '''
+    WARNING: Don't use this. It will screw up typechecks.
+    '''
+    import imp
+    import stem
+    import IPython.lib.deepreload
+    import pkgutil
+    import importlib
+    for mldr, name, is_pkg in pkgutil.walk_packages(stem.__path__, 'stem.'):
+        try:
+            mod = importlib.import_module(name)
+            IPython.lib.deepreload.reload(mod)
+        except:
+            logging.exception('error reloading %r', name)
+
+
+    
+
+
+if __name__ == '__main__':
+    _driver_main()
