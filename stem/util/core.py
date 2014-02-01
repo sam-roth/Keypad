@@ -2,6 +2,8 @@
 
 import collections
 import inspect
+import functools
+import warnings
 
 class ImmutableListView(collections.Sequence):
     def __init__(self, list_):
@@ -44,6 +46,15 @@ def default(x, y):
 
 
 
+def deprecated(func):
+    already_warned = [False]
+    @functools.wraps(func)
+    def result(*args, **kw):
+        if not already_warned[0]:
+            warnings.warn(DeprecationWarning(func), stacklevel=3)
+            already_warned[0] = True
+        return func(*args, **kw)
+    return result
 
 class FatalError(BaseException):
     pass

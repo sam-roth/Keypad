@@ -1,6 +1,7 @@
 import logging
 
 from collections import defaultdict
+from ..util import deprecated
 
 def identity(x): return x
 
@@ -94,6 +95,7 @@ class RangeDict(object):
     def __init__(self, length=0):
         self._data = []
         self._length = length
+
 
     @property 
     def length(self):
@@ -203,6 +205,104 @@ class RangeDict(object):
     def __repr__(self):
         return repr(self._data)
 
+
+class StringAttributes(object):
+    '''
+    A collection of named RangeDicts that allows for iteration over string
+    chunks (spans of uniform format).
+    '''
+
+    def __init__(self, length=0):
+        self._length = length
+        self._attributes = defaultdict(RangeDict)
+
+    @property
+    def length(self):
+        return self._length
+
+    def set_attributes(self, begin=0, end=None, **kw):
+        '''
+        Set the attributes specified in `kw` over the range [`begin`..`end`).
+        Return `True` iff this update resulted in a change to this object's
+        state.
+        '''
+        invalidated = False
+        for key, value in kw.items():
+            attr = self._attributes[key]
+            span_info = attr.span_info(begin)
+
+            numeric_end = end if end is not None else self.length
+            
+            # check if attribute needs update
+            if attr.length != self.length:
+                needs_update = True
+                attr.length = self.length
+            elif span_info is None:
+                needs_update = True
+            else:
+                # avoid re-setting already set attributes (invalidating the cache)
+                needs_update = (span_info.start, span_info.end, span_info.value) \
+                        != (begin, numeric_end, value)
+
+            if needs_update:
+                invalidated = True
+                attr[begin:end] = value
+                
+        return invalidated
+            
+    
+    def splice(self, index, delta):
+        '''
+        Change the length of `self` by `delta` elements before the given
+        `index`.
+        '''
+
+        for attribute in self._attributes.values():
+            attribute.splice(index, delta)
+
+        self._length += delta
+    
+    
+    def find_deltas(self):
+        deltas = defaultdict(dict)
+        for key, attr in self._attributes.items():
+            for idx, value in attr._data: # use directly for efficiency (we won't change it)
+                deltas[idx][key] = value
+
+        return deltas
+
+
+    @property
+    def keys(self):
+        return self._attributes.keys()
+
+    def attributes(self, index):
+        for key, attr in self._attributes.items():
+            yield key, attr[index]
+
+    def iterchunks(self):
+        '''
+        Return an iterator over the "chunks" (regions without attribute
+        changes) in the string. 
+
+        Each yielded value is a triple containing the (begin, end] indices in
+        the chunk and any changed attributes as a dictionary since the last
+        chunk. If the attributes were not changed since the last chunk, the
+        changed attributes dictionary will be empty.
+        '''
+        last_idx = 0
+        last_attrs = {}
+        for delta_idx, delta_attrs in sorted(self.find_deltas().items(), key=lambda x: x[0]):
+            if last_idx != delta_idx:
+                yield last_idx, delta_idx, last_attrs
+            last_attrs, last_idx = delta_attrs, delta_idx
+        
+        if last_idx < self.length:
+            yield last_idx, self.length, last_attrs
+            
+                
+
+
 class AttributedString(object):
     '''
     A mutable string-like datatype that stores a string and a parallel mapping
@@ -241,11 +341,10 @@ class AttributedString(object):
         attributes cover the entire length of the string.
         '''
         self._text = text
-        self._attributes = defaultdict(RangeDict)
+        self._attributes = StringAttributes(len(text))
         self.caches = {}
 
-        for attr, val in attrs.items():
-            self.set_attribute(attr, val)
+        self._attributes.set_attributes(0, None, **attrs)
 
     def split_every(self, chars):
         '''
@@ -279,23 +378,21 @@ class AttributedString(object):
     def invalidate(self):
         self.caches = {}
     
-    def set_attribute_range(self, begin, end, key, value):
-        attr = self._attributes[key]
-        span_info = attr.span_info(begin)
-        
-        numeric_end = end if end is not None else len(self)
-        if span_info is None or attr.length != len(self._text) or \
-                (span_info.start, span_info.end, span_info.value) != (begin, numeric_end, value):
-            self.invalidate()
-            if attr.length != len(self._text):
-                attr.length = len(self._text)
-            attr[begin:end] = value
-
-
     def set_attributes(self, begin=0, end=None, **kw):
-        for k, v in kw.items():
-            self.set_attribute_range(begin, end, k, v)
+        '''
+        set_attribute(begin=0, end=None, key, value)
 
+        Set the attributes `kw` starting at `begin` and ending before `end`. If
+        `end` is `None`, set the attribute to the end of the string.
+        '''
+        if self._attributes.set_attributes(begin, end, **kw):
+            self.invalidate()
+
+    @deprecated
+    def set_attribute_range(self, begin, end, key, value):
+        self.set_attributes(begin, end, **{key:value})
+
+    @deprecated
     def set_attribute(self, *args, **kw):
         '''
         set_attribute(begin=0, end=None, key, value)
@@ -306,21 +403,18 @@ class AttributedString(object):
         '''
         try:
             def signature1(begin, end, key, value):
-                pass
-            signature1(*args, **kw)
+                return begin, end, key, value
+            begin, end, key, value = signature1(*args, **kw)
         except TypeError:
             def signature2(key, value):
                 return key, value
             key, value = signature2(*args, **kw)
-            self.set_attribute_range(0, None, key, value)
+            self.set_attributes(0, None, **{key: value})
         else:
-            self.set_attribute_range(*args, **kw)
-
-
+            self.set_attributes(begin, end, **{key: value})
+    
     def attributes(self, index):
-        for key, attr in self._attributes.items():
-            yield key, attr[index]
-
+        yield from self._attributes.attributes(index)
 
     @property
     def keys(self):
@@ -333,12 +427,7 @@ class AttributedString(object):
 
 
     def find_deltas(self):
-        deltas = defaultdict(dict)
-        for key, attr in self._attributes.items():
-            for idx, value in attr._data:
-                deltas[idx][key] = value
-        
-        return deltas
+        return self._attributes.find_deltas()
 
     def iterchunks(self):
         '''
@@ -350,15 +439,9 @@ class AttributedString(object):
         attributes were not changed since the last chunk, the changed
         attributes dictionary will be empty.
         '''
-        last_idx = 0
-        last_attrs = {}
-        for delta_idx, delta_attrs in sorted(self.find_deltas().items(), key=lambda x: x[0]):
-            if last_idx != delta_idx:
-                yield self.text[last_idx:delta_idx], last_attrs
-            last_attrs, last_idx = delta_attrs, delta_idx
-        
-        if last_idx < len(self.text):
-            yield self.text[last_idx:], last_attrs
+
+        for start, end, attrs in self._attributes.iterchunks():
+            yield self._text[start:end], attrs
             
     @property
     def text(self):
@@ -387,28 +470,9 @@ class AttributedString(object):
         left = self._text[:index]
         right = self._text[index:] if index is not None else ''
         self._text = left + text + right
-
-        text_len = len(text)
-        if index is not None:
-            for attr in self._attributes.values():
-                attr.splice(index, text_len)
-        else:
-            for attr in self._attributes.values():
-                attr.length = len(self._text)
-
-
-        if astr is not None:
-            offset = index
-
-            if offset is None:
-                offset = len(self._text) - len(text)
-            elif offset < 0:
-                offset += len(self._text) - len(text)
-
-            for chunk, attrs in astr.iterchunks():
-                for attr, value in attrs.items():
-                    self.set_attribute(offset, offset + len(chunk), attr, value)
-                offset += len(chunk)
+        
+        numeric_index = index if index is not None else len(self._text)
+        self._attributes.splice(numeric_index, len(text))
 
     def append(self, text):
         '''
@@ -432,8 +496,7 @@ class AttributedString(object):
         self._text = left + right
         
         text_len = stop - start
-        for attr in self._attributes.values():
-            attr.splice(start, -text_len)
+        self._attributes.splice(start, -text_len)
 
     
     
