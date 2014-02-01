@@ -90,4 +90,8 @@ menu(2,
      -1,
      keybinding=Keys.ctrl.braceleft)
 
+try:
+    import stemrc
+except ImportError:
+    pass
 

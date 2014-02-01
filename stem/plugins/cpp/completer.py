@@ -6,7 +6,7 @@ from stem.api import interactive
 from stem.core.responder import Responder
 from stem.core import notification_queue, AttributedString
 from stem.control.interactive import dispatcher as interactive_dispatcher
-
+from stem import options
 from stem.buffers import Span, Cursor
 from stem.plugins.semantics.completer import AbstractCompleter
 
@@ -19,6 +19,11 @@ import textwrap
 from xmlrpc.client import ServerProxy
 from xmlrpc.server import SimpleXMLRPCServer
 
+try:
+    options.LibClangDir
+except AttributeError:
+    options.LibClangDir = None
+
 
 in_main_thread = notification_queue.in_main_thread
 
@@ -29,6 +34,15 @@ def _as_posix_or_none(x):
         return x.as_posix()
 
 
+def get_path_to_clangserver():
+    import pathlib
+    return pathlib.Path(__file__).parent / 'clangserver.nonpkg'
+
+def find_compilation_db(buffer_file):
+    from stem.util.path import search_upwards
+    return next(search_upwards(buffer_file, 'compile_commands.json'), None)
+
+# (function for testing purposes)
 @interactive('lt')
 def lt(responder: object):
     interactive_dispatcher.dispatch(responder, 'edit', '/Users/Sam/Desktop/clangserver/testproj/src/main.cc')
@@ -52,7 +66,18 @@ class CXXCompleter(AbstractCompleter):
             logging.debug('semantic engine server responded at %r', addr)
             host, port = addr
             self.proxy = ServerProxy('http://{}:{}'.format(host, port))
-            self.proxy.enroll_compilation_database(self.buf_ctl.path.parent.parent.as_posix())
+            if options.LibClangDir is not None:
+                self.proxy.set_clang_path(str(options.LibClangDir))
+
+            buffer_path = self.buf_ctl.path
+            compilation_db = find_compilation_db(buffer_path)
+
+            if compilation_db is not None:
+                self.proxy.enroll_compilation_database(compilation_db.parent.as_posix())
+            else:
+                logging.warning('Unable to find compilation database in parents of %r.',
+                                buffer_path.as_posix())
+
             self.__doc = None
             address_callback_handler.shutdown()
             logging.debug('success: terminating address callback server')
@@ -62,10 +87,16 @@ class CXXCompleter(AbstractCompleter):
         self.pool = multiprocessing.dummy.Pool(processes=1)
         self.pool.apply_async(address_callback_handler.serve_forever)
         logging.debug('launching semantic engine server')
-        self.proc = subprocess.Popen([
-            '/Users/Sam/Desktop/clangserver/run.sh',
-            'http://{}:{}'.format(*address_callback_handler.server_address)
-        ])
+        clangserver_path = get_path_to_clangserver()
+        self.proc = subprocess.Popen(
+            [
+                'python2.7',
+                (clangserver_path / 'run.py').as_posix(),
+                'http://{}:{}'.format(*address_callback_handler.server_address),
+            ],
+            env={'PYTHONPATH': clangserver_path.as_posix()}
+        )
+
 
 
     @staticmethod
