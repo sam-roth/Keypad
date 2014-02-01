@@ -106,7 +106,12 @@ class BufferSetController(Responder):
 
         else:
             self.view.next_responder = self
-        self.view.path = self.view.active_tab.controller.path if self.view.active_tab else None
+        
+        if self.view:
+            if self.view.active_tab and self.view.active_tab.controller:
+                self.view.path = self.view.active_tab.controller.path
+            else:
+                self.view.path = None
             
     def _after_buffer_modified_changed(self, val=None):
         if self._active_buffer_controller:
