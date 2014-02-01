@@ -5,7 +5,6 @@ from stem.api import interactive
 from stem.core.responder import Responder
 from stem.core import notification_queue, AttributedString
 from stem.buffers import Span, Cursor
-from stem.control import colors
 import logging
 
 import re

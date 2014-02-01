@@ -4,7 +4,6 @@ import re
 
 import pathlib
 
-from .                          import syntax
 from .cua_interaction           import CUAInteractionMode
 from ..                         import util
 from ..buffers                  import Cursor, BufferManipulator, Buffer, Span, Region

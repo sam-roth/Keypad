@@ -9,7 +9,6 @@ import math
 
 class TextViewSettings(object):
     def __init__(self, scheme):
-        from ..control import colors
 
         self.scheme = scheme
 

@@ -2,7 +2,6 @@
 
 import weakref, types, re
 
-from .                          import syntax, colors
 from .buffer_controller         import BufferController
 from ..core.tag                 import autoconnect, autoextend
 from ..core                     import notification_queue, AttributedString
@@ -26,12 +25,6 @@ def setup_buffer(controller, path):
             autoindent=True
         )
         controller.refresh_view()
-
-
-#@autoconnect(BufferController.buffer_needs_highlight,
-#             lambda tags: tags.get('syntax') == 'python')
-def python_syntax_highlighting(controller):
-    syntax.python_syntax(controller.buffer)
 
 @autoconnect(BufferController.user_changed_buffer, 
              lambda tags: tags.get('autoindent'))

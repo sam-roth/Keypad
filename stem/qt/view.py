@@ -86,12 +86,9 @@ class TextView(QAbstractScrollArea):
         already exist.
         '''
         
-        try:
-            if self._completion_view is None:
-                self._completion_view = CompletionView(parent=self, settings=self.settings)
-                self._completion_view.key_press += self.key_press
-        except:
-            raise RuntimeError()
+        if self._completion_view is None:
+            self._completion_view = CompletionView(parent=self, settings=self.settings)
+            self._completion_view.key_press += self.key_press
 
 
         return self._completion_view
@@ -253,21 +250,12 @@ class TextView(QAbstractScrollArea):
         self.update_plane_size()
 
     def _viewport_paint(self, event):
-
-        #if time.monotonic() - self._last_paint_time < self._update_rate_limit:
-        #    self.viewport().update() # defer
-        #    return
-
-
-        #self._last_paint_time = time.monotonic()
-            
-
         painter = QPainter(self.viewport())
-        area_size = self.viewport().size()
-        self.verticalScrollBar().setPageStep(self.plane_size[0])
-        self.verticalScrollBar().setRange(0, len(self.lines))
-
         with ending(painter):
+            area_size = self.viewport().size()
+            self.verticalScrollBar().setPageStep(self.plane_size[0])
+            self.verticalScrollBar().setRange(0, len(self.lines))
+
             if self.disable_partial_update or not self._partial_redraw_ok:
                 painter.setCompositionMode(QPainter.CompositionMode_Source)
                 painter.fillRect(self.rect(), self.settings.q_bgcolor)
@@ -329,15 +317,15 @@ class TextView(QAbstractScrollArea):
 
     def _paint_to(self, device):
         painter = QPainter(device)
-        painter.setFont(self.font())
-    
-        should_draw_cursor = self.hasFocus() or (self.completion_view and self.completion_view.hasFocus())
-
-        if self._prevent_partial_redraw or self.disable_partial_update:
-            self._partial_redraw_ok = False
-            self._prevent_partial_redraw = False
-
         with ending(painter):
+            painter.setFont(self.font())
+        
+            should_draw_cursor = self.hasFocus() or (self.completion_view and self.completion_view.hasFocus())
+
+            if self._prevent_partial_redraw or self.disable_partial_update:
+                self._partial_redraw_ok = False
+                self._prevent_partial_redraw = False
+
             cursor_color = to_q_color(self.settings.scheme.cursor_color)
             painter.setPen(cursor_color)
             painter.setBrush(cursor_color)
