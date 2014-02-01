@@ -31,6 +31,7 @@ class BufferSetView(Responder, QMainWindow):
         self._command_for_action = {}
         self._item_for_action = {}
         self._active_view = None
+        self._active_tab = None
 
         self._split = split = QSplitter(Qt.Vertical, self)
 
@@ -50,7 +51,11 @@ class BufferSetView(Responder, QMainWindow):
         qApp.focusChanged.connect(self.__app_focus_change)
 
         self.rebuild_menus()
+    
 
+    @property
+    def active_tab(self):
+        return self._active_tab
 
 
     def next_tab(self, n_tabs=1):
@@ -245,6 +250,7 @@ class BufferSetView(Responder, QMainWindow):
         self.active_view_changed(window.widget() if window is not None else None)
         if window:
             window.setWindowState(Qt.WindowMaximized)
+        self._active_tab = window.widget() if window else None
 
     @property
     def active_view(self): 
@@ -274,7 +280,7 @@ class BufferSetView(Responder, QMainWindow):
                 self._mdi.activeSubWindow().setWindowTitle(val.name)
             else:
                 self._mdi.activeSubWindow().setWindowTitle('[unsaved]')
-        self.setWindowFilePath(str(val))
+        self.setWindowFilePath(str(val) if val else None)
 
 
     @property
