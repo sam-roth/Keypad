@@ -95,3 +95,6 @@ try:
 except ImportError:
     pass
 
+
+import stem.plugins.server
+stem.plugins.server.start_server()

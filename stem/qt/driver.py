@@ -91,7 +91,7 @@ class Application(AbstractApplication, QApplication, metaclass=ABCWithQtMeta):
         self.postEvent(self, _ProcessPosted())
 
 
-def _driver_main():
+def main():
     import sys
     import logging
     logfmt = '[%(asctime)s|%(module)s:%(lineno)d|%(levelname)s]\n  %(message)s'
@@ -126,4 +126,4 @@ def reload_all(app: Application):
 
 
 if __name__ == '__main__':
-    _driver_main()
+    main()

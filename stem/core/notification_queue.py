@@ -35,6 +35,8 @@ def register_post_handler(h):
     with _lock:
         _post_handlers.add(h)
 
+    # call the post handler to pump messages that have already arrived
+    h()
     return h
 
 def run_in_main_thread(n):
