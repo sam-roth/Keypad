@@ -105,16 +105,16 @@ class KeySequenceDict(collections.abc.MutableMapping):
 
     Simple Example:
     >>> k = KeySequenceDict(
-    ...     (key.left.optional(shift), 'left'),
-    ...     (key.right, 'right')
+    ...     (Keys.left.optional(Shift), 'left'),
+    ...     (Keys.right, 'right')
     ... )
-    >>> k[key.left]
+    >>> k[Keys.left]
     'left'
-    >>> k[key.right]
+    >>> k[Keys.right]
     'right'
-    >>> k[shift.left]
+    >>> k[Shift.left]
     'left'
-    >>> k[shift.right]
+    >>> k[Shift.right]
     Traceback (most recent call last):
       File "<ipython-input-26-69e4e4544a54>", line 1, in <module>
         k[shift.right]
@@ -127,24 +127,24 @@ class KeySequenceDict(collections.abc.MutableMapping):
 
     More thorough example:
     >>> d = KeySequenceDict(
-    ...     (key.left.optional(shift), 'left'),
-    ...     (key.right.optional(shift), 'right'),
-    ...     (key.up, 'up'),
-    ...     (ctrl.alt.delete.optional(shift.meta), 'restart'),
+    ...     (Keys.left.optional(Shift), 'left'),
+    ...     (Keys.right.optional(Shift), 'right'),
+    ...     (Keys.up, 'up'),
+    ...     (Ctrl.alt.delete.optional(Shift.meta), 'restart'),
     ... )
     >>>
     >>> lookups = [
-    ...     key.left,
-    ...     shift.left,
-    ...     key.right,
-    ...     shift.right,
-    ...     key.up,
-    ...     shift.up,
-    ...     ctrl.alt.delete,
-    ...     ctrl.alt.shift.delete,
-    ...     ctrl.alt.meta.delete,
-    ...     ctrl.delete,
-    ...     ctrl.alt.shift.meta.delete
+    ...     Keys.left,
+    ...     Shift.left,
+    ...     Keys.right,
+    ...     Shift.right,
+    ...     Keys.up,
+    ...     Shift.up,
+    ...     Ctrl.alt.delete,
+    ...     Ctrl.alt.shift.delete,
+    ...     Ctrl.alt.meta.delete,
+    ...     Ctrl.delete,
+    ...     Ctrl.alt.shift.meta.delete
     ... ]
     >>>
     >>> for lookup in lookups:
@@ -237,11 +237,11 @@ class KeySequenceBuilder(object):
     front-ends (e.g. Curses).
 
     To create a SimpleKeySequence object, use an expression like one of these:
-    >>> str(key.esc)
+    >>> str(Keys.esc)
     'Esc'
-    >>> str(ctrl.esc)
+    >>> str(Ctrl.esc)
     'Ctrl+Esc'
-    >>> str(ctrl.alt.esc)
+    >>> str(Ctrl.alt.esc)
     'Ctrl+Alt+Esc'
     '''
     _instances = {}

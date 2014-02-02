@@ -1,7 +1,7 @@
 import logging
 
 from collections import defaultdict
-from ..util import deprecated
+from ..util import deprecated, alphabetical_dict_repr
 
 def identity(x): return x
 
@@ -329,7 +329,7 @@ class AttributedString(object):
     AttributedString(('Hello, ', {'italic': True}), ('world!', {'italic': False}))
     >>> astr.set_attribute(-6, -1, 'color', 'blue')
     >>> astr
-    AttributedString(('Hello, ', {'italic': True}), ('world', {'italic': False, 'color': 'blue'}), ('!', {'color': None}))
+    AttributedString(('Hello, ', {'italic': True}), ('world', {'color': 'blue', 'italic': False}), ('!', {'color': None}))
 
 
 
@@ -568,7 +568,11 @@ class AttributedString(object):
 
 
     def __repr__(self):
-        return 'AttributedString(' + ', '.join(map(str, self.iterchunks())) + ')'
+        body = ', '.join(
+            '({!r}, {})'.format(chunk, alphabetical_dict_repr(deltas))
+            for (chunk, deltas) in self.iterchunks()
+        )
+        return 'AttributedString(' + body + ')'
 
     
 

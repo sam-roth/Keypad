@@ -29,6 +29,12 @@ def dump_object(obj):
     return header + body + end
 
 
+def alphabetical_dict_repr(dictionary):
+    return '{' + ', '.join(
+        '{!r}: {!r}'.format(k, v) 
+        for (k, v) in sorted(dictionary.items(), key=lambda x: x[0])) + '}'
+
+
 def clamp(lo, hi, val):
     if val < lo:
         return lo
