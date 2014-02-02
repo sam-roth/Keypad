@@ -7,6 +7,19 @@ import pathlib
 import stem.plugins
 load_plugins(stem.plugins.__path__, 'stem.plugins.')
 
+import platform 
+
+
+if platform.system() == 'Darwin':
+    PortCtrl        = Keys.meta
+    PortDiamond     = Keys.ctrl
+    PortMeta        = Keys.ctrl
+else:
+    PortCtrl        = Keys.ctrl
+    PortDiamond     = Keys.ctrl
+    PortMeta        = Keys.meta
+
+
 
 submenu(0, 'File')
 
@@ -52,7 +65,7 @@ menu(3,
 menu(4,    
      'Edit/Complete',
      'complete',
-     keybinding=Keys.meta.space)
+     keybinding=PortCtrl.space)
 
 menu(5,
      'Edit/Indent',
