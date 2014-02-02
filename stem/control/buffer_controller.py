@@ -312,6 +312,13 @@ def getpwd(first_responder: object):
     
     writer.write(str(os.path.abspath(os.path.curdir)))
 
+@interactive('cd')
+def chdir(r: object, newdir: 'Path'):
+    import os
+    os.chdir(newdir)
+
+    getpwd(r)
+
 
 import ast
 

@@ -8,6 +8,7 @@ from ..buffers.buffer_protector import BufferProtector
 import logging
 import types
 from ..util import ImmutableListView
+from .interactive import run
 
 class PromptWriter(object):
     def write(self, text):
@@ -27,7 +28,8 @@ class CommandLineInteractionMode(CUAInteractionMode):
             (Keys.return_,          lambda evt: self.accept()),
             (Keys.up,               lambda evt: self.prev_history_item()),
             (Keys.down,             lambda evt: self.next_history_item()),
-            (Keys.esc,              lambda evt: self.cancelled())
+            (Keys.esc,              lambda evt: self.cancelled()),
+            (Keys.tab,              lambda evt: run('complete'))
         ])
 
         self.__prompt = ': '
@@ -36,6 +38,7 @@ class CommandLineInteractionMode(CUAInteractionMode):
         self.__current_cmdline = ''
 
         self.controller.manipulator.executed_change.connect(self.__on_user_buffer_chg)
+        self.controller.view.should_override_app_shortcut.connect(self.intercept_app_shortcut)
         self.__protector = BufferProtector(self.controller.manipulator)
         self.__wrote_newline = False
         with self.controller.history.transaction():
@@ -73,6 +76,16 @@ class CommandLineInteractionMode(CUAInteractionMode):
 #            super()._on_key_press(evt)
 #
 
+    def intercept_app_shortcut(self, event):
+        if Keys.tab.matches(event.key):
+            event.intercept()
+            run('complete')
+
+
+    @property
+    def cmdline_col(self):
+        return len(self.__prompt)
+
     @property
     def current_cmdline(self):
         return self.__current_cmdline
@@ -85,11 +98,15 @@ class CommandLineInteractionMode(CUAInteractionMode):
         Cursor(self.controller.buffer).last_line().end().insert('\n' + str(text))
         self.__next_line()
 
-    def __on_user_buffer_chg(self, chg):
+    def update_cmdline(self):
         self.__history_pos = 0
         home = Cursor(self.controller.buffer).last_line().home().right(len(self.__prompt))
         end = home.clone().end()
         self.__current_cmdline = home.text_to(end) 
+
+
+    def __on_user_buffer_chg(self, chg):
+        self.update_cmdline()
 
     def __next_line(self, add_newline=True):
         prot_end_curs = Cursor(self.controller.buffer).last_line().end()
@@ -106,6 +123,7 @@ class CommandLineInteractionMode(CUAInteractionMode):
         self.controller.history.clear()
 
     def accept(self):
+        self.update_cmdline()
         if not self.__current_cmdline:
             self.cancelled()
             return
@@ -125,11 +143,11 @@ class CommandLineInteractionMode(CUAInteractionMode):
 
         if self.accepted.errors:
             error = self.accepted.errors[0]
-            from ..core import notification_center
+            from ..core import notification_queue
             def error_shower():
                 self.show_error('{} [{}]'.format(str(error), type(error).__name__))
 
-            notification_center.post(error_shower)
+            notification_queue.run_in_main_thread(error_shower)
 
 
 

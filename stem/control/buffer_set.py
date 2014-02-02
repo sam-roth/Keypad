@@ -254,7 +254,7 @@ def gui_edit(bufs: BufferSetController):
 import ast, pathlib
 
 @interactive('edit', 'e')
-def edit(bufs: BufferSetController, path):
+def edit(bufs: BufferSetController, path: "Path"):
     if path.startswith('"') or path.startswith("'"):
         path = ast.literal_eval(path)        
 

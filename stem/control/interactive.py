@@ -64,6 +64,9 @@ class InteractiveDispatcher(object):
         self._registry[name][annots[0]] = impl
         #self._registry[name].append((annots[0], impl))
 
+    def keys(self):
+        return self._registry.keys()
+
     def find_all(self, name):
         return self._registry[name].items()
     

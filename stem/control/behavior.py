@@ -22,7 +22,7 @@ def defer(_: object, *args):
 
 
 @interactive('idecl')
-def find_interactive_declaration(_: object, interactive_name):
+def find_interactive_declaration(_: object, interactive_name: 'Interactive'):
     '''
     idecl <interactive_name>
 
@@ -50,7 +50,7 @@ def find_interactive_declaration(_: object, interactive_name):
         writer.write('{interactive_name}({tyname}, ...)\n  {filename}:{linenum}'.format(**locals()))
 
 @interactive('ihelp', 'ih')
-def interactive_command_help(_: object, interactive_name):
+def interactive_command_help(_: object, interactive_name: 'Interactive'):
     '''
     ih[elp] <interactive_name>
     
