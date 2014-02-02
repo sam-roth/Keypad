@@ -13,9 +13,13 @@ class TextViewSettings(object):
         self.scheme = scheme
 
         fontname, fontsize = options.TextViewFont
+        
 
         self.q_font    = QFont(fontname)
         self.q_font.setPointSizeF(fontsize)
+
+        if options.TextViewIntegerMetrics:
+            self.q_font.setStyleStrategy(QFont.ForceIntegerMetrics | self.q_font.styleStrategy())
             
         self.q_completion_bgcolor = to_q_color(self.scheme.bg)
         self.q_completion_bgcolor.setAlphaF(0.7)

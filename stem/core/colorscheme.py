@@ -25,13 +25,8 @@ class Colorscheme(object):
         
         color = Color.from_hex(color)
         h,s,v = color.hsv
-        if v >= 127:
-            v -= 25 * steps
-        else:
-            v += 25 * steps
         
-        
-        v = clamp(0, 256, v)
+        v = (v + 16 * steps) % 256
         
         return Color.from_hsv(h, s, v, color.alpha)
 
@@ -63,6 +58,7 @@ class AbstractSolarized(Colorscheme):
     
     def __init__(self):
         super().__init__()
+        self.lexical_categories = self.lexical_categories.copy()
         self.lexical_categories.update(
             preprocessor=dict(color=self._orange),
             keyword=dict(color=self._green),

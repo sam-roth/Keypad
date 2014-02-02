@@ -8,4 +8,5 @@ DefaultColorScheme  = colorscheme.SolarizedDark()
 DefaultDriverMod    = 'stem.qt.driver'
 
 
-TextViewFont        = 'Menlo', 12
+TextViewFont                    = 'Menlo', 12
+TextViewIntegerMetrics          = False

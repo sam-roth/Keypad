@@ -1,8 +1,14 @@
 
+try:
+    import stemrc
+except ImportError:
+    pass
+
 
 from .api import *
 
 import pathlib
+
 
 import stem.plugins
 load_plugins(stem.plugins.__path__, 'stem.plugins.')
@@ -103,10 +109,6 @@ menu(2,
      -1,
      keybinding=Keys.ctrl.braceleft)
 
-try:
-    import stemrc
-except ImportError:
-    pass
 
 
 import stem.plugins.server
