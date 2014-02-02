@@ -63,8 +63,11 @@ class InteractiveDispatcher(object):
 
         self._registry[name][annots[0]] = impl
         #self._registry[name].append((annots[0], impl))
+
+    def find_all(self, name):
+        return self._registry[name].items()
     
-    def dispatch(self, responder, name, *args):
+    def find(self, responder, name, *args):
         handlers = self._registry[name]
 
         tried = set()
@@ -77,19 +80,25 @@ class InteractiveDispatcher(object):
                 except KeyError:
                     tried.add(ty)
                 else:
-                    handler(resp, *args)
-                    return True
+                    return ty, resp, handler
             else:
                 for r in resp.next_responders:
-                    if rec_helper(r):
-                        return True
+                    result = rec_helper(r)
+                    if result is not None:
+                        return result
                 else:
-                    return False
+                    return None
         
-        if not rec_helper(responder):
+        result = rec_helper(responder)
+
+        if result is None:
             raise errors.UserError('No match for command ' + name + '. Tried: ' + ', '.join(map(str, tried)))
 
+        return result
 
+    def dispatch(self, responder, name, *args):
+        ty, resp, handler = self.find(responder, name, *args)
+        handler(resp, *args)
 
 
 
