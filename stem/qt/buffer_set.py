@@ -11,21 +11,11 @@ from ..core.responder import Responder
 
 
 import logging
-
-
-class CloseEvent(object):
-    def __init__(self):
-        self.is_intercepted = False
-
-    def intercept(self):
-        self.is_intercepted = True
-
 class BufferSetView(Responder, QMainWindow):
 
     def __init__(self):
         super().__init__()
         
-        self.setAttribute(Qt.WA_QuitOnClose, False)
         
         self._menus_by_hier = {}
         self._command_for_action = {}

@@ -9,6 +9,15 @@ from ..core.color import Color
 
 import abc
 
+
+
+class CloseEvent(object):
+    def __init__(self):
+        self.is_intercepted = False
+
+    def intercept(self):
+        self.is_intercepted = True
+
 class KeyEvent(namedtuple('KeyEvent', 'key text')):
     
     def __new__(cls, *args, **kw):

@@ -60,39 +60,38 @@ class BufferSetController(Responder):
 
         self._command_line_controller.add_tags(cmdline=True)
 
-        self.view.will_close.connect(self._before_view_close)
+        self.view.will_close.connect(self.__before_view_close)
         
     def __after_cmdline_cancelled(self):
         if self._last_active_buffer_controller is not None:
             self.view.active_view = self._last_active_buffer_controller.view
 
+    def __before_subview_close(self, sender, event):
+        view = sender
+        controller = view.controller
 
-    def _before_view_close(self, event):
-        
-        try:
-            paths = [c.path for c in self._buffer_controllers if c.is_modified]
-            if paths:
-                non_none_paths = [p for p in paths if p is not None]
-                result = self.view.show_save_all_prompt(non_none_paths, len(paths)-len(non_none_paths))
-                if result == 'review':
-                    for bc in list(self._buffer_controllers):
-                        if not self.gui_close_buffer(bc):
-                            event.intercept()
-                            break
-                        
-                elif result == 'discard-all':
-                    for bc in self._buffer_controllers:
-                        if bc.is_modified:
-                            bc.is_modified = False
-                            bc.remove_tags(['path'])
-                            bc.view.close()
-                else:
+        self.view.active_view = view
+        if controller.is_modified:
+            answer = self.view.show_save_prompt(controller.path)
+            
+            if answer == 'save':
+                from . import buffer_controller
+                if not buffer_controller.gui_save(controller):
                     event.intercept()
 
-        except Exception as exc:
-            self.view.show_internal_failure_msg()
-            event.intercept()
+            elif answer == 'discard':
+                controller.is_modified = False
+            else:
+                event.intercept()
 
+        if not event.is_intercepted:
+            self.remove_buffer_controller(controller)
+
+    def __before_view_close(self, event):
+        for bc in list(self._buffer_controllers):
+            if not bc.view.close():
+                event.intercept()
+                break
 
     def _after_active_view_change(self, view):
         if view is not None and view.controller is not None:
@@ -165,32 +164,11 @@ class BufferSetController(Responder):
         if controller.is_modified:
             raise errors.BufferModifiedError('Buffer is modified. To discard, use :destroy.')
         else:
-            self.remove_buffer_controller(controller)
+            controller.view.close()
 
     def gui_close_buffer(self, controller=None):
         controller = self.required_active_buffer_controller(controller)
-        self.view.active_view = controller.view
-        if controller.is_modified:
-            answer = self.view.show_save_prompt(controller.path)
-            
-            if answer == 'save':
-                from . import buffer_controller
-                buffer_controller.gui_save(controller)
-                self.close_buffer(controller)
-                return True
-            elif answer == 'discard':
-                controller.is_modified = False
-                self.close_buffer(controller)
-                return True
-            # otherwise, do nothing.
-            else:
-                return False
-
-        else:
-            self.close_buffer(controller)
-            return True
-
-
+        controller.view.close()
 
     def set_tag(self):
         tag_str = self.view.show_input_dialog('Set tags (DEBUGGING ONLY!!!). Use Python kwargs-style expression.')
@@ -218,6 +196,7 @@ class BufferSetController(Responder):
                 return c
 
     def add_buffer_controller(self, buffer_controller):
+        buffer_controller.view.will_close.connect(self.__before_subview_close, add_sender=True)
         self._buffer_controllers.add(buffer_controller)
         buffer_controller.buffer_set = self
 
@@ -271,12 +250,6 @@ def gui_quit_buffer(bufs: BufferSetController):
 
 @interactive('gui_quit_all', 'gquita', 'gqa')
 def gui_quit_all_buffers(bufs: BufferSetController):
-    try:
-        while bufs.gui_close_buffer():
-            pass
-    except errors.NoBufferActiveError:
-        pass
-
     bufs.view.close()
 
 @interactive('destroy')

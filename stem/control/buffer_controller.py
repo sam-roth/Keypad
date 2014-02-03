@@ -280,9 +280,11 @@ def gui_write(buff: BufferController):
 @interactive('gui_save', 'gsave', 'gsv')
 def gui_save(buff: BufferController):
     if not buff.path:
-        gui_write(buff)
+        return gui_write(buff)
     else:
         write(buff)
+
+        return True
 
 
 

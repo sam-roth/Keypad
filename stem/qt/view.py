@@ -60,24 +60,25 @@ class TextView(QAbstractScrollArea):
             mouse_cursor.setShape(Qt.IBeamCursor)
             self.setCursor(mouse_cursor)
 
-            #if provide_completion_view:
-            #    self._completion_view = CompletionView(parent=self, settings=self.settings)
-            #    self._completion_view.hide()
-            #
-            #    self._completion_view.key_press += self.key_press
-            #    self._completion_view.done      += self.completion_done
-            #    self._completion_view.row_changed += self.completion_row_changed
-            #else:
-
-
-            #self._last_paint_time = 0
-            #self._update_rate_limit = 1.0/30
             self.disable_partial_update = False
             self.controller = None        
 
         except:
             logging.exception('error initting TextView')
             raise
+
+
+    @signal.Signal
+    def will_close(self, event):
+        pass
+
+    def closeEvent(self, event):
+        ce = CloseEvent()
+        self.will_close(ce)
+        if ce.is_intercepted:
+            event.ignore()
+            return
+
 
     @property
     def completion_view(self):
