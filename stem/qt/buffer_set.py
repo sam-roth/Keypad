@@ -237,10 +237,10 @@ class BufferSetView(Responder, QMainWindow):
             interactive.dispatcher.dispatch(self, 'show_error', exc)
 
     def _on_subwindow_activated(self, window):
+        self._active_tab = window.widget() if window else None
         self.active_view_changed(window.widget() if window is not None else None)
         if window:
             window.setWindowState(Qt.WindowMaximized)
-        self._active_tab = window.widget() if window else None
 
     @property
     def active_view(self): 
