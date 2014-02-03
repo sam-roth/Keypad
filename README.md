@@ -6,6 +6,10 @@ is not to be used for anything serious at this point.**
 I'll post a real README in the next few days.
 
 
+## Screenshot ([more](https://bitbucket.org/saroth/stem/wiki/Screenshots))
+
+![Editing Python Code](https://bitbucket.org/saroth/stem/wiki/screenshots/overview.png)
+
 ## License
 
 Stem Text Editor
