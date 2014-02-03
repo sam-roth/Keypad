@@ -149,6 +149,8 @@ class BufferSetController(Responder):
                 with bcontr.history.ignoring():
                     bcontr.replace_from_path(path)
 
+            bcontr.is_modified = False
+
             self._after_active_view_change(view)
 
         else:
