@@ -9,6 +9,7 @@ I'll post a real README in the next few days.
 ## License
 
 Stem Text Editor
+
 Copyright © 2014 Sam Roth.
 
 This program is free software: you can redistribute it and/or modify it under
