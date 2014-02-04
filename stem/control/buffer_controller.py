@@ -52,6 +52,11 @@ class BufferController(Tagged, Responder):
             self.interaction_mode = CUAInteractionMode(self)
         else:
             self.interaction_mode = None
+
+        self.instance_tags_added.connect(self.__after_tags_added)
+
+    
+    
     
     def save(self):
         if self.path is not None:
@@ -67,6 +72,16 @@ class BufferController(Tagged, Responder):
 
     def _after_history_transaction_committed(self):
         self.refresh_view()
+
+    def __after_tags_added(self, tags):
+        if 'path' in tags:
+            self.path_changed()
+
+
+    @Signal
+    def path_changed(self):
+        pass
+
         
     @property
     def is_modified(self):

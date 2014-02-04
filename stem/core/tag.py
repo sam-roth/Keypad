@@ -14,6 +14,14 @@ class Tagged(object):
         self.extensions = {}
 
     @signal.Signal
+    def instance_tags_added(self, tags):
+        pass
+
+    @signal.Signal
+    def instance_tags_removed(self, tags):
+        pass
+
+    @signal.Signal
     def needs_init(self):
         pass
 
@@ -34,6 +42,7 @@ class Tagged(object):
 
         self.__tags.update(kw)
         self.tags_added(self, kw)
+        self.instance_tags_added(kw)
     
     def remove_tags(self, tags):
         tag_kv = {}
@@ -45,6 +54,7 @@ class Tagged(object):
                 pass
 
         self.tags_removed(self, tag_kv)
+        self.instance_tags_removed(tag_kv)
 
 
 

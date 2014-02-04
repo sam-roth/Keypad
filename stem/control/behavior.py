@@ -76,8 +76,9 @@ def interactive_command_help(_: object, interactive_name: 'Interactive'):
 
 
 
-@autoconnect(BufferController.loaded_from_path)
-def setup_buffer(controller, path):
+@autoconnect(BufferController.path_changed)
+def setup_buffer(controller):
+    path = controller.path
     if path.suffix == '.py':
         controller.add_tags(
             syntax='python',
