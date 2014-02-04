@@ -262,6 +262,12 @@ class StringAttributes(object):
 
         self._length += delta
     
+
+    def insert(self, index, attrs):
+        self.splice(index, attrs.length)
+        end = attrs.length + index
+        for begin, _, delta in attrs.iterchunks():
+            self.set_attributes(begin, end, **delta)
     
     def find_deltas(self):
         deltas = defaultdict(dict)
@@ -472,7 +478,11 @@ class AttributedString(object):
         self._text = left + text + right
         
         numeric_index = index if index is not None else len(self._text)
-        self._attributes.splice(numeric_index, len(text))
+        if astr is not None:
+            self._attributes.insert(numeric_index, astr._attributes)
+        else:
+            self._attributes.splice(numeric_index, len(text))
+
 
     def append(self, text):
         '''

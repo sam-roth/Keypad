@@ -2,20 +2,25 @@
 from .color import Color
 from ..util import clamp
 import random
+import logging
 
 class Colorscheme(object):
     
     fg = Color.from_hex('#000')
     bg = Color.from_hex('#FFF')
-    
-    lexical_categories = {}
 
+    selection_bg = fg
+    selection_fg = bg
+    
     fallback_sat = 0.5
     fallback_val = 128
 
+    def __init__(self):
+        self.lexical_categories = {
+        }
+
     def lexical_category_attrs(self, lexcat):
         if lexcat not in self.lexical_categories:
-            print('will generate missing', lexcat)
             self.lexical_categories[lexcat] = dict(
                 color=Color.from_hsv(random.random(), self.fallback_sat, self.fallback_val))
 
@@ -58,7 +63,6 @@ class AbstractSolarized(Colorscheme):
     
     def __init__(self):
         super().__init__()
-        self.lexical_categories = self.lexical_categories.copy()
         self.lexical_categories.update(
             preprocessor=dict(color=self._orange),
             keyword=dict(color=self._green),
@@ -66,7 +70,7 @@ class AbstractSolarized(Colorscheme):
             literal=dict(color=self._cyan),
             escape=dict(color=self._red),
             todo=dict(color=self._magenta),
-            docstring=dict(color=self._violet)
+            docstring=dict(color=self._violet),
         )
 
 
@@ -74,6 +78,11 @@ class SolarizedDark(AbstractSolarized):
     
     fg = AbstractSolarized._base0
     bg = AbstractSolarized._base03
+
+    selection_fg = AbstractSolarized._base03
+    selection_bg = AbstractSolarized._base01
+
+    cur_line_bg = AbstractSolarized._base02
 
     fallback_val = fg.hsv[2]
 

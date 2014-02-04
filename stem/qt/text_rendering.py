@@ -4,7 +4,6 @@ from PyQt4.Qt import *
 from .qt_util import *
 from ..util.cascade_dict import CascadeDict
 from .. import options
-
 import math
 
 class TextViewSettings(object):
@@ -95,6 +94,12 @@ def paint_attr_text(painter, text, bounding_rect, cfg):
         sel_bgcolor = attributes.get('sel_bgcolor')
         sel_color   = attributes.get('sel_color')
 
+        if sel_bgcolor == 'auto':
+            sel_bgcolor = cfg.scheme.selection_bg
+
+        if sel_color == 'auto':
+            sel_color = cfg.scheme.selection_fg
+
 
             
         actual_color = sel_color or color
@@ -182,28 +187,75 @@ def render_attr_text(text, cfg):
     return pixmap
             
 
-def draw_attr_text(painter, rect, text, settings, partial=False):
+def apply_overlay(text, overlay):
+    text = text.clone()
+
+    for start, end, key, value in overlay:
+        text.set_attributes(start, end, **{key: value})
+
+    return text
+
+
+
+# Updates will be overlayed with a translucent red box if set to True.
+FLASH_RERENDER = False
+
+def draw_attr_text(painter, rect, text, settings, partial=False, overlay=frozenset()):
+    '''
+    Draw the AttributedString text, rerendering it if necessary. Use the
+    overlay formatting specified if any.
+
+    The overlay formatting should be specified as a frozenset of tuples of
+        start_pos, end_pos, key, value.
+
+    The overlay formatting will be applied to the string before displaying it.
+    '''
     cache_key = 'stem.view.draw_attr_text.pixmap'
     draw_pos_key = 'stem.view.draw_attr_text.pos'
+    overlay_key = 'stem.view.draw_attr_text.overlay_formatting'
+
     
+    # Ensure that we don't get a mutable set here. That would be bad. (I'm
+    # assuming that Python doesn't make a copy here if the set is already
+    # frozen.)
+    overlay = frozenset(overlay)
+
     pixmap = text.caches.get(cache_key)
 
-    no_cache            = pixmap is None
+    no_cache            = pixmap is None or \
+                          text.caches.get(overlay_key, frozenset()) != overlay
     should_draw_text    = not partial or no_cache or \
                           text.caches.get(draw_pos_key, None) != rect.topLeft()
     
 
     if no_cache:
-        pixmap = render_attr_text(text, settings)
+        if overlay:
+            text_to_draw = apply_overlay(text, overlay)
+            text.caches[overlay_key] = overlay
+        else:
+            text_to_draw = text
+            try:
+                del text.caches[overlay_key]
+            except KeyError:
+                pass
+
+        pixmap = render_attr_text(text_to_draw, settings)
         text.caches[cache_key] = pixmap
     
-    if should_draw_text:
+    if should_draw_text or (FLASH_RERENDER and text.caches.get('flashlast')):
         text.caches[draw_pos_key] = rect.topLeft()
         with restoring(painter):
             painter.setCompositionMode(QPainter.CompositionMode_Source)
             painter.fillRect(rect, settings.q_bgcolor)
         painter.drawPixmap(rect.topLeft(), pixmap)
+        if FLASH_RERENDER:
+            if no_cache:
+                painter.fillRect(rect, QColor.fromRgb(255, 0, 0, 64))
+                text.caches['flashlast'] = True
+            else:
+                text.caches['flashlast'] = False
 
+    
     return (should_draw_text, no_cache)
     
 

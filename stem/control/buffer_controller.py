@@ -7,7 +7,7 @@ import pathlib
 from .cua_interaction           import CUAInteractionMode
 from ..                         import util
 from ..buffers                  import Cursor, BufferManipulator, Buffer, Span, Region
-from ..core                     import AttributedString, errors, Signal, write_atomically
+from ..core                     import AttributedString, errors, Signal, write_atomically, color
 from ..core.tag                 import Tagged, autoconnect
 from ..core.attributed_string   import lower_bound
 from ..core.key                 import *
@@ -195,28 +195,18 @@ class BufferController(Tagged, Responder):
         
         # draw selection
         if anchor is not None:
-            selected_region = Span(curs, anchor)
+            selected_region = Span(curs, anchor).region
         else:
             selected_region = Region()
 
-        if full:
-            selected_region.set_attributes(sel_bgcolor='#666')
-        else:
-            previous_region = self._prev_region
+        
 
-            # areas in the currently selected region not in the previously
-            # selected region
-            added_region    = selected_region - previous_region
-
-            # areas in the previously selected region not in the currently selected
-            # region
-            removed_region  = previous_region - selected_region
-            
-            removed_region.set_attributes(sel_bgcolor=None)
-            added_region.set_attributes(sel_bgcolor='#666')
-
-
-        self._prev_region = selected_region
+        self.view.overlay_spans = []
+        for span in selected_region.spans:
+            self.view.overlay_spans.extend([
+                (span, 'sel_color', 'auto'),
+                (span, 'sel_bgcolor', 'auto')
+            ])
 
         
         if full:
