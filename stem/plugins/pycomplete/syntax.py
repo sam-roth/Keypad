@@ -27,7 +27,8 @@ def pylexer():
     Comment     = regex(r'#.*', COMMENT)
 
     HEX         = r'[a-fA-F0-9]'
-
+    
+    
     Esc1        = regex(r'''\\[abfnrtv'"\\]''', ESCAPE)
     Esc2        = regex(r'''\\\[0-7]{1,3}''', ESCAPE)
     Esc3        = regex(r'''\\x[a-fA-F0-9]{2}''', ESCAPE)
@@ -82,15 +83,20 @@ def pylexer():
 
 
     def make_raw_string(quote):
+        
+        
         return region(
             guard=regex(r"r" + quote),
-            exit=regex(r"(?<!\\)" + quote),
-            contains=[regex(r"\\" + quote, ESCAPE)],
+            exit=regex(r"\\\\" + quote + "|" + r"(?<!\\)" + quote),
+            contains=[regex(r"(?<!\\)\\" + quote, ESCAPE)],
             attrs=STRING
         )
 
     RSQString = make_raw_string("'")
     RDQString = make_raw_string('"')
+    
+    RTSQString = make_raw_string("'''")
+    RTDQString = make_raw_string('"""')
     
     NUMBER = dict(lexcat='literal')
 
@@ -115,7 +121,9 @@ def pylexer():
         FloatLiteral,
         Comment,
         FuncDef,
-        CommAt
+        CommAt,
+        RTSQString,
+        RTDQString,
     ]
 
     DQDoctest.contains = tuple(PythonLexers)
