@@ -3,6 +3,10 @@
 **Warning: This program is still very buggy and has many hardcoded options. It
 is not to be used for anything serious at this point.**
 
+**Note to Windows users: The program does not support Windows yet. It will start, 
+but many things don't work properly due to the lack of fork(). I will address
+this soon.**
+
 Stem is a text editor written in Python with a flexible plugin system. 
 
 ## Design Principles
