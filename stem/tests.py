@@ -13,6 +13,35 @@ buff_text = '''\
 '''
 
 
+class TestBuffer(unittest.TestCase):
+
+    def setUp(self):
+        self.buff = Buffer()
+        self.buff.insert((0,0), buff_text)
+
+    def test_content_correct(self):
+        assert self.buff.text == buff_text
+
+    def test_insert(self):
+        self.buff.insert((0,1), 'ab\ncd')
+
+        assert self.buff.text == '1ab\ncd2\n34\n56\n'
+
+    def test_insert2(self):
+        self.buff.insert((0,1), 'ab\ncd\n')
+
+        assert self.buff.text == '1ab\ncd\n2\n34\n56\n'
+
+    def test_insert_empty(self):
+        self.buff.insert((0,0), '')
+        assert self.buff.text == buff_text
+
+    def test_insert_newline(self):
+        self.buff.insert((0,0), '\n')
+        
+        assert self.buff.text == '\n12\n34\n56\n'
+        
+
 
 class TestSpan(unittest.TestCase):
 

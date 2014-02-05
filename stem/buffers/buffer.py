@@ -88,7 +88,7 @@ class Buffer(object):
             y += len(text_lines)-1
             
             line = self._lines[y]
-            line.insert(0, removed_text)
+            line.append(removed_text)
 
             result = (y, len(removed_text))
 
