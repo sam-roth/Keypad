@@ -7,9 +7,14 @@ Stem is a text editor written in Python with a flexible plugin system.
 
 ## Design Principles
 
-* **Hackability:** Unlike heavyweight IDEs such as Eclipse, Stem makes plugins simple plugins easy to write. There's an example on this page, and some larger ones in the `plugins` directory.
-* **Flexibility:** Stem uses a model-view-controller architecture to isolate the GUI from the text editing logic, allowing for the possibility of additional frontends, such as a Curses frontend. 
-* **Lack of Dogma:** Stem is an editor for everyone. There's no right or wrong way of using it.
+* **Hackability:** Unlike heavyweight IDEs such as Eclipse, Stem makes plugins
+  simple plugins easy to write. There's an example on this page, and some
+  larger ones in the `plugins` directory.
+* **Flexibility:** Stem uses a model-view-controller architecture to isolate
+  the GUI from the text editing logic, allowing for the possibility of
+  additional frontends, such as a Curses frontend. 
+* **Lack of Dogma:** Stem is an editor for everyone. There's no right or wrong
+  way of using it.
 
 ## Plugin Example: Autoindent
 
@@ -37,7 +42,23 @@ def autoindent(controller, chg):
 
 ## The Name
 
-The name of this project is likely to change in the future. "Stem" is a metaphor for the plugin architecture used by the editor. If the core of the editor is the stem, then the plugins are leaves.
+The name of this project is likely to change in the future. "Stem" is a
+metaphor for the plugin architecture used by the editor. If the core of the
+editor is the stem, then the plugins are leaves.
+
+## Installation and Running
+
+### Dependencies
+
+* [Python 3.3](http://www.python.org/)
+* [PyQt4](http://www.riverbankcomputing.com/software/pyqt/download)
+* [pathlib](https://pypi.python.org/pypi/pathlib/)
+
+### Running
+
+```
+python3.3 -m stem.qt.driver
+```
 
 ## License
 
