@@ -58,6 +58,12 @@ menu(1,
      'Edit/Redo',
      'redo',
      keybinding=Keys.ctrl.shift.z)
+
+menu(1.5,
+     'Edit/Cut',
+     'clipboard_cut',
+     keybinding=Keys.ctrl.x)
+
 menu(2,
      'Edit/Copy',
      'clipboard_copy',

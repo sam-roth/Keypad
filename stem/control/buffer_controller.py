@@ -238,6 +238,15 @@ def show_error(buff: BufferController, error):
     buff.interaction_mode.show_error(str(error) + ' [' + type(error).__name__ + ']')
 
 
+@interactive('clipboard_cut')
+def clipboard_cut(buff: BufferController):
+    if buff.anchor_cursor is not None:
+        clipboard_copy(buff)
+        with buff.history.transaction():
+            buff.anchor_cursor.remove_to(buff.canonical_cursor)
+        buff.anchor_cursor = None
+
+
 @interactive('clipboard_copy')
 def clipboard_copy(buff: BufferController):
     if buff.anchor_cursor is not None:
