@@ -57,7 +57,7 @@ editor is the stem, then the plugins are leaves.
 ### Running
 
 ```
-python3.3 -m stem.qt.driver
+python3.3 -m stem
 ```
 
 ## License
