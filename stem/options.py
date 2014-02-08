@@ -16,8 +16,6 @@ DefaultDriverMod    = 'stem.qt.driver'
 
 
 
-
-
 DefaultOtherFont                = 'Monospace', 10
 DefaultOSXFont                  = 'Menlo', 12
 DefaultWinFont                  = 'Consolas', 10

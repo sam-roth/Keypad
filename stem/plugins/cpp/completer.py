@@ -19,6 +19,8 @@ import textwrap
 from xmlrpc.client import ServerProxy
 from xmlrpc.server import SimpleXMLRPCServer
 
+from . import mp_helpers, worker
+
 try:
     options.LibClangDir
 except AttributeError:
@@ -42,13 +44,6 @@ def find_compilation_db(buffer_file):
     from stem.util.path import search_upwards
     return next(search_upwards(buffer_file, 'compile_commands.json'), None)
 
-# (function for testing purposes)
-@interactive('lt')
-def lt(responder: object):
-    interactive_dispatcher.dispatch(responder, 'edit', '/Users/Sam/Desktop/clangserver/testproj/src/main.cc')
-    interactive_dispatcher.dispatch(responder, 'tag', 'syntax', '"c++"')
-
-
 @autoextend(BufferController,
             lambda tags: tags.get('syntax') == 'c++')
 class CXXCompleter(AbstractCompleter):
@@ -58,45 +53,11 @@ class CXXCompleter(AbstractCompleter):
 
     def __init__(self, buf_ctl):
         super().__init__(buf_ctl)
-
-        address_callback_handler = SimpleXMLRPCServer(('127.0.0.1', 0), allow_none=True)
-
-        @in_main_thread
-        def use_address(addr):
-            logging.debug('semantic engine server responded at %r', addr)
-            host, port = addr
-            self.proxy = ServerProxy('http://{}:{}'.format(host, port))
-            if options.LibClangDir is not None:
-                self.proxy.set_clang_path(str(options.LibClangDir))
-
-            buffer_path = self.buf_ctl.path
-            compilation_db = find_compilation_db(buffer_path)
-
-            if compilation_db is not None:
-                self.proxy.enroll_compilation_database(compilation_db.parent.as_posix())
-            else:
-                logging.warning('Unable to find compilation database in parents of %r.',
-                                buffer_path.as_posix())
-
-            self.__doc = None
-            address_callback_handler.shutdown()
-            logging.debug('success: terminating address callback server')
-
-        logging.debug('launching callback server')
-        address_callback_handler.register_function(use_address, 'use_address')
-        self.pool = multiprocessing.dummy.Pool(processes=1)
-        self.pool.apply_async(address_callback_handler.serve_forever)
-        logging.debug('launching semantic engine server')
-        clangserver_path = get_path_to_clangserver()
-        self.proc = subprocess.Popen(
-            [
-                'python2.7',
-                (clangserver_path / 'run.py').as_posix(),
-                'http://{}:{}'.format(*address_callback_handler.server_address),
-            ],
-            env={'PYTHONPATH': clangserver_path.as_posix()}
-        )
-
+        self.worker = worker.WorkerManager()
+        self.worker.start()
+        self.engine = self.worker.SemanticEngine()        
+        self.engine.enroll_compilation_database(str(find_compilation_db(buf_ctl.path).parent))
+        
 
 
     @staticmethod
@@ -123,19 +84,6 @@ class CXXCompleter(AbstractCompleter):
 
     def _request_completions(self):
         line, col = self._start_pos
-        import pprint
-
-        def worker():
-            compls = self.proxy.completions(
-                self.buf_ctl.path.as_posix(),
-                line+1,
-                col+1,
-                [(self.buf_ctl.path.as_posix(), self.buf_ctl.buffer.text)]
-            )
-
-            return compls
-
-
 
         @in_main_thread
         def callback(compls):
@@ -146,7 +94,14 @@ class CXXCompleter(AbstractCompleter):
             except:
                 logging.exception('exception in c++ completion')
 
-        self.pool.apply_async(worker, callback=callback)
+        mp_helpers.call_async(
+            callback,
+            self.engine.completions,
+            self.buf_ctl.path.as_posix(),
+            line+1,
+            col+1,
+            [(self.buf_ctl.path.as_posix(), self.buf_ctl.buffer.text)]
+        )
 
 
     def _request_docs(self, index):
