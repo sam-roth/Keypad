@@ -52,11 +52,33 @@ editor is the stem, then the plugins are leaves.
 
 ## Installation and Running
 
-### Dependencies
+### Core Dependencies
 
 * [Python 3.3](http://www.python.org/)
 * [PyQt4](http://www.riverbankcomputing.com/software/pyqt/download)
 * [pathlib](https://pypi.python.org/pypi/pathlib/)
+
+### Included Plugin Dependencies
+
+#### C++ Completion
+
+* [Clang 3.5](http://clang.llvm.org)
+
+**Note:** In order to use Clang for code completion, you may need to add a file
+to your `PYTHONPATH` with the name `stemrc.py` and the following contents,
+substituting the path with one appropriate for your system.
+
+```
+#!python
+import stem.plugins.cpp.options
+stem.plugins.cpp.options.ClangLibrary = pathlib.Path('/Library/Developer/CommandLineTools/usr/lib/libclang.dylib')
+```
+
+
+#### Python Completion
+
+* [Jedi](http://jedi.jedidjah.ch/en/latest/)
+
 
 ### Running
 
