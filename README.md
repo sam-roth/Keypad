@@ -27,7 +27,7 @@ This is a plugin that maintains the indentation level when moving to a new line.
 ```
 #!python
 @autoconnect(BufferController.user_changed_buffer, 
-             lambda tags: tags.get('autoindent'))
+             lambda tags: tags.get('autoindent'))           # handler for buffers with tag "autoindent"
 def autoindent(controller, chg):
     if chg.insert.endswith('\n'):                           # user added a line
         beg_curs = Cursor(controller.buffer).move(*chg.pos) # move to the start of the inserted text
