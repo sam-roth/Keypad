@@ -5,10 +5,11 @@ import glob
 
 
 def search_upwards(path, glob):
-    path = pathlib.Path(path)
-    while path is not None:
-        yield from path.glob(glob)
-        path = path.parent
+    if path is not None:
+        path = pathlib.Path(path)
+        while path is not None and path.parent != path:
+            yield from path.glob(glob)
+            path = path.parent
 
         
 

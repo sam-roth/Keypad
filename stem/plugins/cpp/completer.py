@@ -56,7 +56,10 @@ class CXXCompleter(AbstractCompleter):
         self.worker = worker.WorkerManager()
         self.worker.start()
         self.engine = self.worker.SemanticEngine()        
-        self.engine.enroll_compilation_database(str(find_compilation_db(buf_ctl.path).parent))
+        
+        db = find_compilation_db(buf_ctl.path)
+        if db is not None:
+            self.engine.enroll_compilation_database(str(db.parent))
         
 
 
@@ -93,14 +96,17 @@ class CXXCompleter(AbstractCompleter):
                 self.show_completions(conv_compls)
             except:
                 logging.exception('exception in c++ completion')
+        
+        bufpath = str(self.buf_ctl.path) if self.buf_ctl.path else 'foo.cpp'
 
+    
         mp_helpers.call_async(
             callback,
             self.engine.completions,
-            self.buf_ctl.path.as_posix(),
+            bufpath,
             line+1,
             col+1,
-            [(self.buf_ctl.path.as_posix(), self.buf_ctl.buffer.text)]
+            [(bufpath, self.buf_ctl.buffer.text)]
         )
 
 

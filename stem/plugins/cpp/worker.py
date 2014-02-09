@@ -57,14 +57,17 @@ class WorkerSemanticEngine(object):
             raise KeyError(filename)
 
     def clang_flags(self, filename):
-        commands = self.compile_commands(filename)
-
-        results = []
-        for flag in commands.arguments:
-            if flag == b'-c':
-                break
-            results.append(flag)
-        return results
+        try:
+            commands = self.compile_commands(filename)
+        except KeyError:
+            return list(map(encode, getattr(options, 'DefaultClangFlags', [])))
+        else:
+            results = []
+            for flag in commands.arguments:
+                if flag == b'-c':
+                    break
+                results.append(flag)
+            return results
 
 
     def translation_unit(self, filename, unsaved_files=[]):
@@ -81,7 +84,8 @@ class WorkerSemanticEngine(object):
             commands = self.clang_flags(filename)
             tu = self.index.parse(encode(filename),
                                   args=commands,
-                                  options=cindex.TranslationUnit.PARSE_INCLUDE_BRIEF_COMMENTS_IN_CODE_COMPLETION | 
+                                  options=cindex.TranslationUnit.PARSE_INCLUDE_BRIEF_COMMENTS_IN_CODE_COMPLETION |
+                                  cindex.TranslationUnit.PARSE_CACHE_COMPLETION_RESULTS |
                                   cindex.TranslationUnit.PARSE_PRECOMPILED_PREAMBLE)
             tu.reparse(unsaved_files)
             self.trans_units[filename] = tu
