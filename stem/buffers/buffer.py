@@ -98,8 +98,6 @@ class Buffer(object):
     def text(self):
         return '\n'.join(line.text for line in self._lines)
 
-
-
     def remove(self, pos, length):
         if length == 0:
             return
@@ -169,7 +167,14 @@ class Buffer(object):
             line_start_offset += len(self._lines[y]) + 1
 
         return y, line_start_offset
-
+    
+    def calculate_index(self, pos):
+        py, px = pos
+        
+        index_to_line = sum(len(line) + 1 for line in self._lines[:py])
+        
+        return index_to_line + px
+        
     
     @property
     def end_pos(self):

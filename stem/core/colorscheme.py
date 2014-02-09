@@ -90,5 +90,6 @@ class SolarizedDark(AbstractSolarized):
         super().__init__()
         self.lexical_categories.update(
             comment=dict(color=self._base01),
+            search=dict(bgcolor=self._yellow, color=self.selection_fg),
         )
 
