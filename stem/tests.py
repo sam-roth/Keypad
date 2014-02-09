@@ -2,9 +2,11 @@
 
 import unittest
 
-from .buffers import Buffer, Span, Region, Cursor
-from .core import write_atomically 
+from .buffers import Buffer, Span, Region, Cursor, TextModification, BufferHistory
+from .core import write_atomically, errors
 
+
+import random
 
 buff_text = '''\
 12
@@ -12,6 +14,85 @@ buff_text = '''\
 56
 '''
 
+def make_random_change(prng, buff):
+    '''
+    Return a random valid TextModification for the buffer. Does not execute it.
+
+    :type prng: random.Random
+    :type buff: stem.buffers.Buffer
+    '''
+    
+    buflen = len(buff.text)
+    
+    start_idx = prng.randrange(buflen)
+    start_pos = buff.calculate_pos((0,0), start_idx)
+    
+    if prng.randrange(2):
+        return TextModification(pos=start_pos, 
+                                insert=random_printable(prng))
+    else:
+        end_idx = prng.randrange(start_idx, buflen)
+        rm_len = end_idx - start_idx
+        
+        return TextModification(pos=start_pos,
+                                remove=buff.span_text(start_pos,
+                                                      offset=rm_len))
+        
+
+class TestBufferHistory(unittest.TestCase):
+    
+    def setUp(self):
+        self.buffer = Buffer()
+        self.buffer.insert((0,0), buff_text)
+        self.history = BufferHistory(self.buffer)
+        self.prng = random.Random(1234)
+        
+    def test_simple_undo(self):
+        for i in range(1000):
+            orig_text = self.buffer.text
+            #print('orig text:', orig_text)
+            rchg = make_random_change(self.prng, self.buffer)
+            with self.history.transaction():
+                #print('rchg:', rchg)
+                self.buffer.execute(rchg)
+            new_text = self.buffer.text
+            
+            #print('new text:', new_text)
+            
+            if rchg.insert or rchg.remove:
+                self.history.undo()
+            else:
+                try:
+                    self.history.undo()
+                except errors.CantUndoError:
+                    pass
+                else:
+                    assert False, "shouldn't be able to undo that"
+            
+            assert self.buffer.text == orig_text
+        
+    def test_complex_undo_redo(self):
+        orig_state = self.buffer.text
+        for i in range(100):
+            with self.history.transaction():                    
+                rchg = make_random_change(self.prng, self.buffer)
+                self.buffer.execute(rchg)
+        new_state = self.buffer.text
+
+        try:
+            while True: self.history.undo()
+        except errors.CantUndoError:
+            pass
+
+        assert self.buffer.text == orig_state
+
+        try:
+            while True: self.history.redo()
+        except errors.CantRedoError:
+            pass
+
+        assert self.buffer.text == new_state            
+        
 
 class TestBuffer(unittest.TestCase):
 
@@ -103,19 +184,19 @@ import tempfile
 import logging
 import os
 
-
+def random_printable(prng):
+    return ''.join(
+        prng.choice(string.printable)
+        for _ in range(1024)
+    )
 class TestAtomicWrites(unittest.TestCase):
     def setUp(self):
         self.prng = prng = random.Random(1234)
 
-        def random_printable():
-            return ''.join(
-                prng.choice(string.printable)
-                for _ in range(1024)
-            )
 
-        self.corpus1 = random_printable()
-        self.corpus2 = random_printable()
+
+        self.corpus1 = random_printable(prng)
+        self.corpus2 = random_printable(prng)
 
         fd, self.filename = tempfile.mkstemp(text=False)
 
