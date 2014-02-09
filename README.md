@@ -58,7 +58,7 @@ editor is the stem, then the plugins are leaves.
 * [PyQt4](http://www.riverbankcomputing.com/software/pyqt/download)
 * [pathlib](https://pypi.python.org/pypi/pathlib/)
 
-### Included Plugin Dependencies
+### Dependencies of Included Plugins
 
 #### C++ Completion
 
