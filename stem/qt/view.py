@@ -18,6 +18,7 @@ import time
 
 
 import logging
+import itertools
 
 class TextView(QAbstractScrollArea):
 
@@ -62,7 +63,7 @@ class TextView(QAbstractScrollArea):
 
             self.disable_partial_update = False
             self.controller = None        
-            self.overlay_spans = []
+            self.overlay_spans = {}
 
         except:
             logging.exception('error initting TextView')
@@ -357,11 +358,14 @@ class TextView(QAbstractScrollArea):
 
             text_lines_end = 0
             modeline_start = 0
+
+            # merge the iterable of lists into a single list
+            overlay_spans = list(itertools.chain.from_iterable(self.overlay_spans.values()))
             
             for i, row in enumerate(lines_to_display, self.start_line):
 
                 overlays = set()
-                for overlay_span, attr_key, attr_val in self.overlay_spans:
+                for overlay_span, attr_key, attr_val in overlay_spans:
                     start_pos, end_pos = overlay_span.start_curs.pos, overlay_span.end_curs.pos
 
                     start_y, start_x = start_pos

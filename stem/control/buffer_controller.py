@@ -215,14 +215,15 @@ class BufferController(Tagged, Responder):
             selected_region = Region()
 
         
-
-        self.view.overlay_spans = []
+        
+        overlay_spans = []
         for span in selected_region.spans:
-            self.view.overlay_spans.extend([
+            overlay_spans.extend([
                 (span, 'sel_color', 'auto'),
                 (span, 'sel_bgcolor', 'auto')
             ])
-
+        
+        self.view.overlay_spans['selection'] = overlay_spans
         
         if full:
             self.view.full_redraw()
