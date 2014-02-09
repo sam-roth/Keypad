@@ -2,6 +2,12 @@
 
 
 def main():
+    import sys
+    import logging
+    logfmt = '[%(asctime)s|%(module)s:%(lineno)d|%(levelname)s]\n  %(message)s'
+
+    logging.basicConfig(level=logging.DEBUG,
+                        format=logfmt)
     import os.path
     thirdparty = os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir, 'third-party'))
     import sys
