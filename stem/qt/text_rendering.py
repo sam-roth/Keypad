@@ -5,6 +5,8 @@ from .qt_util import *
 from ..util.cascade_dict import CascadeDict
 from .. import options
 import math
+from . import options as qt_options
+
 
 class TextViewSettings(object):
     def __init__(self, scheme):
@@ -21,7 +23,7 @@ class TextViewSettings(object):
             self.q_font.setStyleStrategy(QFont.ForceIntegerMetrics | self.q_font.styleStrategy())
             
         self.q_completion_bgcolor = to_q_color(self.scheme.bg)
-        self.q_completion_bgcolor.setAlphaF(0.7)
+        self.q_completion_bgcolor.setAlphaF(qt_options.CompletionViewOpacity)
 
         self.q_bgcolor  = to_q_color(self.scheme.bg)
         self.q_fgcolor  = to_q_color(self.scheme.fg)

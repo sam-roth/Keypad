@@ -10,13 +10,14 @@ from ..core                 import AttributedString, Signal
 from ..core.key             import SimpleKeySequence, Keys, KeySequenceDict
 from ..abstract.completion  import AbstractCompletionView
 
+from . import options
 
 
 completion_view_stylesheet = r"""
 
 QWidget#outer_container {{
     background-color:       {settings.completion_bgcolor.css_rgba};
-    border-radius:          10px;
+    border-radius:          {border_radius};
     padding-top:            10px;
     padding-bottom:         10px;
 }}
@@ -75,7 +76,6 @@ class CompletionListItemDelegate(QItemDelegate):
 
         for s in (self.settings, self.selected_settings):
             s.q_font = QFont(s.q_font)
-            s.q_font.setPointSize(13)
 
     def paint(self, painter, option, index):
         
@@ -237,7 +237,8 @@ class CompletionView(QWidget, AbstractCompletionView, metaclass=ABCWithQtMeta):
         self.setWindowFlags(Qt.Popup)
         
         #self.setAttribute(Qt.WA_TranslucentBackground)
-        self.setAttribute(Qt.WA_NoSystemBackground)
+        if options.CompletionViewOpacity != 1:
+            self.setAttribute(Qt.WA_NoSystemBackground)
         #self.setAttribute(Qt.WA_OpaquePaintEvent, True)
 
         self._listWidget.setAttribute(Qt.WA_MacShowFocusRect, False)
@@ -248,7 +249,8 @@ class CompletionView(QWidget, AbstractCompletionView, metaclass=ABCWithQtMeta):
 
         stylesheet = completion_view_stylesheet.format(
             settings=settings,
-            selbg=scheme.emphasize(scheme.bg, 1)
+            selbg=scheme.emphasize(scheme.bg, 1),
+            border_radius='10px' if options.CompletionViewOpacity != 1 else '0px'
         )
         self.setStyleSheet(stylesheet)
 
@@ -352,6 +354,8 @@ class CompletionView(QWidget, AbstractCompletionView, metaclass=ABCWithQtMeta):
 
     def showEvent(self, evt):
         super().showEvent(evt)
+        self.raise_()
+        self.setFocus(Qt.OtherFocusReason)
 
     def on_model_reset(self):
         self._listWidget.resizeColumnToContents(0)
