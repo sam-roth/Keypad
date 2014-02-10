@@ -19,6 +19,87 @@ def isprint(ch):
 
 
 class CUAInteractionMode(Responder):
+
+
+    def make_cursor_move(self, fn):
+        def result(evt):
+            if evt.key.modifiers & Modifiers.Shift:
+                if self.controller.anchor_cursor is None:
+                    self.controller.anchor_cursor = self.curs.clone()
+            else:
+                self.controller.anchor_cursor = None
+            fn()
+        return result
+
+    def make_remove(self, n):
+        def result(evt):
+            if self.controller.anchor_cursor is not None:
+                self.curs.remove_to(self.controller.anchor_cursor)
+                self.controller.anchor_cursor = None
+            else:
+                self.curs.delete(n)
+
+        return result
+
+    
+    def make_page_move(self, n):
+        def result():
+            height, width = self.view.plane_size
+            self.curs.down(n * height - 1)
+        return result
+
+
+    def select_all(self, evt):
+        c = self.curs
+        c.move(0, 0)
+        other = c.clone()
+        other.move(*self.controller.buffer.end_pos)
+        self.controller.anchor_cursor = other
+
+
+    def make_advance_word(self, n):
+        rgx = re.compile(
+            r'''
+              \b 
+            | $ 
+            | ^ 
+            | _                     # for snake_case idents
+            | (?<= _ ) \w           #  -> match after "_" too
+            | (?<= [a-z] ) [A-Z]    # for camelCase and PascalCase idents
+            | ['"]                  # match strings
+            | (?<= ['"] ) .         # match after strings
+            ''',
+            re.VERBOSE
+        )
+        def result():
+            line, col = self.curs.pos
+            posns = [match.start() for match in 
+                     rgx.finditer(self.curs.line.text)]
+            idx = lower_bound(posns, col)
+            idx += n
+            
+            if 0 <= idx < len(posns):
+                new_col = posns[idx]
+                self.curs.right(new_col - col)
+            elif idx < 0:
+                self.curs.up().end()
+            else:
+                self.curs.down().home()
+
+        return result
+
+    
+    
+    def make_delete_word(self, n):
+        advance = self.make_advance_word(n)
+        def result(evt):
+            if self.controller.anchor_cursor is None:
+                self.controller.anchor_cursor = self.curs.clone()
+                advance()
+            self.curs.remove_to(self.controller.anchor_cursor)
+            self.controller.anchor_cursor = None
+        return result
+
     def __init__(self, controller):
         super().__init__()
 
@@ -29,92 +110,16 @@ class CUAInteractionMode(Responder):
 
         self.modeline = AttributedString()
         self.view.modelines.append(self.modeline)
-
-        def cursor_move(fn):
-            def result(evt):
-                if evt.key.modifiers & Modifiers.Shift:
-                    if self.controller.anchor_cursor is None:
-                        self.controller.anchor_cursor = self.curs.clone()
-                else:
-                    self.controller.anchor_cursor = None
-                fn()
-            return result
         
-        
-        
-        def remove(n):
-            def result(evt):
-                if self.controller.anchor_cursor is not None:
-                    self.curs.remove_to(self.controller.anchor_cursor)
-                    self.controller.anchor_cursor = None
-                else:
-                    self.curs.delete(n)
-
-            return result
-
-        def page_move(n):
-            def result():
-                height, width = self.view.plane_size
-                self.curs.down(n * height - 1)
-            return result
-
-
-        def select_all(evt):
-            c = self.curs
-            c.move(0, 0)
-            other = c.clone()
-            other.move(*self.controller.buffer.end_pos)
-            self.controller.anchor_cursor = other
-
-
-        def advance_word(n):
-            rgx = re.compile(
-                r'''
-                  \b 
-                | $ 
-                | ^ 
-                | _                     # for snake_case idents
-                | (?<= _ ) \w           #  -> match after "_" too
-                | (?<= [a-z] ) [A-Z]    # for camelCase and PascalCase idents
-                | ['"]                  # match strings
-                | (?<= ['"] ) .         # match after strings
-                ''',
-                re.VERBOSE
-            )
-            def result():
-                line, col = self.curs.pos
-                posns = [match.start() for match in 
-                         rgx.finditer(self.curs.line.text)]
-                idx = lower_bound(posns, col)
-                idx += n
-                
-                if 0 <= idx < len(posns):
-                    new_col = posns[idx]
-                    self.curs.right(new_col - col)
-                elif idx < 0:
-                    self.curs.up().end()
-                else:
-                    self.curs.down().home()
-
-            return result
-
-        
-        def delete_word(n):
-            advance = advance_word(n)
-            def result(evt):
-                if self.controller.anchor_cursor is None:
-                    self.controller.anchor_cursor = self.curs.clone()
-                    advance()
-                self.curs.remove_to(self.controller.anchor_cursor)
-                self.controller.anchor_cursor = None
-            return result
-
-
-
+        cursor_move = self.make_cursor_move
+        remove = self.make_remove
+        page_move = self.make_page_move
+        select_all = self.select_all
+        advance_word = self.make_advance_word
+        delete_word = self.make_delete_word
 
         manip = self.curs.manip
 
-        controller.view.completions = [(str(x),) for x in range(100)]
         
         self.keybindings = KeySequenceDict(
             (Keys.left      .optional(Shift),   cursor_move(self.curs.left)), 
@@ -159,19 +164,16 @@ class CUAInteractionMode(Responder):
         self._show_default_modeline()
         self.controller.refresh_view(full=True)
 
+    def detach(self):
+        self.controller.remove_next_responders(self)
+        self.controller.view.key_press.disconnect(self._on_key_press)
+        self.controller.view.scrolled.disconnect(self._on_view_scrolled)
+        self.controller.view.mouse_down_char.disconnect(self._on_mouse_down)
+        self.controller.view.mouse_move_char.disconnect(self._on_mouse_move)
+
+
     def _on_view_scrolled(self, start_line):
         pass
-        #self.pres.refresh_view(full=True)
-        #y, x = self.curs.pos
-        #max_y = start_line + self.pres.view.buffer_lines_visible
-        #new_y = util.clamp(start_line, max_y, y)
-
-        #dy = new_y - y
-        #
-        #self.curs.down(dy)
-
-        #self._show_default_modeline()
-        #self.pres.refresh_view(full=True)
 
     def _on_mouse_down(self, line, col):
         self.controller.anchor_cursor = None
