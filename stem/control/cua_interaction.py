@@ -170,6 +170,7 @@ class CUAInteractionMode(Responder):
         self.controller.view.scrolled.disconnect(self._on_view_scrolled)
         self.controller.view.mouse_down_char.disconnect(self._on_mouse_down)
         self.controller.view.mouse_move_char.disconnect(self._on_mouse_move)
+        self.view.modelines.remove(self.modeline)
 
 
     def _on_view_scrolled(self, start_line):
