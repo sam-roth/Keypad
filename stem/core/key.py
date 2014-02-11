@@ -319,7 +319,11 @@ class KeySequenceBuilder(object):
     bracketleft                    = _k('bracketleft', 0x5B)
     backslash                      = _k('backslash', 0x5C)
     bracketright                   = _k('bracketright', 0x5D)
-    asciicircum                    = _k('asciicircum', 0x5E)
+    
+
+    caret                          = _k('caret', 0x5E)
+    asciicircum                    = caret
+
     underscore                     = _k('underscore', 0x5F)
     quoteleft                      = _k('quoteleft', 0x60)
     braceleft                      = _k('braceleft', 0x7B)
@@ -412,10 +416,10 @@ class KeySequenceBuilder(object):
     down                           = _k('down', 0x1000015)
     pageup                         = _k('pageup', 0x1000016)
     pagedown                       = _k('pagedown', 0x1000017)
-    #shift                          = _k('shift', 0x1000020)
-    #control                        = _k('control', 0x1000021)
-    #meta                           = _k('meta', 0x1000022)
-    #alt                            = _k('alt', 0x1000023)
+    shift_key                      = _k('shift', 0x1000020)
+    control_key                    = _k('control', 0x1000021)
+    meta_key                       = _k('meta', 0x1000022)
+    alt_key                        = _k('alt', 0x1000023)
     capslock                       = _k('capslock', 0x1000024)
     numlock                        = _k('numlock', 0x1000025)
     scrolllock                     = _k('scrolllock', 0x1000026)
