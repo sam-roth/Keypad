@@ -19,8 +19,6 @@ def isprint(ch):
 
 
 class CUAInteractionMode(Responder):
-
-
     def make_cursor_move(self, fn):
         def result(evt):
             if evt.key.modifiers & Modifiers.Shift:
@@ -136,7 +134,7 @@ class CUAInteractionMode(Responder):
             (Keys.delete,                       remove(1)),
             (Keys.home      .optional(Shift),   cursor_move(self.curs.home)),
             (Keys.end       .optional(Shift),   cursor_move(self.curs.end)),
-            (Keys.enter,                        lambda evt: self.curs.insert('\n')),
+            (Keys.enter     .optional(Shift),   lambda evt: self.curs.insert('\n')),
             (Ctrl.a,                            select_all),
             (Ctrl.z,                            lambda evt: manip.history.undo()),
             (Ctrl.shift.z,                      lambda evt: manip.history.redo()),
@@ -149,7 +147,7 @@ class CUAInteractionMode(Responder):
 
         kb = self.keybindings
 
-        kb[Keys.return_]                = kb[Keys.enter]
+        kb[Keys.return_.optional(Shift)] = kb[Keys.enter]
 
         # mainly for Mac users (though Home and End are mapped too)
         kb[Ctrl.left.optional(Shift)]   = kb[Keys.home]
