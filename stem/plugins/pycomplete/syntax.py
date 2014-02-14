@@ -103,7 +103,8 @@ def pylexer():
     FloatLiteral = regex(r'\b\d*\.\d+', NUMBER)
     IntLiteral   = regex(r'\b(?:0[xbo])?\d+L?', NUMBER)
 
-    FuncDef = regex(r'(?:(?<=def)|(?<=class)|(?<=@))\s*[\w.]+', FUNCTION)
+    FuncDef = regex(r'(?:(?<=def)|(?<=class)|(?<=@))\s+\w+', FUNCTION)
+    Deco    = regex(r'(?<=@)\s*\w+', FUNCTION)
     CommAt = regex(re.escape('@'), ESCAPE)
     
 
@@ -124,6 +125,7 @@ def pylexer():
         CommAt,
         RTSQString,
         RTDQString,
+        Deco
     ]
 
     DQDoctest.contains = tuple(PythonLexers)
