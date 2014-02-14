@@ -54,6 +54,21 @@ class SimpleKeySequence(object):
 
 
     @property
+    def spelling(self):
+        if self.modifiers & ~Modifiers.Shift == 0:
+            try:
+                ch = chr(self.keycode)
+            except ValueError:
+                pass # fallback to <...> repr
+            else:
+                if self.modifiers & Modifiers.Shift:
+                    return ch.upper()
+                else:
+                    return ch.lower()
+
+        return '<{!s}>'.format(self)
+
+    @property
     def modifiers(self): return self._modifiers
 
     @property
