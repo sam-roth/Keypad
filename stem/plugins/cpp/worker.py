@@ -1,3 +1,4 @@
+import os, signal
 
 
 import multiprocessing
@@ -23,7 +24,9 @@ def decode_recursively(s):
         return {decode_recursively(k): decode_recursively(v) for (k, v) in s.items()}
     else:
         return s
-
+ParseOptions = (cindex.TranslationUnit.PARSE_INCLUDE_BRIEF_COMMENTS_IN_CODE_COMPLETION |
+ #                                 cindex.TranslationUnit.PARSE_CACHE_COMPLETION_RESULTS |
+                                  cindex.TranslationUnit.PARSE_PRECOMPILED_PREAMBLE)
 
 class WorkerSemanticEngine(object):
     def __init__(self):
@@ -84,9 +87,7 @@ class WorkerSemanticEngine(object):
             commands = self.clang_flags(filename)
             tu = self.index.parse(encode(filename),
                                   args=commands,
-                                  options=cindex.TranslationUnit.PARSE_INCLUDE_BRIEF_COMMENTS_IN_CODE_COMPLETION |
-                                  cindex.TranslationUnit.PARSE_CACHE_COMPLETION_RESULTS |
-                                  cindex.TranslationUnit.PARSE_PRECOMPILED_PREAMBLE)
+                                  options=ParseOptions)
             tu.reparse(unsaved_files)
             self.trans_units[filename] = tu
             return tu
@@ -141,8 +142,40 @@ class SemanticEngine(object):
         ))
 
     @staticmethod
+    def _convert_location(loc):
+        if loc is not None:
+            return (loc.file.name if loc.file is not None else '<unknown>', (loc.line, loc.column))
+        else:
+            return ('<unknown>', (0, 0))
+    
+    @staticmethod
+    def _convert_diagnostic(diag):
+        return decode_recursively(dict(
+            severity=diag.severity,
+            location=SemanticEngine._convert_location(diag.location),
+            spelling=diag.spelling
+        ))
+    @staticmethod
     def _cvt_unsaved(unsaved_files):
         return [(f.encode(), c.encode()) for (f,c) in unsaved_files]
+
+
+    def check_living(self): 
+        pass
+
+    def reparse_and_get_diagnostics(self, filename, unsaved_files=[]):
+        try:
+            unsaved_files = self._cvt_unsaved(unsaved_files)
+            tu = self.engine.translation_unit(encode(filename), unsaved_files)
+            tu.reparse(unsaved_files=unsaved_files, options=ParseOptions)
+
+            diags = [self._convert_diagnostic(diag) for diag in tu.diagnostics]
+            return diags
+        except:
+            import traceback
+            traceback.print_exc()
+
+
 
     def completions(self, filename, line, col, unsaved_files=[]):
         try:
@@ -156,7 +189,9 @@ class SemanticEngine(object):
                                           unsaved_files=unsaved_files)
 
             assert isinstance(completions, cindex.CodeCompletionResults)
-            return [self._convert_completion_result(r) for r in completions.results]
+            compls = [self._convert_completion_result(r) for r in completions.results]
+
+            return compls
         except:
             import traceback
             traceback.print_exc()
