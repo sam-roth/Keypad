@@ -95,6 +95,7 @@ def paint_attr_text(painter, text, bounding_rect, cfg):
         bgcolor     = attributes.get('bgcolor')
         sel_bgcolor = attributes.get('sel_bgcolor')
         sel_color   = attributes.get('sel_color')
+        error       = attributes.get('error', False)
 
         if sel_bgcolor == 'auto':
             sel_bgcolor = cfg.scheme.selection_bg
@@ -134,6 +135,16 @@ def paint_attr_text(painter, text, bounding_rect, cfg):
         
         painter.setPen(to_q_color(actual_color))
         painter.drawText(QPointF(xc, yc), tab_expanded_string)# string)
+        if error:
+            with restoring(painter):
+                pen = painter.pen()
+                pen.setColor(QColor(255, 0, 0, 128))
+                pen.setStyle(Qt.DotLine)
+                pen.setWidth(2)
+                error_y = yc + fm.underlinePos()
+                painter.setPen(pen)
+                painter.drawLine(xc, error_y, xc + width, error_y)
+
 
         xc += width
         raw_col += len(tab_expanded_string)
