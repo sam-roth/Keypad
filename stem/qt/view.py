@@ -20,16 +20,18 @@ import time
 import logging
 import itertools
 
+
+
 class TextView(QAbstractScrollArea):
+    class CursorType:
+        Bar = 0
+        Rect = 1
+        FillRect = 2
 
     class MouseButtons:
         Left = Qt.LeftButton
         Right = Qt.RightButton
         Middle = Qt.MiddleButton
-    
-
-
-    
 
     def __init__(self, parent=None):
         try:
@@ -79,11 +81,21 @@ class TextView(QAbstractScrollArea):
             self._cursor_blink = False
             self._cursor_blink_on_timer.start()
 
+            self._cursor_type = self.CursorType.Bar
+
 
         except:
             logging.exception('error initting TextView')
             raise
 
+    @property
+    def cursor_type(self): 
+        return self._cursor_type
+    
+    @cursor_type.setter
+    def cursor_type(self, value): 
+        self._cursor_type = value
+        self.partial_redraw()
 
     def _on_cursor_blink_on(self):
         self._cursor_blink = True
@@ -401,6 +413,15 @@ class TextView(QAbstractScrollArea):
                         
                         overlays.add((line_start_x, line_end_x, attr_key, attr_val))
 
+                if i == cursor_line and should_draw_cursor:
+                    if self._cursor_type == self.CursorType.Rect:
+                        overlays.add((cursor_col, cursor_col+1, 'cartouche', self.settings.fgcolor))
+                    elif self._cursor_type == self.CursorType.FillRect:
+                        # FIXME: this should overwrite the selection overlay.
+                        overlays.add((cursor_col, cursor_col+1, 'bgcolor', self.settings.fgcolor))
+                        overlays.add((cursor_col, cursor_col+1, 'color', self.settings.bgcolor))
+
+
                 if i == len(text_lines) + self.start_line:
                     text_lines_end = y
                     modeline_start = y = self.height() - height * len(self.modelines) - self._margins.bottom()
@@ -415,7 +436,7 @@ class TextView(QAbstractScrollArea):
                 if drew_line: lines_drawn += 1
                 if renewed_cache: lines_updated += 1
 
-                if i == cursor_line and should_draw_cursor:
+                if i == cursor_line and should_draw_cursor and self._cursor_type == self.CursorType.Bar:
                     cursor_x = fm.width(self.settings.expand_tabs(row.text[:cursor_col])) + x
                     painter.fillRect(
                         QRectF(QPointF(cursor_x, y+1),
