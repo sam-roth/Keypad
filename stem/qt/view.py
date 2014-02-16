@@ -65,10 +65,41 @@ class TextView(QAbstractScrollArea):
             self.controller = None        
             self.overlay_spans = {}
 
+            self._cursor_blink_on_timer = QTimer()
+            self._cursor_blink_on_timer.setInterval((1.0-options.CursorDutyCycle)/options.CursorBlinkRate_Hz * 1000)
+            self._cursor_blink_on_timer.setSingleShot(True)
+            self._cursor_blink_on_timer.timeout.connect(self._on_cursor_blink_on)
+
+            self._cursor_blink_off_timer = QTimer()
+            self._cursor_blink_off_timer.setInterval(options.CursorDutyCycle/options.CursorBlinkRate_Hz * 1000)
+            self._cursor_blink_off_timer.setSingleShot(True)
+            self._cursor_blink_off_timer.timeout.connect(self._on_cursor_blink_off)
+
+
+            self._cursor_blink = False
+            self._cursor_blink_on_timer.start()
+
+
         except:
             logging.exception('error initting TextView')
             raise
 
+
+    def _on_cursor_blink_on(self):
+        self._cursor_blink = True
+        self.partial_redraw()
+        if self.hasFocus():
+            self._cursor_blink_off_timer.start()
+
+    def _on_cursor_blink_off(self):
+        self._cursor_blink = False
+        self.partial_redraw()
+        self._cursor_blink_on_timer.start()
+
+
+    def focusInEvent(self, event):
+        self.full_redraw()
+        self._cursor_blink_off_timer.start()
 
     @signal.Signal
     def will_close(self, event):
@@ -300,30 +331,23 @@ class TextView(QAbstractScrollArea):
 
     def keyPressEvent(self, event):
         event.accept()
-
         self.key_press(marshal_key_event(event))
-#        self.key_press(
-#            KeyEvent(
-#                key=SimpleKeySequence(
-#                    modifiers=event.modifiers() & ~Qt.KeypadModifier,
-#                    keycode=event.key()
-#                ),
-#                text=event.text().replace('\r', '\n')
-#            )
-#        )
-
     
     def scrollContentsBy(self, dx, dy):
         self.scrolled(self.verticalScrollBar().value())
-        #self.viewport().update()
-    
 
     def _paint_to(self, device):
         painter = QPainter(device)
         with ending(painter):
             painter.setFont(self.font())
         
-            should_draw_cursor = self.hasFocus() or (self.completion_view and self.completion_view.hasFocus())
+            
+            should_draw_cursor = (
+                self._cursor_blink
+                and (self.hasFocus()
+                     or (self.completion_view and self.completion_view.hasFocus()))
+            )
+
 
             if self._prevent_partial_redraw or self.disable_partial_update:
                 self._partial_redraw_ok = False
@@ -376,9 +400,6 @@ class TextView(QAbstractScrollArea):
                         line_end_x = len(row) if i != end_y else end_x
                         
                         overlays.add((line_start_x, line_end_x, attr_key, attr_val))
-                                  
-
-
 
                 if i == len(text_lines) + self.start_line:
                     text_lines_end = y
@@ -396,7 +417,12 @@ class TextView(QAbstractScrollArea):
 
                 if i == cursor_line and should_draw_cursor:
                     cursor_x = fm.width(self.settings.expand_tabs(row.text[:cursor_col])) + x
-                    painter.drawLine(cursor_x, y + 1, cursor_x, y + height - 2)
+                    painter.fillRect(
+                        QRectF(QPointF(cursor_x, y+1),
+                               QSizeF(2, height - 2)),
+                        painter.pen().color()
+                    )
+                    #painter.drawLine(cursor_x, y + 1, cursor_x, y + height - 2)
 
                 y += int(height)
                 if y >= self.height():
@@ -412,7 +438,6 @@ class TextView(QAbstractScrollArea):
                 self.settings.q_bgcolor
             )
 
-            #logging.debug('Redraw: %s copied from pixmap, %s rerendered.', lines_drawn, lines_updated)
             self._partial_redraw_ok = False
             self._last_cursor_line = cursor_line
             

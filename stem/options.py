@@ -28,3 +28,8 @@ else:
     TextViewFont                = DefaultOtherFont
 
 TextViewIntegerMetrics          = False
+
+
+CursorBlinkRate_Hz  = 1
+CursorDutyCycle     = 0.8
+
