@@ -3,6 +3,10 @@ from .buffer import TextModification, Buffer
 
 class Cursor(object):
 
+    class Chirality:
+        Left = 0  # Inserting text at cursor doesn't move it.
+        Right = 1 # Inserting text at cursor moves it.
+
     def __init__(self, manip):    
         self.manip = manip
         
@@ -13,6 +17,7 @@ class Cursor(object):
 
         self.pos = 0, 0
         self._col_affinity = None
+        self.chirality = Cursor.Chirality.Right
 
         
     def _on_buffer_text_modified(self, change):
@@ -27,12 +32,14 @@ class Cursor(object):
         t=None
 
         if change.insert:
+            if self.chirality != Cursor.Chirality.Left \
+                    or self_y != chg_y or self_x != chg_x:
 
-            if self_y == chg_y and self_x >= chg_x:
-                self_y = end_y
-                self_x = (self_x - chg_x) + end_x
-            elif self_y > chg_y:
-                self_y += end_y - chg_y
+                if self_y == chg_y and self_x >= chg_x:
+                    self_y = end_y
+                    self_x = (self_x - chg_x) + end_x
+                elif self_y > chg_y:
+                    self_y += end_y - chg_y
 
         if change.remove:
             end_y, end_x = change.inverse.insert_end_pos
@@ -132,7 +139,9 @@ class Cursor(object):
         return self
 
     def clone(self):
-        return Cursor(self.manip).move(*self.pos)
+        result = Cursor(self.manip).move(*self.pos)
+        result.chirality = self.chirality
+        return result
         
     def move(self, line=None, col=None):
         y, x = self.pos
