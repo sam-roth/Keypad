@@ -24,6 +24,7 @@ class BufferController(Tagged, Responder):
         '''
         super().__init__()
 
+        self.last_canonical_cursor_pos = 0,0
         self._view              = view
         self.buffer             = buff
         self.view.lines         = self.buffer.lines
@@ -56,6 +57,9 @@ class BufferController(Tagged, Responder):
         self.instance_tags_added.connect(self.__after_tags_added)
 
     
+    @Signal
+    def canonical_cursor_move(self):
+        pass
     
     
     def save(self):
@@ -204,6 +208,9 @@ class BufferController(Tagged, Responder):
         curs = self.canonical_cursor
         if curs is not None:
             curs_line = curs.line
+            if curs.pos != self.last_canonical_cursor_pos:
+                self.canonical_cursor_move()
+                self.last_canonical_cursor_pos = curs.pos
             self.view.cursor_pos = curs.pos
 
         anchor = self.anchor_cursor
