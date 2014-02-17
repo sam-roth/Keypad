@@ -63,12 +63,13 @@ class Cursor(object):
                     t = 'after last line'
         
         try:
-            self.pos = self_y, self_x
+            self._set_pos((self_y, self_x))
         except:
             import logging
             import pprint
             logging.exception('t=%r pos=%r self_y=%r, self_x=%r, locals=%s', t, self.pos, self_y, self_x, pprint.pprint(locals()))
             raise
+
 
     @property
     def pos(self):
@@ -76,6 +77,9 @@ class Cursor(object):
 
     @pos.setter
     def pos(self, value):
+        self._set_pos(value)
+
+    def _set_pos(self, value):
         self._col_affinity = None
         y, x = value
 
@@ -138,10 +142,13 @@ class Cursor(object):
         self.delete(-n)
         return self
 
-    def clone(self):
-        result = Cursor(self.manip).move(*self.pos)
+    def _clone(self, ty):
+        result = ty(self.manip).move(*self.pos)
         result.chirality = self.chirality
         return result
+
+    def clone(self):
+        return self._clone(Cursor)
         
     def move(self, line=None, col=None):
         y, x = self.pos
@@ -210,6 +217,37 @@ class Cursor(object):
 
     def __repr__(self):
         return 'Cursor{!r}'.format(self.pos)
+
+
+class ModifiedCursor(Cursor):
+    def __init__(self, *args, **kw):
+        self.modifiers = []
+        super().__init__(*args, **kw)
+
+    def delete(self, n):
+        start = self.clone().advance(n)
+        start.remove_to(self)
+        return self
+
+    @property
+    def pos(self):
+        return self._pos
+    
+    @pos.setter
+    def pos(self, value):
+        for modifier in self.modifiers:
+            value = modifier(self, value)
+            
+        super()._set_pos(value)
+
+    def _clone(self, ty):
+        result = super()._clone(ty)
+        result.modifiers = self.modifiers.copy()
+        return result
+
+    def clone(self):
+        return self._clone(ModifiedCursor)
+        
 
 
 

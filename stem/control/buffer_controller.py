@@ -6,7 +6,7 @@ import pathlib
 
 from .cua_interaction           import CUAInteractionMode
 from ..                         import util
-from ..buffers                  import Cursor, BufferManipulator, Buffer, Span, Region
+from ..buffers                  import ModifiedCursor, Cursor, BufferManipulator, Buffer, Span, Region
 from ..core                     import AttributedString, errors, Signal, write_atomically, color
 from ..core.tag                 import Tagged, autoconnect
 from ..core.attributed_string   import lower_bound
@@ -29,7 +29,7 @@ class BufferController(Tagged, Responder):
         self.view.lines         = self.buffer.lines
         self.view.keep          = self
         self.manipulator        = BufferManipulator(buff)
-        self.canonical_cursor   = Cursor(self.manipulator)
+        self.canonical_cursor   = ModifiedCursor(self.manipulator)
         self.anchor_cursor      = None
 
 
