@@ -7,7 +7,7 @@ class Cursor(object):
         Left = 0  # Inserting text at cursor doesn't move it.
         Right = 1 # Inserting text at cursor moves it.
 
-    def __init__(self, manip):    
+    def __init__(self, manip, pos=(0,0)):    
         self.manip = manip
         
         # allow either a buffer or a buffer manipulator through duck typing
@@ -15,7 +15,7 @@ class Cursor(object):
 
         self.buffer.text_modified.connect(self._on_buffer_text_modified)
 
-        self.pos = 0, 0
+        self.pos = pos
         self._col_affinity = None
         self.chirality = Cursor.Chirality.Right
 
@@ -70,14 +70,76 @@ class Cursor(object):
             logging.exception('t=%r pos=%r self_y=%r, self_x=%r, locals=%s', t, self.pos, self_y, self_x, pprint.pprint(locals()))
             raise
 
+    def walk(self, stride):
+        '''
+        Yield successive characters, moving the cursor in the direction implied
+        by the sign of the stride given.
+
+        The stride is the number of characters to advance by.
+
+        If either end of the document is reached, the generator will raise StopIteration.
+        '''
+        while True:
+            pos = self.pos
+            yield self.rchar
+            if stride == 0 or stride > 0 and self.at_end or stride < 0 and self.at_start:
+                break
+            self.advance(stride)
+        
+
+    @property
+    def rchar(self):
+        '''
+        The character to the right of the cursor.
+        '''
+        return self.buffer.span_text(self.pos, offset=1)
+
+    @property
+    def at_start(self):
+        '''
+        True iff the cursor cannot advance by any negative number of characters.
+        '''
+        return self.pos == (0, 0)
+
+    @property
+    def past_end(self):
+        '''
+        True iff the cursor is at the end of the last line in the document.
+        '''
+        return self.pos > self.buffer.end_pos
+
+    @property
+    def at_end(self):
+        '''
+        True iff the cursor is before the last character in the document.
+        '''
+        return self.pos >= self.buffer.end_pos
+
+    @property
+    def y(self):
+        '''
+        The 0-based line number of the cursor.
+        '''
+        return self.pos[0]
+
+    @property
+    def x(self):
+        '''
+        The 0-based column number of the cursor. (Tabs not expanded.)
+        '''
+        return self.pos[1]
 
     @property
     def pos(self):
+        '''
+        A tuple of ``(y, x)``. See the `y` and `x` properties for details.
+        '''
         return self._pos
 
     @pos.setter
     def pos(self, value):
         self._set_pos(value)
+
 
     def _set_pos(self, value):
         self._col_affinity = None
@@ -151,13 +213,20 @@ class Cursor(object):
         return self._clone(Cursor)
         
     def move(self, line=None, col=None):
+
         y, x = self.pos
 
-        if line is not None:
-            y = line
+        if isinstance(line, tuple): # check if line is actually a pair y, x
+            if col is not None:
+                raise TypeError('too many arguments')
+            
+            y, x = line
+        else:
+            if line is not None:
+                y = line
 
-        if col is not None:
-            x = col
+            if col is not None:
+                x = col
 
         self.pos = y, x
 

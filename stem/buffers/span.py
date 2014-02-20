@@ -91,6 +91,22 @@ class Span(BasicSpan):
         super().__init__(start_curs)
         self.end_curs = end_curs
 
+    @classmethod
+    def from_pos(cls, buff, pos, *, length=None, end=None):
+        if not ((length is None) ^ (end is None)):
+            raise TypeError('Must provide at least one of `length`, `end`.')
+
+        if length is not None:
+            c1 = Cursor(buff).move(pos)
+            c2 = c1.clone().advance(length)
+            return cls(c1, c2)
+        else:
+            c1 = Cursor(buff).move(pos)
+            c2 = c1.clone().move(end)
+            return cls(c1, c2)
+
+        
+
 import logging
 
 class Region(object):
