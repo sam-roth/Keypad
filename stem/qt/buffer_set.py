@@ -330,8 +330,15 @@ class BufferSetView(Responder, QMainWindow):
         else:
             return None
     
+    def __on_subview_close(self, view):
+        for subwindow in self._mdi.subWindowList():
+            if subwindow.widget() is view:
+                subwindow.close()
+                return
+
     def add_buffer_view(self):
         view = TextView(self)
+        view.closing.connect(self.__on_subview_close, add_sender=True)
         win = self._mdi.addSubWindow(view)
         win.setWindowState(Qt.WindowMaximized)
         self._on_subwindow_activated(win)

@@ -117,13 +117,18 @@ class TextView(QAbstractScrollArea):
     def will_close(self, event):
         pass
 
+    @signal.Signal
+    def closing(self):
+        pass
+
     def closeEvent(self, event):
         ce = CloseEvent()
         self.will_close(ce)
         if ce.is_intercepted:
             event.ignore()
             return
-
+        else:
+            self.closing()
 
     @property
     def completion_view(self):
