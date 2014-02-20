@@ -82,14 +82,16 @@ def setup_buffer(controller):
     if path.suffix == '.py':
         controller.add_tags(
             syntax='python',
-            autoindent=True
+            autoindent=True,
+            parmatch=True
         )
 
         controller.refresh_view()
     elif path.suffix in ('.cpp', '.hpp', '.cc', '.hh', '.h'):
         controller.add_tags(
             syntax='c++',
-            autoindent=True
+            autoindent=True,
+            parmatch=True
         )
         controller.refresh_view()
 
