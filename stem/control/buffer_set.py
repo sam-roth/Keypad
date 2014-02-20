@@ -137,7 +137,7 @@ class BufferSetController(Responder):
     def activate_cmdline(self):
         self.view.active_view = self._command_line_controller.view
         
-    def open(self, path=None):
+    def open(self, path=None, create_new=True):
         bcontr = self.find(path) if path is not None else None
         if bcontr is None:
             from . import buffer_controller
@@ -147,7 +147,7 @@ class BufferSetController(Responder):
 
             if path is not None:
                 with bcontr.history.ignoring():
-                    bcontr.replace_from_path(path)
+                    bcontr.replace_from_path(path, create_new=create_new)
 
             bcontr.is_modified = False
 

@@ -132,7 +132,7 @@ class BufferController(Tagged, Responder):
         with path.open('rb') as f:
             Cursor(self.buffer).move(*self.buffer.end_pos).insert(f.read().decode())
 
-    def replace_from_path(self, path):
+    def replace_from_path(self, path, create_new=False):
         '''
         Replace the contents of `self.buffer` with the contents of the
         file located at `path` decoded using UTF-8. 
@@ -141,7 +141,12 @@ class BufferController(Tagged, Responder):
         '''
 
         self.clear()
-        self.append_from_path(path)
+        try:
+            self.append_from_path(path)
+        except FileNotFoundError:
+            if not create_new:
+                raise
+
         self.add_tags(path=path)
         self.is_modified = True
 
