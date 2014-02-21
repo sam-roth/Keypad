@@ -96,7 +96,6 @@ class BufferController(Tagged, Responder):
         if val != self._is_modified:
             self._is_modified = val
             self.modified_was_changed(val)
-            print('modified changed:', val)
 
     
     @Signal
@@ -297,7 +296,6 @@ def write(buff: BufferController, path: str=None):
 def gui_write(buff: BufferController):
     path = buff.buffer_set.run_save_dialog(buff.path)
     if path:
-        print('path was', path)
         buff.write_to_path(path)
         buff.add_tags(path=path)
         return True

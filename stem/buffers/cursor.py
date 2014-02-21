@@ -66,8 +66,7 @@ class Cursor(object):
             self._set_pos((self_y, self_x))
         except:
             import logging
-            import pprint
-            logging.exception('t=%r pos=%r self_y=%r, self_x=%r, locals=%s', t, self.pos, self_y, self_x, pprint.pprint(locals()))
+            logging.exception('Exception while updating cursor position after text modification.')
             raise
 
     def walk(self, stride):

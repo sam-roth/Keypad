@@ -33,7 +33,6 @@ def render_buffer_to_printer(buff, printer, settings):
         for line_number, logical_line in enumerate(buff.lines):
 
             for line in logical_line.split_every(page_width_chars):
-                print(line.text)
                 size = rendering.text_size(line, settings, printer.pageRect(QPrinter.DevicePixel).width())
                 #size.setWidth(printer.pageRect(QPrinter.DevicePixel).width())
                 
