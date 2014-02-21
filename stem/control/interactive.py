@@ -95,7 +95,7 @@ class InteractiveDispatcher(object):
         result = rec_helper(responder)
 
         if result is None:
-            raise errors.UserError('No match for command ' + name + '. Tried: ' + ', '.join(map(str, tried)))
+            raise errors.NoSuchCommandError('No applicable command {!r}'.format(name))
 
         return result
 

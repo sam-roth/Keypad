@@ -9,6 +9,11 @@ class ExistentialError(UserError):
     Something exists that prevents an operation from occuring, or something
     does not exist that is required for an operation.
     '''
+    
+class NoSuchCommandError(ExistentialError):
+    '''
+    No meaning is known for the command in this context.
+    '''    
 
 class HistoryExistentialError(ExistentialError):
     '''
