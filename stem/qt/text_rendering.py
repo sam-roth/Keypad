@@ -131,14 +131,14 @@ def paint_attr_text(painter, text, bounding_rect, cfg):
         # draw background
         if actual_bgcolor is not None:
             painter.fillRect(
-                QRectF(xc, 0, width, fm.lineSpacing()+1),
+                QRectF(xc, 0, width, fm.lineSpacing()), #+1),
                 to_q_color(actual_bgcolor)
             )
 
         if cartouche is not None:
             with restoring(painter):
                 painter.setPen(to_q_color(cartouche))
-                painter.drawRect(xc, 0, width-1, fm.lineSpacing())
+                painter.drawRect(xc, 0, width-1, fm.lineSpacing()-1)
         
         painter.setPen(to_q_color(actual_color))
         painter.drawText(QPointF(xc, yc), tab_expanded_string)# string)
@@ -174,7 +174,7 @@ def text_size(text, cfg, window_width=None):
     
     return QSizeF(
         window_width or (chwidth * len(tab_expanded)),
-        lines * (fm.lineSpacing() + 1)
+        lines * (fm.lineSpacing()) # + 1)
         #fm.width(cfg.expand_tabs(text.text)) + 1,
         #fm.lineSpacing() + 1
     )

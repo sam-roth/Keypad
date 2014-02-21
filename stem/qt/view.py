@@ -236,7 +236,7 @@ class TextView(QAbstractScrollArea):
         
 
         self.char_width = metrics.width('m')
-        self.line_height = int(metrics.lineSpacing() + 2)
+        self.line_height = int(metrics.lineSpacing())
 
 
         width_chars   = size.width() / self.char_width
