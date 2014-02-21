@@ -90,6 +90,29 @@ class Application(AbstractApplication, QApplication, metaclass=ABCWithQtMeta):
     def _on_post(self):
         self.postEvent(self, _ProcessPosted())
 
+def _fatal_handler(*args, **kw):
+    import os
+    logging.fatal(*args, **kw)
+    os.abort()
+
+def _decode_if_needed(s):
+    if isinstance(s, bytes):
+        try:
+            return s.decode()
+        except:
+            return str(s)
+    else:
+        return str(s)
+
+
+def _message_handler(ty, msg):
+    try:
+        handler = _level_handlers[ty]
+    except KeyError:
+        logging.exception('Unknown message type: %r. Will log as error.', ty)
+        logging.error('%s', _decode_if_needed(msg))
+    else:
+        handler('%s', _decode_if_needed(msg))
 
 def main():
     import sys
@@ -98,9 +121,23 @@ def main():
 
     logging.basicConfig(level=logging.DEBUG,
                         format=logfmt)
+    
 
+        
     global config
     from .. import config
+    
+    global _level_handlers
+    _level_handlers = {
+        QtDebugMsg:    logging.debug,
+        QtWarningMsg:  logging.warning,
+        QtCriticalMsg: logging.critical,
+        QtFatalMsg:    _fatal_handler
+    }
+        
+    
+    qInstallMsgHandler(_message_handler)    
+   
     sys.exit(Application(sys.argv).exec_())
 
 
