@@ -20,6 +20,9 @@ def start_server():
         server.register_function(in_main_thread(run), 'run')
        
         host, port = server.server_address
+        path = server_address_file()
+        if not path.parent.exists():
+            path.parent.mkdir(parents=True)
         with server_address_file().open('w') as f:
             f.write('http://{host}:{port}'.format(**locals()))
 
