@@ -444,8 +444,8 @@ class TextView(QAbstractScrollArea):
                 if i == cursor_line and should_draw_cursor and self._cursor_type == self.CursorType.Bar:
                     cursor_x = fm.width(self.settings.expand_tabs(row.text[:cursor_col])) + x
                     painter.fillRect(
-                        QRectF(QPointF(cursor_x, y+1),
-                               QSizeF(2, height - 2)),
+                        QRectF(QPointF(cursor_x, y),
+                               QSizeF(2, height)),
                         painter.pen().color()
                     )
                     #painter.drawLine(cursor_x, y + 1, cursor_x, y + height - 2)
