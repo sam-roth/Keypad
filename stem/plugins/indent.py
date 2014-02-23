@@ -149,7 +149,11 @@ def uncomment(span, comment_char):
 def comment_toggle(bctl: BufferController):
     comment_char = get_commentchar(bctl)
     try:
-        sel = Span(bctl.canonical_cursor, bctl.anchor_cursor)
+        if bctl.anchor_cursor is not None:
+            sel = Span(bctl.canonical_cursor, bctl.anchor_cursor)
+        else:
+            sel = Span(bctl.canonical_cursor.clone().home(),
+                       bctl.canonical_cursor.clone().end())
         with bctl.history.transaction():
             if is_commented(sel, comment_char):
                 uncomment(sel, comment_char)
