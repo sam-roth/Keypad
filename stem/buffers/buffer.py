@@ -190,6 +190,13 @@ class Buffer(object):
         ) + '\n' + cyan + '=' * 70 + norm
 
 
+    @classmethod
+    def from_text(cls, text):
+        result = cls()
+        result.insert((0,0), text)
+        return result
+
+
 
 def main():
     buf = Buffer()

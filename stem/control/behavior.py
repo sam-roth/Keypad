@@ -102,9 +102,12 @@ def autoindent(controller, chg):
         beg_curs = Cursor(controller.buffer).move(*chg.pos)
         indent = re.match(r'^\s*', beg_curs.line.text)
         if indent is not None:
-            Cursor(controller.buffer)\
-                .move(*chg.insert_end_pos)\
-                .insert(indent.group(0))
+            curs = Cursor(controller.buffer)\
+                .move(*chg.insert_end_pos)
+
+            # check if we're already indented
+            if not re.match(r'^\s+', curs.line.text):
+                curs.insert(indent.group(0))
 
 
 

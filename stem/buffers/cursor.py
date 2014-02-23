@@ -1,6 +1,6 @@
 
 from .buffer import TextModification, Buffer
-
+import re
 class Cursor(object):
 
     class Chirality:
@@ -68,6 +68,10 @@ class Cursor(object):
             import logging
             logging.exception('Exception while updating cursor position after text modification.')
             raise
+
+
+    def searchline(self, regex, flags=0):
+        return re.search(regex, self.line.text, flags)
 
     def walk(self, stride):
         '''
