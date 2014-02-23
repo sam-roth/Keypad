@@ -41,7 +41,7 @@ def indent_block(bctl: BufferController, levels=1):
     
     with bctl.history.transaction():
         if not ac:
-            cc.insert('    ')
+            cc.insert(' ' * get_shiftwidth(bctl))
         else:
             text = ac.text_to(cc)
             indent_text = '\n'.join(_change_line_indent(line, levels * get_shiftwidth(bctl))
@@ -53,6 +53,30 @@ def indent_block(bctl: BufferController, levels=1):
             bctl.canonical_cursor.pos = cc.pos
             bctl.anchor_cursor.pos = pos
             bctl.refresh_view(True)
+
+import logging
+@interactive('dedent_or_backspace')
+def dedent_or_backspace(bctl: BufferController):
+    cc = bctl.canonical_cursor
+    ac = bctl.anchor_cursor
+    
+
+    with bctl.history.transaction():
+        if ac:
+            cc.remove_to(ac)
+        else:
+            match = cc.searchline('^\s+')
+            
+            if not match:
+                chars = 1
+            else:
+                end = cc.x
+                if end <= match.end() and (end % get_shiftwidth(bctl)) == 0 and end != 0:
+                    chars = get_shiftwidth(bctl)
+                else:
+                    chars = 1
+            cc.backspace(chars)
+
 
 
 @interactive('align')

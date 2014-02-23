@@ -83,6 +83,8 @@ menu(5,
      'Edit/Indent',
      'indent_block',
      keybinding=Keys.tab)
+
+
 menu(5.1,
      'Edit/Dedent',
      'indent_block',
@@ -92,6 +94,12 @@ menu(5.2,
      'Edit/Align New Line',
      'newline_aligned',
      keybinding=Keys.ctrl.return_)
+
+menu(5.3,
+     'Edit/Dedent or Backspace',
+     'dedent_or_backspace',
+     keybinding=Keys.backspace)
+
 menu(5.5,
      'Edit/Toggle Comment',
       'comment_toggle',
