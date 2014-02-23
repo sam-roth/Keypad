@@ -19,6 +19,8 @@ class TextViewSettings(object):
         self.q_font    = QFont(fontname)
         self.q_font.setPointSizeF(fontsize)
 
+        self.double_strike = options.TextViewDoubleStrike
+
         if options.TextViewIntegerMetrics:
             self.q_font.setStyleStrategy(QFont.ForceIntegerMetrics | self.q_font.styleStrategy())
             
@@ -142,6 +144,9 @@ def paint_attr_text(painter, text, bounding_rect, cfg):
         
         painter.setPen(to_q_color(actual_color))
         painter.drawText(QPointF(xc, yc), tab_expanded_string)# string)
+        if cfg.double_strike:
+            # greatly improves legibility on dark backgrounds when using FreeType
+            painter.drawText(QPointF(xc, yc), tab_expanded_string)
         if error:
             with restoring(painter):
                 pen = painter.pen()
