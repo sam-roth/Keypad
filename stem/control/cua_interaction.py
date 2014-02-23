@@ -86,6 +86,17 @@ class CUAInteractionMode(Responder):
 
         return result
 
+    def make_advance_para(self, n):
+        def result():
+            skip = True
+            c = self.curs
+            for _ in c.walklines(n):
+                if c.searchline(r'^\s*$'):
+                    if not skip:
+                        break       
+                else:
+                    skip = False
+        return result
     
     
     def make_delete_word(self, n):
@@ -141,6 +152,9 @@ class CUAInteractionMode(Responder):
             (Meta.space,                        lambda evt: controller.completion_requested()),
             (Keys.f1,                           lambda evt: controller.user_requested_help()),
             (Keys.tab,                          lambda evt: self.curs.insert('    ')),
+            (Keys.alt.down  .optional(Shift),   cursor_move(self.make_advance_para(1))),
+            (Keys.alt.up    .optional(Shift),   cursor_move(self.make_advance_para(-1))),
+
         )
 
 

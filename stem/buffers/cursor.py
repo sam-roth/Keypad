@@ -88,6 +88,24 @@ class Cursor(object):
             if stride == 0 or stride > 0 and self.at_end or stride < 0 and self.at_start:
                 break
             self.advance(stride)
+
+    def walklines(self, stride):
+        '''
+        Yield successive lines, moving the cursor in the direction implied by the sign of 
+        the stride given.
+
+        The stride is the number of lines to move down by.
+
+        If either end of the document is reached, the generator will raise StopIteration.
+        '''
+        
+        while True:
+            yield self.line
+            if stride == 0 or stride < 0 and self.y == 0 or \
+                    stride > 0 and self.y == len(self.buffer.lines) - 1:
+                break
+            self.down(stride)
+
         
 
     @property
