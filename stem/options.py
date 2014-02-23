@@ -27,8 +27,8 @@ elif OnWindows:
 else:
     TextViewFont                = DefaultOtherFont
 
-# You may wish to set this to true if spacing looks strange.
-TextViewIntegerMetrics          = False
+# You may wish to set this to False if spacing looks strange.
+TextViewIntegerMetrics          = True
 
 # Double striking text may improve legibility under FreeType
 # when using light-on-dark color schemes. Generally, it makes

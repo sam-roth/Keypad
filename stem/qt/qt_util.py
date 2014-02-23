@@ -8,8 +8,18 @@ from ..core.key import SimpleKeySequence
 from ..core.color import Color
 
 import abc
+import math
 
-
+def qsizef_ceil(size):
+    '''
+    Converts a QSizeF to a QSize, rounding up.
+    :type size: PyQr4.Qt.QSizeF
+    '''
+    
+    return QSize(
+        math.ceil(size.width()),
+        math.ceil(size.height())
+    ) 
 
 class CloseEvent(object):
     def __init__(self):

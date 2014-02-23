@@ -61,7 +61,7 @@ def paint_attr_text(painter, text, bounding_rect, cfg):
 
     # current coordinates
     xc = 0.0 + bounding_rect.left()
-    yc = fm.ascent() + bounding_rect.top()
+    yc = fm.ascent() + bounding_rect.top() - 1
     raw_col = 0
     
 
@@ -179,7 +179,7 @@ def text_size(text, cfg, window_width=None):
     
     return QSizeF(
         window_width or (chwidth * len(tab_expanded)),
-        lines * (fm.lineSpacing()) # + 1)
+        lines * fm.lineSpacing() # + 1)
         #fm.width(cfg.expand_tabs(text.text)) + 1,
         #fm.lineSpacing() + 1
     )
@@ -200,14 +200,16 @@ def render_attr_text(text, cfg):
 
     
     # Trying to make a pixmap of zero-width produces many annoying warnings.
-    bounding_rect_size = text_size(text, cfg).expandedTo(QSizeF(1,1))
+    bounding_rect_size = qsizef_ceil(text_size(text, cfg).expandedTo(QSizeF(1,1)))
 
-    pixmap = QPixmap(bounding_rect_size.toSize())
+    
+    pixmap = QPixmap(bounding_rect_size)
+    
     #pixmap.setAlphaChannel(QPixmap(bounding_rect_size.toSize()))
     #assert pixmap.hasAlpha()
     painter = QPainter(pixmap)
     with ending(painter):
-        paint_attr_text(painter, text, QRectF(QPointF(0, 0), bounding_rect_size), cfg)
+        paint_attr_text(painter, text, QRectF(QPointF(0, 0), QSizeF(bounding_rect_size.width(), bounding_rect_size.height())), cfg)
 
     return pixmap
             
