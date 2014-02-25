@@ -64,6 +64,7 @@ def dedent_or_backspace(bctl: BufferController):
     with bctl.history.transaction():
         if ac:
             cc.remove_to(ac)
+            bctl.anchor_cursor = None
         else:
             match = cc.searchline('^\s+')
             
