@@ -1,4 +1,5 @@
 import os, signal
+import os.path
 
 
 import multiprocessing
@@ -25,8 +26,20 @@ def decode_recursively(s):
     else:
         return s
 ParseOptions = (cindex.TranslationUnit.PARSE_INCLUDE_BRIEF_COMMENTS_IN_CODE_COMPLETION |
+                                  cindex.TranslationUnit.PARSE_INCOMPLETE | 
  #                                 cindex.TranslationUnit.PARSE_CACHE_COMPLETION_RESULTS |
                                   cindex.TranslationUnit.PARSE_PRECOMPILED_PREAMBLE)
+
+def might_be_header(filename):
+    '''
+    Determine if the filename conforms to known header extensions.
+    '''
+    
+    _, ext = os.path.splitext(filename)
+    
+    return ext.lower() in (b'.h', b'.hpp', b'.hh')
+
+    
 
 class WorkerSemanticEngine(object):
     def __init__(self):
@@ -63,14 +76,22 @@ class WorkerSemanticEngine(object):
         try:
             commands = self.compile_commands(filename)
         except KeyError:
-            return list(map(encode, getattr(options, 'DefaultClangFlags', [])))
+            if might_be_header(filename):
+                default_flags = 'DefaultClangHeaderFlags'
+            else:
+                default_flags = 'DefaultClangFlags'
+            logging.debug('used default flags for %r (%r)', filename, default_flags)
+            return list(map(encode, getattr(options, default_flags, [])))
         else:
+
             results = []
             for flag in commands.arguments:
                 if flag == b'-c':
                     break
                 results.append(flag)
+            logging.debug('used flags from cdb for %r: %r', filename, results)
             return results
+
 
 
     def translation_unit(self, filename, unsaved_files=[]):
