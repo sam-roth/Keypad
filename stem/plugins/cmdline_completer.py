@@ -25,6 +25,23 @@ def _as_posix_or_none(x):
         return x.as_posix()
 
 
+def _get_directory_contents_rec(path):
+    path = pathlib.Path(path)
+    if not path.is_dir():
+        yield path
+    else:
+        for item in path.iterdir():
+            if not item.is_dir() and not item.name.startswith('.'):
+                yield item
+                
+        for item in path.iterdir():
+            if item.is_dir() and not item.name.startswith('.'):
+                try:
+                    yield from _get_directory_contents_rec(item)
+                except OSError:
+                    pass # skip over things like infinite symlinks
+
+
 @autoextend(BufferController,
             lambda tags: tags.get('cmdline'))
 class CmdlineCompleter(AbstractCompleter):
@@ -74,7 +91,16 @@ class CmdlineCompleter(AbstractCompleter):
                 
                 self.__compcat = category
                 if category == 'Path':
-                    limited_glob = itertools.islice(((str(p),) for p in pathlib.Path().glob('**/*') if not p.name.startswith('.')), 8192)
+                    #limited_glob = #itertools.islice(((str(p),) for p in pathlib.Path().glob('**/*') if not p.name.startswith('.')), 8192)
+                    rootpath = pathlib.Path(imode.current_cmdline[col-imode.cmdline_col:])
+                    if not rootpath.is_dir():
+                        rootpath = rootpath.parent
+                    
+                    limited_glob = itertools.islice(
+                        ((str(p), ) for p in _get_directory_contents_rec(rootpath)),
+                        1024
+                    )
+                    
                     self.show_completions(list(limited_glob))
             
                 elif category == 'Interactive':
