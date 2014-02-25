@@ -8,7 +8,7 @@ from stem.plugins.semantics.syntax import SyntaxHighlighter, lazy
 @lazy
 def cpplexer():
     from stem.plugins.semantics.syntaxlib import keyword, regex, region
-    
+    import re
 
     keywords = '''
         alignas alignof and and_eq asm auto bitand bitor bool break case catch char
@@ -29,6 +29,7 @@ def cpplexer():
     COMMENT     = dict(lexcat='comment')
     DOC         = dict(lexcat='docstring')
     PREPROC     = dict(lexcat='preprocessor')
+    TODO        = dict(lexcat='todo')
 
     HEX         = r'[a-fA-F0-9]'
     
@@ -36,7 +37,7 @@ def cpplexer():
     Preproc = regex(r'^\s*#\s*\w+', PREPROC)
 
 
-    Keyword = keyword(keywords, KEYWORD) # Semantically satiated yet [ZONG2006CHI]?
+    Keyword = keyword(keywords, KEYWORD) 
 
     
     Esc1        = regex(r'''\\[abfnrtv'"\\]''', ESCAPE)
@@ -55,12 +56,21 @@ def cpplexer():
                     attrs=STRING
                 )
 
+    
+    Todo        = regex(r'\btodo:|\bfixme:|\bhack:', TODO, flags=re.IGNORECASE)
 
-    CPPComment  = regex(r'//(?!/).*', COMMENT)
+
+    CPPComment  = region(
+                    guard=regex(r'//'),
+                    exit=regex(r'$'),
+                    contains=[Todo],
+                    attrs=COMMENT
+                )
+                
     CComment    = region(
                     guard=regex(r'/\*(?!\*)'),
                     exit=regex(r'\*/'),
-                    contains=[],
+                    contains=[Todo],
                     attrs=COMMENT
                 )
 
@@ -95,9 +105,4 @@ def cpp_syntax_highlghting(bufctl):
     )
 
     highlighter.highlight_buffer(bufctl.buffer)
-# Bibliography
-# ============
-# [ZONG2006CHI]  D. Zongker, “Chicken chicken chicken: Chicken chicken,” Annals
-#                of Improbable Research, vol. 12, no. 5, pp. 16–21, September 2006.
-#                [Online]. Available: http://www.improbable.com/airchives/paperair/
-#                                     volume12/v12i5/chicken-12-5.pdf
+

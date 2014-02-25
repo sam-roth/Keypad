@@ -74,9 +74,9 @@ Nothing = NothingLexer()
 
 class RegexLexer(Lexer):
 
-    def __init__(self, regex, attrs=None):
+    def __init__(self, regex, attrs=None, flags=0):
         super().__init__(attrs)
-        self.regex = re.compile(regex)
+        self.regex = re.compile(regex, flags)
 
     def guard_match(self, string, start, stop):
         match = self.regex.search(
@@ -161,11 +161,16 @@ class Tokenizer(object):
                                         
                 start = fg_stop
 
-def keyword(kws, attrs=None):
-    return RegexLexer('|'.join(
-        r'\b' + re.escape(x) + r'\b' 
-        for x in kws),
-        attrs)
+def keyword(kws, attrs=None, caseless=False):
+    if caseless:
+        flags = re.IGNORECASE
+    else:
+        flags = 0
+        
+    return RegexLexer('|'.join(r'\b' + re.escape(x) + r'\b' 
+                               for x in kws),
+                      attrs,
+                      flags=flags)
 
 regex = RegexLexer
 region = RegionLexer
