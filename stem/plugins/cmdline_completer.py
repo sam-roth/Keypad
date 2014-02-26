@@ -18,6 +18,11 @@ import shlex
 import inspect
 import logging
 import itertools
+import os.path
+
+def _expand_user(p):
+    return pathlib.Path(os.path.expanduser(str(p)))
+
 def _as_posix_or_none(x):
     if x is None:
         return None
@@ -92,14 +97,23 @@ class CmdlineCompleter(AbstractCompleter):
                 self.__compcat = category
                 if category == 'Path':
                     #limited_glob = #itertools.islice(((str(p),) for p in pathlib.Path().glob('**/*') if not p.name.startswith('.')), 8192)
-                    rootpath = pathlib.Path(imode.current_cmdline[col-imode.cmdline_col:])
+                    
+                    
+                    typed_rootpath = imode.current_cmdline[col-imode.cmdline_col:]
+                    rootpath = _expand_user(typed_rootpath)
+                    logging.debug('rootpath: %r', rootpath)
                     if not rootpath.is_dir():
                         rootpath = rootpath.parent
+                        typed_rootpath = os.path.join(*(os.path.split(typed_rootpath)[:-1]))
+                            
+
                     
                     limited_glob = itertools.islice(
-                        ((str(p), ) for p in _get_directory_contents_rec(rootpath)),
+                        ((os.path.join(typed_rootpath, str(p.relative_to(rootpath))), ) for p in _get_directory_contents_rec(rootpath)),
                         1024
                     )
+                    limited_glob = list(limited_glob)
+                    logging.debug('limited glob: %r', limited_glob)
                     
                     self.show_completions(list(limited_glob))
             

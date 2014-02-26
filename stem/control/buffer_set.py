@@ -10,8 +10,8 @@ from . import behavior
 from .command_line_interaction import CommandLineInteractionMode
 from .command_line_interpreter import CommandLineInterpreter
 from ..abstract.application import app
-from ..core.notification_queue import in_main_thread
-
+from ..core.notification_queue import in_main_thread, run_in_main_thread
+import os.path
 from .interactive import interactive, run
 
 import sys
@@ -235,12 +235,27 @@ def gui_edit(bufs: BufferSetController):
 import ast, pathlib
 
 @interactive('edit', 'e')
-def edit(bufs: BufferSetController, path: "Path"):
+def edit(bufs: BufferSetController, path: "Path", line=None, col=None):    
     if path.startswith('"') or path.startswith("'"):
         path = ast.literal_eval(path)        
 
-    path = pathlib.Path(path)
-    bufs.open(path)
+    
+    path = pathlib.Path(os.path.expanduser(str(path)))   
+
+    bc = bufs.open(path)
+
+    
+    
+    if line is not None:
+        bc.canonical_cursor.move(line=int(line)-1)
+    
+    if col is not None:
+        bc.canonical_cursor.move(col=int(col)-1)
+    
+    # This needs to be run later since the size of the view hasn't been
+    # determined yet.
+    run_in_main_thread(bc.scroll_to_cursor)
+    
 
 @interactive('quit', 'q')
 def quit_buffer(bufs: BufferSetController):
