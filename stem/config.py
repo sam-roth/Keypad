@@ -98,7 +98,7 @@ menu(5.2,
 menu(5.3,
      'Edit/Dedent or Backspace',
      'dedent_or_backspace',
-     keybinding=Keys.backspace)
+     keybinding=Keys.backspace.optional(Keys.shift))
 
 menu(5.5,
      'Edit/Toggle Comment',
@@ -122,6 +122,12 @@ menu(2,
      'next_tab',
      -1,
      keybinding=Keys.ctrl.braceleft)
+
+
+submenu(3, 'Semantics')
+
+menu(0, 'Semantics/Find Declaration', 'find_declaration', keybinding=Keys.shift.f3)
+menu(1, 'Semantics/Find Definition',  'find_definition', keybinding=Keys.f3)
 
 
 

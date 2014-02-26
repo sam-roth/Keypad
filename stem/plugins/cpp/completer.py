@@ -4,8 +4,8 @@ from stem.control import BufferController
 from stem.abstract.completion import AbstractCompletionView
 from stem.api import interactive
 from stem.core.responder import Responder
-from stem.core import notification_queue, AttributedString
-from stem.control.interactive import dispatcher as interactive_dispatcher
+from stem.core import notification_queue, AttributedString, errors
+from stem.control.interactive import dispatcher as interactive_dispatcher, run as run_interactive
 from stem import options
 from stem.buffers import Span, Cursor
 from stem.plugins.semantics.completer import AbstractCompleter
@@ -17,6 +17,7 @@ import re
 import textwrap
 import time
 import threading
+import pathlib
 
 
 from xmlrpc.client import ServerProxy
@@ -66,13 +67,15 @@ class RepeatingTimer(threading.Thread):
 
 @autoextend(BufferController,
             lambda tags: tags.get('syntax') == 'c++')
-class CXXCompleter(AbstractCompleter):
+class CXXCompleter(AbstractCompleter, Responder):
 
     TriggerPattern = re.compile(r'\.|::|->')
     WordChar       = re.compile(r'[\w\d]')
 
     def __init__(self, buf_ctl):
         super().__init__(buf_ctl)
+        self._has_shut_down = False
+        buf_ctl.add_next_responders(self)
         self._start_worker()
         self._worker_crashes = 0
         
@@ -87,7 +90,8 @@ class CXXCompleter(AbstractCompleter):
         db = find_compilation_db(buf_ctl.path)
         if db is not None:
             self.engine.enroll_compilation_database(str(db.parent))
-        
+    
+        buf_ctl.closing.connect(self._shutdown)
 
     def _start_worker(self):
         self.worker = worker.WorkerManager()
@@ -95,10 +99,17 @@ class CXXCompleter(AbstractCompleter):
 
         self.engine = self.worker.SemanticEngine()        
 
-    def __del__(self):
-        self.reparse_timer.cancel()
-        self.worker.shutdown()
+    def _shutdown(self):
+        if not self._has_shut_down:
+            self._has_shut_down = True
+            logging.debug('Terminating completion worker')
+            self.reparse_timer.cancel()
+            self.worker.shutdown()
+            
 
+    def __del__(self):
+        self._shutdown()
+        
     @staticmethod
     def __convert_compl_results(completions):
         results = []
@@ -170,6 +181,10 @@ class CXXCompleter(AbstractCompleter):
                 
             self._worker_crashes += 1
 
+    @property
+    def fakepath(self):
+        return str(self.buf_ctl.path) if self.buf_ctl.path else '__foo__.cpp'
+
 
     def _request_completions(self):
         line, col = self._start_pos
@@ -184,7 +199,7 @@ class CXXCompleter(AbstractCompleter):
             except:
                 logging.exception('exception in c++ completion')
         
-        bufpath = str(self.buf_ctl.path) if self.buf_ctl.path else 'foo.cpp'
+        bufpath = self.fakepath
 
         
         mp_helpers.call_async(
@@ -201,3 +216,44 @@ class CXXCompleter(AbstractCompleter):
         if self.__doc is not None:
             self.show_documentation([self.__doc[index]])
 
+
+@interactive('restart_completer')
+def restart_completer(comp: CXXCompleter):
+    if comp._worker_crashes >= 4:
+        comp._worker_crashes = 0
+        comp._start_worker()
+
+
+@interactive('find_definition')
+def find_definition(comp: CXXCompleter):
+    line, col = comp.buf_ctl.canonical_cursor.pos
+    path = comp.fakepath
+    
+    @in_main_thread
+    def callback(results):
+        try:
+            if results:
+                file, line, col = results
+                if comp.buf_ctl.path != pathlib.Path(file) and file != path:
+                    run_interactive('edit', file, line, col)
+                else:
+                    comp.buf_ctl.anchor_cursor = None
+                    comp.buf_ctl.canonical_cursor.move(line-1, col-1)
+                    comp.buf_ctl.scroll_to_cursor()
+                    comp.buf_ctl.refresh_view()
+        except:
+            logging.exception('error trying to find definition')
+            
+    
+    mp_helpers.call_async(
+        callback,
+        comp.engine.find_definition,
+        path,
+        line+1,
+        col+1,
+        [(path, comp.buf_ctl.buffer.text)]
+    )
+    
+    
+    
+    

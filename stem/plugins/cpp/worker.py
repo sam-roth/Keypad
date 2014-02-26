@@ -27,7 +27,7 @@ def decode_recursively(s):
         return s
 ParseOptions = (cindex.TranslationUnit.PARSE_INCLUDE_BRIEF_COMMENTS_IN_CODE_COMPLETION |
                                   cindex.TranslationUnit.PARSE_INCOMPLETE | 
- #                                 cindex.TranslationUnit.PARSE_CACHE_COMPLETION_RESULTS |
+                                  cindex.TranslationUnit.PARSE_CACHE_COMPLETION_RESULTS |
                                   cindex.TranslationUnit.PARSE_PRECOMPILED_PREAMBLE)
 
 def might_be_header(filename):
@@ -217,7 +217,24 @@ class SemanticEngine(object):
             import traceback
             traceback.print_exc()
 
-    
+
+    def find_definition(self, filename, line, col, unsaved_files=[]):
+        try:
+            unsaved_files = self._cvt_unsaved(unsaved_files)
+            tu = self.engine.translation_unit(encode(filename), unsaved_files)
+            
+            curs = cindex.Cursor.from_location(tu,
+                                               tu.get_location(encode(filename),
+                                                               (line, col)))
+            defn = curs.get_definition()
+            loc = defn.location
+            return (decode_recursively(loc.file.name), loc.line, loc.column)
+        except:
+            import traceback
+            traceback.print_exc()
+            
+            
+            
 
 class WorkerManager(BaseManager):
     pass

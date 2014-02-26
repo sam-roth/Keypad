@@ -35,6 +35,7 @@ class BufferController(Tagged, Responder):
 
 
         self.view.scrolled                  += self._on_view_scrolled
+        
         self.manipulator.executed_change    += self.user_changed_buffer
         #self.view.completion_done           += self.completion_done
         buff.text_modified                  += self.buffer_was_changed 
@@ -43,9 +44,13 @@ class BufferController(Tagged, Responder):
         self.history.transaction_committed  += self._after_history_transaction_committed
         #self.view.completion_row_changed    += self.completion_row_changed
         self.buffer_set = buffer_set
+        
+        self.view.closing.connect(self.closing)
 
         self._prev_region = Region()
         self._is_modified = False
+        
+
 
         view.controller = self
 
@@ -57,6 +62,11 @@ class BufferController(Tagged, Responder):
         self.instance_tags_added.connect(self.__after_tags_added)
 
     
+    
+    @Signal
+    def closing(self):
+        pass
+    
     @Signal
     def canonical_cursor_move(self):
         pass
@@ -66,7 +76,7 @@ class BufferController(Tagged, Responder):
         if self.path is not None:
             self.write_to_path(self.path)
 
-
+    
     @property
     def view(self): 
         return self._view
@@ -241,7 +251,10 @@ class BufferController(Tagged, Responder):
         else:
             self.view.partial_redraw()
 
-
+    
+    def scroll_to_cursor(self):
+        self.view.scroll_to_line(self.canonical_cursor.y)
+        self.refresh_view(full=True)
 from ..abstract.application import app
 
 @interactive('show_error')

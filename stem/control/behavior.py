@@ -91,7 +91,8 @@ def setup_buffer(controller):
         controller.add_tags(
             syntax='c++',
             autoindent=True,
-            parmatch=True
+            parmatch=True,
+            commentchar='//'
         )
         controller.refresh_view()
 
