@@ -189,6 +189,7 @@ class CUAInteractionMode(Responder):
             (Keys.alt.down  .optional(Shift),   movm('advance_para', 1)),
             (Keys.alt.up    .optional(Shift),   movm('advance_para', -1)),
             (Keys.tab,                          movm('tab')),
+            (Keys.backtab   .optional(Shift),   movm('tab', -1, ignore_shift=True)),
             (Keys.pagedown  .optional(Shift),   mov(page_down, 1)),
             (Keys.pageup    .optional(Shift),   mov(page_down, -1)),
         )

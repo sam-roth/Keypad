@@ -187,13 +187,30 @@ class Selection(object):
         return self
     
 
-    def tab(self):
+    def tab(self, n=1):
         if self._anchor_cursor:
-            c = self._anchor_cursor
+            first, second = sorted([
+                self._insert_cursor,
+                self._anchor_cursor
+            ], key=lambda c: c.pos)
+
+            c = first.clone()
+
+            for _ in c.walklines(1):
+                if c.pos >= second.pos:
+                    break
+
+                c.home()
+                if n > 0:
+                    c.insert(self.indent * n)
+                else:
+                    m = c.searchline(r'^\s+')
+                    if m:
+                        remove_count = min(m.end(), -len(self.indent) * n)
+                        c.delete(remove_count)
         else:
             c = self._insert_cursor
-
-        c.insert(self.indent)
+            c.insert(self.indent * n)
         
         return self
 
