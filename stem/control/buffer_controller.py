@@ -283,8 +283,7 @@ def clipboard_cut(buff: BufferController):
     if buff.anchor_cursor is not None:
         clipboard_copy(buff)
         with buff.history.transaction():
-            buff.anchor_cursor.remove_to(buff.canonical_cursor)
-        buff.anchor_cursor = None
+            buff.selection.replace('')
 
 
 @interactive('clipboard_copy')

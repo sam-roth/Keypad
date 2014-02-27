@@ -156,6 +156,9 @@ class Selection(object):
         with self.moving():
             self._insert_cursor.insert(value)
 
+        if not value:
+            self._anchor_cursor = None
+
     def replace(self, text):
         self.text = text
         return self
