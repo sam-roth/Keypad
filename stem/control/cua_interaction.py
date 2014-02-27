@@ -159,6 +159,12 @@ class CUAInteractionMode(Responder):
             with sel.select():
                 sel.advance_word(n)
             sel.text = ''
+            
+            
+        def page_down(sel, n):
+            height, width = self.view.plane_size
+            sel.down(height * n)            
+            
         
 
 
@@ -183,46 +189,21 @@ class CUAInteractionMode(Responder):
             (Keys.alt.down  .optional(Shift),   movm('advance_para', 1)),
             (Keys.alt.up    .optional(Shift),   movm('advance_para', -1)),
             (Keys.tab,                          movm('tab')),
-
-
-            
-#            (Keys.left      .optional(Shift),   cursor_move(self.curs.left)), 
-#            (Keys.right     .optional(Shift),   cursor_move(self.curs.right)), 
-#            (Alt.left       .optional(Shift),   cursor_move(advance_word(-1))),
-#            (Alt.right      .optional(Shift),   cursor_move(advance_word(1))),
-#            (Alt.backspace,                     delete_word(-1)),
-#            (Alt.delete,                        delete_word(1)),
-#            (Keys.up        .optional(Shift),   cursor_move(self.curs.up)), 
-#            (Keys.down      .optional(Shift),   cursor_move(self.curs.down)),
-#            (Keys.pagedown  .optional(Shift),   cursor_move(page_move(1))),
-#            (Keys.pageup    .optional(Shift),   cursor_move(page_move(-1))),
-#            (Keys.backspace,                    remove(-1)),
-#            (Keys.delete,                       remove(1)),
-#            (Keys.home      .optional(Shift),   cursor_move(self.curs.home)),
-#            (Keys.end       .optional(Shift),   cursor_move(self.curs.end)),
-#            (Keys.enter     .optional(Shift),   lambda evt: self.curs.insert('\n')),
-#            (Ctrl.a,                            select_all),
-#            (Ctrl.z,                            lambda evt: manip.history.undo()),
-#            (Ctrl.shift.z,                      lambda evt: manip.history.redo()),
-#            (Meta.space,                        lambda evt: controller.completion_requested()),
-#            (Keys.f1,                           lambda evt: controller.user_requested_help()),
-#            (Keys.tab,                          lambda evt: self.curs.insert('    ')),
-#            (Keys.alt.down  .optional(Shift),   cursor_move(self.make_advance_para(1))),
-#            (Keys.alt.up    .optional(Shift),   cursor_move(self.make_advance_para(-1))),
-
+            (Keys.pagedown  .optional(Shift),   mov(page_down, 1)),
+            (Keys.pageup    .optional(Shift),   mov(page_down, -1)),
         )
 
 
 
         kb = self.keybindings
-#
+
         kb[Keys.return_.optional(Shift)] = kb[Keys.enter]
-#
-#        # mainly for Mac users (though Home and End are mapped too)
-#        kb[Ctrl.left.optional(Shift)]   = kb[Keys.home]
-#        kb[Ctrl.right.optional(Shift)]  = kb[Keys.end]
-#
-#
+
+        # mainly for Mac users (though Home and End are mapped too)
+        kb[Ctrl.left.optional(Shift)]   = kb[Keys.home]
+        kb[Ctrl.right.optional(Shift)]  = kb[Keys.end]
+
+
         self.controller.view.key_press.connect(self._on_key_press)
         self.controller.view.scrolled.connect(self._on_view_scrolled)
         self.controller.view.mouse_down_char.connect(self._on_mouse_down)
@@ -279,7 +260,16 @@ class CUAInteractionMode(Responder):
 
     def _show_default_modeline(self):
         self.modeline.remove(0, None)
-        self.modeline.append('{:<20} [{}]'.format(repr(self.curs.pos), type(self).__name__))
+        path = self.controller.path
+        if path is None:
+            path = '<unsaved>'
+        else:
+            path = str(path)
+            if len(path) > 20:
+                path = '…' + path[-19:]
+            
+        loc_hint = '{0}:{1}:{2}'.format(path, self.curs.y+1, self.curs.x+1)
+        self.modeline.append('{:<50} [{}]'.format(loc_hint, type(self).__name__))
         self.modeline.set_attribute('color', '#268bd2')
 
 

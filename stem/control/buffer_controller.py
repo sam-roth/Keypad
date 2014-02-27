@@ -370,7 +370,7 @@ def getpwd(first_responder: object):
 @interactive('cd')
 def chdir(r: object, newdir: 'Path'):
     import os
-    os.chdir(newdir)
+    os.chdir(os.path.expanduser(str(newdir)))
 
     getpwd(r)
 
