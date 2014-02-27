@@ -150,6 +150,15 @@ class Cursor(object):
         '''
         return self.pos[1]
 
+
+    @property
+    def on_last_line(self):
+        return self.y == len(self.buffer.lines) - 1
+
+    @property
+    def on_first_line(self):
+        return self.y == 0
+
     @property
     def pos(self):
         '''
@@ -165,7 +174,9 @@ class Cursor(object):
     def _set_pos(self, value):
         self._col_affinity = None
         y, x = value
-
+        if y < 0:
+            raise IndexError('Line number must be positive')
+        
         try:
             line = self.buffer.lines[y]
         except IndexError:
@@ -205,7 +216,11 @@ class Cursor(object):
         return self
 
     def advance(self, n=1):
-        self.pos = self.buffer.calculate_pos(self.pos, n)
+        try:
+            self.pos = self.buffer.calculate_pos(self.pos, n)
+        except IndexError:
+            pass
+
         return self
 
     def delete(self, n=1):

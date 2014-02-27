@@ -7,7 +7,7 @@ import pathlib
 from .cua_interaction           import CUAInteractionMode
 from ..                         import util
 from ..buffers                  import ModifiedCursor, Cursor, BufferManipulator, Buffer, Span, Region
-from ..buffers.selection        import Selection
+from ..buffers.selection        import Selection, BacktabMixin
 from ..core                     import AttributedString, errors, Signal, write_atomically, color
 from ..core.tag                 import Tagged, autoconnect
 from ..core.attributed_string   import lower_bound
@@ -15,6 +15,9 @@ from ..core.key                 import *
 from ..core.responder           import Responder
 
 
+
+class SelectionImpl(BacktabMixin, Selection):
+    pass
 
 
 from .interactive import interactive
@@ -34,7 +37,7 @@ class BufferController(Tagged, Responder):
         self.view.keep          = self
         self.manipulator        = BufferManipulator(buff)
 
-        self.selection          = Selection(self.manipulator)
+        self.selection          = SelectionImpl(self.manipulator)
 
 #        self.canonical_cursor   = ModifiedCursor(self.manipulator)
 #        self.anchor_cursor      = None

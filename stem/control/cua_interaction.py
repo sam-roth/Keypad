@@ -120,54 +120,109 @@ class CUAInteractionMode(Responder):
         self.modeline = AttributedString()
         self.view.modelines.append(self.modeline)
         
-        cursor_move = self.make_cursor_move
-        remove = self.make_remove
-        page_move = self.make_page_move
-        select_all = self.select_all
-        advance_word = self.make_advance_word
-        delete_word = self.make_delete_word
+#        cursor_move = self.make_cursor_move
+#        remove = self.make_remove
+#        page_move = self.make_page_move
+#        select_all = self.select_all
+#        advance_word = self.make_advance_word
+#        delete_word = self.make_delete_word
+#
+
+        def mov(func, *args, ignore_shift=False):
+            def result(evt):
+                if not ignore_shift and evt.key.modifiers & Modifiers.Shift:
+                    with self.controller.selection.select():
+                        func(self.controller.selection, *args)
+                else:
+                    func(self.controller.selection, *args)
+            return result
+        
+        def method(name):
+            def result(instance, *args, **kw):
+                return getattr(instance, name)(*args, **kw)
+            return result
+        
+        def movm(func, *args, ignore_shift=False):
+            return mov(method(func), *args, ignore_shift=ignore_shift)
+
+
+        def select_all(evt):
+            sel = self.controller.selection
+            sel.move(0,0)
+            with sel.select():
+                sel.last_line().end()
+
+        
+        def delete_word(n, evt):
+            sel =  self.controller.selection
+            sel.clear_selection()
+            with sel.select():
+                sel.advance_word(n)
+            sel.text = ''
+        
+
 
         manip = self.curs.manip
 
         
         self.keybindings = KeySequenceDict(
-            (Keys.left      .optional(Shift),   cursor_move(self.curs.left)), 
-            (Keys.right     .optional(Shift),   cursor_move(self.curs.right)), 
-            (Alt.left       .optional(Shift),   cursor_move(advance_word(-1))),
-            (Alt.right      .optional(Shift),   cursor_move(advance_word(1))),
-            (Alt.backspace,                     delete_word(-1)),
-            (Alt.delete,                        delete_word(1)),
-            (Keys.up        .optional(Shift),   cursor_move(self.curs.up)), 
-            (Keys.down      .optional(Shift),   cursor_move(self.curs.down)),
-            (Keys.pagedown  .optional(Shift),   cursor_move(page_move(1))),
-            (Keys.pageup    .optional(Shift),   cursor_move(page_move(-1))),
-            (Keys.backspace,                    remove(-1)),
-            (Keys.delete,                       remove(1)),
-            (Keys.home      .optional(Shift),   cursor_move(self.curs.home)),
-            (Keys.end       .optional(Shift),   cursor_move(self.curs.end)),
-            (Keys.enter     .optional(Shift),   lambda evt: self.curs.insert('\n')),
-            (Ctrl.a,                            select_all),
-            (Ctrl.z,                            lambda evt: manip.history.undo()),
-            (Ctrl.shift.z,                      lambda evt: manip.history.redo()),
-            (Meta.space,                        lambda evt: controller.completion_requested()),
-            (Keys.f1,                           lambda evt: controller.user_requested_help()),
-            (Keys.tab,                          lambda evt: self.curs.insert('    ')),
-            (Keys.alt.down  .optional(Shift),   cursor_move(self.make_advance_para(1))),
-            (Keys.alt.up    .optional(Shift),   cursor_move(self.make_advance_para(-1))),
+            (Keys.left      .optional(Shift),   movm('right', -1)),
+            (Keys.right     .optional(Shift),   movm('right', 1)),
+            (Keys.up        .optional(Shift),   movm('down', -1)),
+            (Keys.down      .optional(Shift),   movm('down', 1)),
+            (Keys.backspace .optional(Shift),   movm('backspace', ignore_shift=True)),
+            (Keys.delete    .optional(Shift),   movm('delete', 1, ignore_shift=True)),
+            (Keys.home      .optional(Shift),   movm('home')),
+            (Keys.end       .optional(Shift),   movm('end')),
+            (Keys.ctrl.a,                       select_all),
+            (Keys.enter,                        movm('replace', '\n', ignore_shift=True)),
+            (Keys.alt.right .optional(Shift),   movm('advance_word', 1)),
+            (Keys.alt.left  .optional(Shift),   movm('advance_word', -1)),
+            (Keys.alt.backspace.optional(Shift),lambda evt: delete_word(-1, evt)),
+            (Keys.alt.delete.optional(Shift),   lambda evt: delete_word(1, evt)),
+            (Keys.alt.down  .optional(Shift),   movm('advance_para', 1)),
+            (Keys.alt.up    .optional(Shift),   movm('advance_para', -1)),
+            (Keys.tab,                          movm('tab')),
+
+
+            
+#            (Keys.left      .optional(Shift),   cursor_move(self.curs.left)), 
+#            (Keys.right     .optional(Shift),   cursor_move(self.curs.right)), 
+#            (Alt.left       .optional(Shift),   cursor_move(advance_word(-1))),
+#            (Alt.right      .optional(Shift),   cursor_move(advance_word(1))),
+#            (Alt.backspace,                     delete_word(-1)),
+#            (Alt.delete,                        delete_word(1)),
+#            (Keys.up        .optional(Shift),   cursor_move(self.curs.up)), 
+#            (Keys.down      .optional(Shift),   cursor_move(self.curs.down)),
+#            (Keys.pagedown  .optional(Shift),   cursor_move(page_move(1))),
+#            (Keys.pageup    .optional(Shift),   cursor_move(page_move(-1))),
+#            (Keys.backspace,                    remove(-1)),
+#            (Keys.delete,                       remove(1)),
+#            (Keys.home      .optional(Shift),   cursor_move(self.curs.home)),
+#            (Keys.end       .optional(Shift),   cursor_move(self.curs.end)),
+#            (Keys.enter     .optional(Shift),   lambda evt: self.curs.insert('\n')),
+#            (Ctrl.a,                            select_all),
+#            (Ctrl.z,                            lambda evt: manip.history.undo()),
+#            (Ctrl.shift.z,                      lambda evt: manip.history.redo()),
+#            (Meta.space,                        lambda evt: controller.completion_requested()),
+#            (Keys.f1,                           lambda evt: controller.user_requested_help()),
+#            (Keys.tab,                          lambda evt: self.curs.insert('    ')),
+#            (Keys.alt.down  .optional(Shift),   cursor_move(self.make_advance_para(1))),
+#            (Keys.alt.up    .optional(Shift),   cursor_move(self.make_advance_para(-1))),
 
         )
 
 
 
         kb = self.keybindings
-
+#
         kb[Keys.return_.optional(Shift)] = kb[Keys.enter]
-
-        # mainly for Mac users (though Home and End are mapped too)
-        kb[Ctrl.left.optional(Shift)]   = kb[Keys.home]
-        kb[Ctrl.right.optional(Shift)]  = kb[Keys.end]
-
-
+#
+#        # mainly for Mac users (though Home and End are mapped too)
+#        kb[Ctrl.left.optional(Shift)]   = kb[Keys.home]
+#        kb[Ctrl.right.optional(Shift)]  = kb[Keys.end]
+#
+#
         self.controller.view.key_press.connect(self._on_key_press)
         self.controller.view.scrolled.connect(self._on_view_scrolled)
         self.controller.view.mouse_down_char.connect(self._on_mouse_down)
@@ -189,16 +244,22 @@ class CUAInteractionMode(Responder):
         pass
 
     def _on_mouse_down(self, line, col):
-        self.controller.anchor_cursor = None
-        self.curs.move(0,0).down(line).right(col)
+        #self.controller.anchor_cursor = None
+        #self.curs.move(0,0).down(line).right(col)
+        sel = self.controller.selection
+        sel.move(0,0).down(line).right(col)
         self._show_default_modeline()
         self.controller.refresh_view()
 
     def _on_mouse_move(self, buttons, line, col):
         if buttons & self.controller.view.MouseButtons.Left:
-            if self.controller.anchor_cursor is None:
-                self.controller.anchor_cursor = self.curs.clone()
-            self.curs.move(0,0).down(line).right(col)
+            #if self.controller.anchor_cursor is None:
+            #    self.controller.anchor_cursor = self.curs.clone()
+            #self.curs.move(0,0).down(line).right(col)
+            sel = self.controller.selection
+            with sel.select():
+                sel.move(0,0).down(line).right(col)
+                
             self._show_default_modeline()
             self.controller.refresh_view()
 
@@ -239,10 +300,11 @@ class CUAInteractionMode(Responder):
                 binding = self.keybindings[evt.key]
             except KeyError:
                 if isprint(evt.text):
-                    if self.controller.anchor_cursor is not None:
-                        self.curs.remove_to(self.controller.anchor_cursor)
-                        self.controller.anchor_cursor = None
-                    self.curs.insert(evt.text)
+                    self.controller.selection.text = evt.text
+                    #if self.controller.anchor_cursor is not None:
+                    #    self.curs.remove_to(self.controller.anchor_cursor)
+                    #    self.controller.anchor_cursor = None
+                    #self.curs.insert(evt.text)
             else:
                 try:
                     binding(evt)

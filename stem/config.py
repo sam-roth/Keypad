@@ -10,8 +10,8 @@ from .api import *
 import pathlib
 
 
-#import stem.plugins
-#load_plugins(stem.plugins.__path__, 'stem.plugins.')
+import stem.plugins
+load_plugins(stem.plugins.__path__, 'stem.plugins.')
 
 import platform 
 
@@ -79,12 +79,12 @@ menu(4,
      'complete',
      keybinding=PortCtrl.space)
 
-menu(5,
-     'Edit/Indent',
-     'indent_block',
-     keybinding=Keys.tab)
-
-
+#menu(5,
+#     'Edit/Indent',
+#     'indent_block',
+#     keybinding=Keys.tab)
+#
+#
 #menu(5.1,
 #     'Edit/Dedent',
 #     'indent_block',

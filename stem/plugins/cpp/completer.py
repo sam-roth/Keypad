@@ -237,8 +237,7 @@ def find_definition(comp: CXXCompleter):
                 if comp.buf_ctl.path != pathlib.Path(file) and file != path:
                     run_interactive('edit', file, line, col)
                 else:
-                    comp.buf_ctl.anchor_cursor = None
-                    comp.buf_ctl.canonical_cursor.move(line-1, col-1)
+                    comp.buf_ctl.selection.move(line-1, col-1)
                     comp.buf_ctl.scroll_to_cursor()
                     comp.buf_ctl.refresh_view()
         except:
