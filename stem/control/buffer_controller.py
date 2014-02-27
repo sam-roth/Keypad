@@ -7,11 +7,17 @@ import pathlib
 from .cua_interaction           import CUAInteractionMode
 from ..                         import util
 from ..buffers                  import ModifiedCursor, Cursor, BufferManipulator, Buffer, Span, Region
+from ..buffers.selection        import Selection, BacktabMixin
 from ..core                     import AttributedString, errors, Signal, write_atomically, color
 from ..core.tag                 import Tagged, autoconnect
 from ..core.attributed_string   import lower_bound
 from ..core.key                 import *
 from ..core.responder           import Responder
+
+
+
+class SelectionImpl(BacktabMixin, Selection):
+    pass
 
 
 from .interactive import interactive
@@ -30,8 +36,11 @@ class BufferController(Tagged, Responder):
         self.view.lines         = self.buffer.lines
         self.view.keep          = self
         self.manipulator        = BufferManipulator(buff)
-        self.canonical_cursor   = ModifiedCursor(self.manipulator)
-        self.anchor_cursor      = None
+
+        self.selection          = SelectionImpl(self.manipulator)
+
+#        self.canonical_cursor   = ModifiedCursor(self.manipulator)
+#        self.anchor_cursor      = None
 
 
         self.view.scrolled                  += self._on_view_scrolled
@@ -61,8 +70,14 @@ class BufferController(Tagged, Responder):
 
         self.instance_tags_added.connect(self.__after_tags_added)
 
+    @property
+    def canonical_cursor(self):
+        return self.selection.insert_cursor
     
-    
+    @property
+    def anchor_cursor(self):
+        return self.selection.anchor_cursor
+
     @Signal
     def closing(self):
         pass
@@ -268,8 +283,7 @@ def clipboard_cut(buff: BufferController):
     if buff.anchor_cursor is not None:
         clipboard_copy(buff)
         with buff.history.transaction():
-            buff.anchor_cursor.remove_to(buff.canonical_cursor)
-        buff.anchor_cursor = None
+            buff.selection.replace('')
 
 
 @interactive('clipboard_copy')
@@ -355,7 +369,7 @@ def getpwd(first_responder: object):
 @interactive('cd')
 def chdir(r: object, newdir: 'Path'):
     import os
-    os.chdir(newdir)
+    os.chdir(os.path.expanduser(str(newdir)))
 
     getpwd(r)
 

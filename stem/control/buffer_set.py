@@ -244,13 +244,11 @@ def edit(bufs: BufferSetController, path: "Path", line=None, col=None):
 
     bc = bufs.open(path)
 
-    
-    
     if line is not None:
-        bc.canonical_cursor.move(line=int(line)-1)
+        bc.selection.move(line=int(line)-1)
     
     if col is not None:
-        bc.canonical_cursor.move(col=int(col)-1)
+        bc.selection.move(col=int(col)-1)
     
     # This needs to be run later since the size of the view hasn't been
     # determined yet.
