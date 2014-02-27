@@ -85,21 +85,21 @@ menu(5,
      keybinding=Keys.tab)
 
 
-menu(5.1,
-     'Edit/Dedent',
-     'indent_block',
-     -1,
-     keybinding=Keys.shift.tab)
-menu(5.2,
-     'Edit/Align New Line',
-     'newline_aligned',
-     keybinding=Keys.ctrl.return_)
-
-menu(5.3,
-     'Edit/Dedent or Backspace',
-     'dedent_or_backspace',
-     keybinding=Keys.backspace.optional(Keys.shift))
-
+#menu(5.1,
+#     'Edit/Dedent',
+#     'indent_block',
+#     -1,
+#     keybinding=Keys.shift.tab)
+#menu(5.2,
+#     'Edit/Align New Line',
+#     'newline_aligned',
+#     keybinding=Keys.ctrl.return_)
+#
+#menu(5.3,
+#     'Edit/Dedent or Backspace',
+#     'dedent_or_backspace',
+#     keybinding=Keys.backspace.optional(Keys.shift))
+#
 menu(5.5,
      'Edit/Toggle Comment',
       'comment_toggle',

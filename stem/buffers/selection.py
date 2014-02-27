@@ -3,18 +3,24 @@ import abc
 import contextlib
 
 class Selection(object):
-    def __init__(self, buff):
+    def __init__(self, manip):
         '''
         Create a new selection on the given buffer.
-
-        :type buff: stem.buffers.Buffer
         '''
 
         from .cursor import Cursor
-
-        self.buffer = buff
+        from .buffer_manipulator import BufferManipulator
+        from .buffer import Buffer
         
-        self._insert_cursor = Cursor(buff)
+        self.manip = manip
+        if isinstance(manip, BufferManipulator):
+            self.buffer = manip.buffer
+        elif isinstance(manip, Buffer):
+            self.buffer = manip
+        else:
+            raise TypeError('Must use Buffer or Manipulator for this constructor')
+        
+        self._insert_cursor = Cursor(manip)
         self._anchor_cursor = None
         
         self._select = False
