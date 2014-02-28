@@ -71,6 +71,7 @@ class AbstractSolarized(Colorscheme):
             escape=dict(color=self._red),
             todo=dict(color=self._magenta),
             docstring=dict(color=self._violet),
+            type=dict(color=self._yellow)
         )
 
 
