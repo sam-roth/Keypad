@@ -1,5 +1,17 @@
-import os, signal
+import os, signal, contextlib
 import os.path
+
+@contextlib.contextmanager
+def acquiring_without_blocking(lock):
+    acquired = False
+    try:
+        acquired = lock.acquire(False)
+        if not acquired:
+            raise threading.ThreadError('lock is locked')
+        yield
+    finally:
+        if acquired:
+            lock.release()
 
 
 import multiprocessing
@@ -9,6 +21,8 @@ import logging
 from clang import cindex
 
 from . import options
+import threading
+
 
 def encode(s):
     if isinstance(s, bytes):
@@ -43,6 +57,7 @@ def might_be_header(filename):
 
 class WorkerSemanticEngine(object):
     def __init__(self):
+        cindex.conf.get_cindex_library().clang_toggleCrashRecovery(1)
         self.index = cindex.Index.create()
         self.compilation_databases = []
         self.trans_units = {}
@@ -64,7 +79,7 @@ class WorkerSemanticEngine(object):
         :rtype: clang.cindex.CompileCommand
         '''
         for cd in self.compilation_databases:
-            commands = cd.getCompileCommands(encode(filename))
+            commands = cd.getCompileCommands(os.path.abspath(filename))
             if commands is not None:
                 for command in commands:
                     # return the first set of compile commands 
@@ -122,6 +137,7 @@ class SemanticEngine(object):
 
     def __init__(self):
         self._engine = None
+        self._lock = threading.Lock()
 
 
     @property
@@ -186,20 +202,20 @@ class SemanticEngine(object):
 
     def reparse_and_get_diagnostics(self, filename, unsaved_files=[]):
         try:
-            unsaved_files = self._cvt_unsaved(unsaved_files)
-            tu = self.engine.translation_unit(encode(filename), unsaved_files)
-            tu.reparse(unsaved_files=unsaved_files, options=ParseOptions)
+            with acquiring_without_blocking(self._lock):
+                unsaved_files = self._cvt_unsaved(unsaved_files)
+                tu = self.engine.translation_unit(encode(filename), unsaved_files)
+                tu.reparse(unsaved_files=unsaved_files, options=ParseOptions)
 
-            diags = [self._convert_diagnostic(diag) for diag in tu.diagnostics]
-            return diags
-        except:
-            import traceback
-            traceback.print_exc()
+                diags = [self._convert_diagnostic(diag) for diag in tu.diagnostics]
+                return diags
 
+        except threading.ThreadError:
+            return []
 
 
     def completions(self, filename, line, col, unsaved_files=[]):
-        try:
+        with self._lock:
             unsaved_files = self._cvt_unsaved(unsaved_files)
             tu = self.engine.translation_unit(encode(filename), unsaved_files)
             
@@ -213,13 +229,10 @@ class SemanticEngine(object):
             compls = [self._convert_completion_result(r) for r in completions.results]
 
             return compls
-        except:
-            import traceback
-            traceback.print_exc()
 
 
     def find_definition(self, filename, line, col, unsaved_files=[]):
-        try:
+        with self._lock:
             unsaved_files = self._cvt_unsaved(unsaved_files)
             tu = self.engine.translation_unit(encode(filename), unsaved_files)
             
@@ -229,12 +242,8 @@ class SemanticEngine(object):
             defn = curs.get_definition()
             loc = defn.location
             return (decode_recursively(loc.file.name), loc.line, loc.column)
-        except:
-            import traceback
-            traceback.print_exc()
-            
-            
-            
+        
+        
 
 class WorkerManager(BaseManager):
     pass
