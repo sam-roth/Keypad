@@ -25,11 +25,40 @@ from xmlrpc.server import SimpleXMLRPCServer
 
 from . import mp_helpers, worker, options as cpp_options
 
+_KindNames = {
+    'CXX_METHOD': AttributedString('method', lexcat='function'),
+    'FUNCTION_DECL': AttributedString('function', lexcat='function'),
+    'FUNCTION_TEMPLATE': AttributedString('function template', lexcat='function'),
+    'DESTRUCTOR': AttributedString('destructor', lexcat='function'),
+    'CONSTRUCTOR': AttributedString('constructor', lexcat='function'),
+    'PARM_DECL': AttributedString('argument', lexcat='docstring'),
+    'FIELD_DECL': AttributedString('field', lexcat='docstring'),
+    'VAR_DECL': AttributedString('variable', lexcat='docstring'),
+    'ENUM_CONSTANT_DECL': AttributedString('variable', lexcat='docstring'),
+    'CLASS_DECL': AttributedString('class', lexcat='type'),
+    'STRUCT_DECL': AttributedString('struct', lexcat='type'),
+    'CLASS_TEMPLATE': AttributedString('class template', lexcat='type'),
+    'TYPEDEF_DECL': AttributedString('typedef', lexcat='type'),
+    'NAMESPACE': AttributedString('namespace', lexcat='preprocessor'),
+    'MACRO_DEFINITION': AttributedString('macro', lexcat='preprocessor'),
+    'NOT_IMPLEMENTED': AttributedString('not implemented', italic=True, lexcat='comment')
+}
+
+def _kind_name(clang_name):
+    return _KindNames.get(clang_name, clang_name)
+
 try:
     options.LibClangDir
 except AttributeError:
     options.LibClangDir = None
 
+def _common_prefix_len(xs, ys):
+    i=0
+    for i, (x, y) in enumerate(zip(xs, ys)):
+        if x != y:
+            return i
+    else:
+        return i + 1
 
 in_main_thread = notification_queue.in_main_thread
 
@@ -42,7 +71,7 @@ def _as_posix_or_none(x):
 
 def find_compilation_db(buffer_file):
     from stem.util.path import search_upwards
-    return next(search_upwards(buffer_file, 'compile_commands.json'), None)
+    return next(search_upwards(pathlib.Path(buffer_file).absolute(), 'compile_commands.json'), None)
 
 
 
@@ -92,7 +121,14 @@ class CXXCompleter(AbstractCompleter, Responder):
             self.engine.enroll_compilation_database(str(db.parent))
     
         buf_ctl.closing.connect(self._shutdown)
-
+    
+    def _sort_completions(self, key, completions):
+        completions = list(completions)
+        completions.sort(key=lambda c: -_common_prefix_len(c[1][0], key))
+        return completions        
+                
+        
+    
     def _start_worker(self):
         self.worker = worker.WorkerManager()
         self.worker.start()
@@ -127,7 +163,8 @@ class CXXCompleter(AbstractCompleter, Responder):
 
             if 'brief_comment' in completion:
                 doc_chunks.append(str(completion['brief_comment']))
-            results.append([' '.join(chunks)])
+            results.append([' '.join(chunks), 
+                _kind_name(completion.get('kind'))])
             doc.append(' '.join(doc_chunks))
         
         return results, doc
