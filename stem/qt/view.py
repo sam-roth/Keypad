@@ -16,7 +16,6 @@ from ..                         import options
 import time
 
 
-
 import logging
 import itertools
 
@@ -82,7 +81,7 @@ class TextView(QAbstractScrollArea):
             self._cursor_blink_on_timer.start()
 
             self._cursor_type = self.CursorType.Bar
-
+            
 
         except:
             logging.exception('error initting TextView')
@@ -171,22 +170,17 @@ class TextView(QAbstractScrollArea):
 
     @property
     def completions(self):
-        if self._completion_view is not None:
-            return self._completion_view.model.completions
-        else:
-            return []
+        return self.completion_view.model.completions
+
     
     @completions.setter
     def completions(self, val):
-        if self._completion_view is not None:
-            self._completion_view.model.completions = val
+        self.completion_view.model.completions = val
 
     def show_completions(self):
-        if self._completion_view is not None:
-            x,y = self.map_from_plane(*self.cursor_pos)
-
-            self._completion_view.move_(self.mapToGlobal(QPoint(x, y + self.line_height)))
-            self._completion_view.show()
+        x,y = self.map_from_plane(*self.cursor_pos)
+        self.completion_view.move_(self.mapToGlobal(QPoint(x, y + self.line_height)))
+        self.completion_view.show()
 
 
 
