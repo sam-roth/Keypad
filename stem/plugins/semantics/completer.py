@@ -16,7 +16,7 @@ import abc
 def make_fuzzy_pattern(pattern):
     expr = '.*?' + '.*?'.join(map(re.escape, pattern.lower()))
     return re.compile(expr)
-
+import traceback
 
 class AbstractCompleter(Responder, metaclass=abc.ABCMeta):
     '''
@@ -29,7 +29,7 @@ class AbstractCompleter(Responder, metaclass=abc.ABCMeta):
     .. automethod:: _request_completions
     .. automethod:: _request_docs
     '''
-
+    
     def __init__(self, buf_ctl):
         super().__init__()
         self._start_pos = None
@@ -170,15 +170,20 @@ class AbstractCompleter(Responder, metaclass=abc.ABCMeta):
         self.refilter_typed()
         self.buf_ctl.view.show_completions()
 
+    def _sort_completions(self, key, completions):
+        return sorted(completions, key=lambda x: len(x[1][0]))        
+
     def refilter(self, typed_text):
         pattern = make_fuzzy_pattern(typed_text)
         
         # Sort the completions by length ascending, adding explicit indices to
         # the completions so that they may be referenced later.
 
-        sorted_pairs = sorted(((i,t) for (i,t) in enumerate(self.completions)
-                               if pattern.match(t[0].lower()) is not None),
-                              key=lambda x: len(x[1][0]))
+        #sorted_pairs = sorted(
+        completions = ((i,t) for (i,t) in enumerate(self.completions)
+                       if pattern.match(t[0].lower()) is not None)
+        sorted_pairs = self._sort_completions(typed_text, completions)
+                              #key=lambda x: len(x[1][0]))
         
         
         # Split off the indices and keep them as a mapping between completion
@@ -190,9 +195,9 @@ class AbstractCompleter(Responder, metaclass=abc.ABCMeta):
 
         
         self._worker_indices = indices
-        self.cview.completions = completions
-
-        if not completions:
+        
+        self.buf_ctl.view.completions = completions
+        if typed_text and not completions:
             self.cancel()
         
     @property
@@ -223,7 +228,7 @@ class AbstractCompleter(Responder, metaclass=abc.ABCMeta):
 
         source = self.buf_ctl.buffer.text
         line, col = self._start_pos
-
+        
 
         self._request_completions()
 
