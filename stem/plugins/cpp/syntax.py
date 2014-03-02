@@ -11,14 +11,20 @@ def cpplexer():
     import re
 
     keywords = '''
-        alignas alignof and and_eq asm auto bitand bitor bool break case catch char
-        char16_t char32_t class compl const constexpr const_cast continue decltype
+        alignas alignof and and_eq asm bitand bitor break case catch
+        class compl constexpr const_cast continue
         default delete do double dynamic_cast else enum explicit export extern false
-        float for friend goto if inline int long mutable namespace new noexcept not
-        not_eq nullptr operator or or_eq private protected public register
-        reinterpret_cast return short signed sizeof static static_assert static_cast
+        for friend goto if inline namespace new noexcept not
+        not_eq nullptr operator or or_eq private protected public
+        reinterpret_cast return sizeof static static_assert static_cast
         struct switch template this thread_local throw true try typedef typeid typename
-        union unsigned using virtual void volatile wchar_t while xor xor_eq
+        union using virtual while xor xor_eq
+    '''.split()
+    
+    
+    cpp_types = '''
+    int long bool auto char16_t char32_t char const register mutable void volatile wchar_t
+    float short signed unsigned decltype
     '''.split()
 
     
@@ -30,6 +36,7 @@ def cpplexer():
     DOC         = dict(lexcat='docstring')
     PREPROC     = dict(lexcat='preprocessor')
     TODO        = dict(lexcat='todo')
+    TYPE        = dict(lexcat='type')
 
     HEX         = r'[a-fA-F0-9]'
     
@@ -38,6 +45,7 @@ def cpplexer():
 
 
     Keyword = keyword(keywords, KEYWORD) 
+    Type    = keyword(cpp_types, TYPE)
 
     
     Esc1        = regex(r'''\\[abfnrtv'"\\]''', ESCAPE)
@@ -56,6 +64,9 @@ def cpplexer():
                     attrs=STRING
                 )
 
+    HexLit      = regex(r'\b0x[0-9a-fA-F]+L?\b', NUMBER)
+    DecLit      = regex(r'\b[\d]+L?\b', NUMBER)
+    FloatLit    = regex(r'\b(?:\d+\.\d*|\.\d+)f?\b', NUMBER)
     
     Todo        = regex(r'\btodo:|\bfixme:|\bhack:', TODO, flags=re.IGNORECASE)
 
@@ -88,7 +99,7 @@ def cpplexer():
             exit=None,
             contains=[DQString, Keyword, CPPComment, 
                       CComment, DoxyCPPComment, DoxyCComment,
-                      Preproc]
+                      Preproc, Type, HexLit, DecLit, FloatLit]
         )
 
 
