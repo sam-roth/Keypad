@@ -53,7 +53,7 @@ class BufferSetController(Responder):
             self.view.command_line_view, 
             Buffer(),
             provide_interaction_mode=False,
-            config=self.config
+            config=self.config.inherit()
         )
 
         cl_imode = self._command_line_controller.interaction_mode = \
@@ -146,7 +146,7 @@ class BufferSetController(Responder):
         if bcontr is None:
             from . import buffer_controller
             view = self.view.add_buffer_view()
-            bcontr = buffer_controller.BufferController(self, view, Buffer(), config=self.config)
+            bcontr = buffer_controller.BufferController(self, view, Buffer(), config=self.config.inherit())
             bcontr.modified_was_changed.connect(self._after_buffer_modified_changed)
 
             if path is not None:

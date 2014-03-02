@@ -56,11 +56,12 @@ def might_be_header(filename):
     
 
 class WorkerSemanticEngine(object):
-    def __init__(self):
+    def __init__(self, config):
         cindex.conf.get_cindex_library().clang_toggleCrashRecovery(1)
         self.index = cindex.Index.create()
         self.compilation_databases = []
         self.trans_units = {}
+        self.config = config
 
     def enroll_compilation_database(self, path):
         '''
@@ -135,9 +136,10 @@ class WorkerSemanticEngine(object):
 
 class SemanticEngine(object):
 
-    def __init__(self):
+    def __init__(self, config):
         self._engine = None
         self._lock = threading.Lock()
+        self._config = config
 
 
     @property
@@ -145,7 +147,7 @@ class SemanticEngine(object):
         if self._engine is None:
             if options.ClangLibrary is not None:
                 cindex.Config.set_library_file(str(options.ClangLibrary))
-            self._engine = WorkerSemanticEngine()
+            self._engine = WorkerSemanticEngine(self._config)
         return self._engine
 
     def enroll_compilation_database(self, path):

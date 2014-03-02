@@ -103,6 +103,7 @@ class CXXCompleter(AbstractCompleter, Responder):
 
     def __init__(self, buf_ctl):
         super().__init__(buf_ctl)
+        self.config = self.buf_ctl.config
         self._has_shut_down = False
         buf_ctl.add_next_responders(self)
         self._start_worker()
@@ -121,6 +122,8 @@ class CXXCompleter(AbstractCompleter, Responder):
             self.engine.enroll_compilation_database(str(db.parent))
     
         buf_ctl.closing.connect(self._shutdown)
+        
+    
     
     def _sort_completions(self, key, completions):
         completions = list(completions)
@@ -133,7 +136,7 @@ class CXXCompleter(AbstractCompleter, Responder):
         self.worker = worker.WorkerManager()
         self.worker.start()
 
-        self.engine = self.worker.SemanticEngine()        
+        self.engine = self.worker.SemanticEngine(self.config)
 
     def _shutdown(self):
         if not self._has_shut_down:
