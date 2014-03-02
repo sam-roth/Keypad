@@ -95,7 +95,8 @@ class BufferSetController(Responder):
 
     def _after_active_view_change(self, view):
         if view is not None and view.controller is not None:
-            self._last_active_buffer_controller = self._active_buffer_controller
+            if self._active_buffer_controller is not self._command_line_controller:
+                self._last_active_buffer_controller = self._active_buffer_controller
 
             self.view.next_responder = view.controller
             view.controller.add_next_responders(self)
