@@ -35,6 +35,7 @@ class TextView(QAbstractScrollArea):
     def __init__(self, parent=None):
         try:
             super().__init__(parent)
+            self._config = None
             self._completion_view = None
             self.setAttribute(Qt.WA_OpaquePaintEvent, True)
             self.viewport().setAttribute(Qt.WA_OpaquePaintEvent, True)
@@ -86,6 +87,21 @@ class TextView(QAbstractScrollArea):
         except:
             logging.exception('error initting TextView')
             raise
+            
+    def _on_settings_reloaded(self):
+        for line in self._lines:
+            line.invalidate()
+        self.full_redraw()
+    
+    @property
+    def config(self):
+        return self._config
+        
+    @config.setter
+    def config(self, val):
+        self._config = val
+        self.settings = TextViewSettings(options.DefaultColorScheme, val)
+        self.settings.reloaded.connect(self._on_settings_reloaded)
 
     @property
     def cursor_type(self): 
@@ -195,7 +211,7 @@ class TextView(QAbstractScrollArea):
         return h - len(self.modelines)
 
     @property
-    def tab_width(self): return 8
+    def tab_width(self): return self.settings.tab_stop
 
     @signal.Signal
     def plane_size_changed(self, width, height): pass
@@ -221,7 +237,7 @@ class TextView(QAbstractScrollArea):
         self.update_plane_size()
 
     def update_plane_size(self):
-        metrics = QFontMetricsF(self.font())
+        metrics = QFontMetricsF(self.settings.q_font)
         
         m = self._margins
         size = self.size()
@@ -269,9 +285,11 @@ class TextView(QAbstractScrollArea):
     def map_from_plane(self, line, col):
         
         y = self._margins.top() + (line - self.start_line) * self.line_height
-        fm = QFontMetricsF(self.font())
+        fm = QFontMetricsF(self.settings.q_font)
         
-        x = self._margins.left() + fm.width(self.lines[line].text[:col])
+        expanded_text = self.settings.expand_tabs(self.lines[line].text[:col])
+        
+        x = self._margins.left() + fm.width(expanded_text)
 
         return x, y
 
@@ -370,7 +388,7 @@ class TextView(QAbstractScrollArea):
 
             x = self._margins.left()
 
-            fm = QFontMetricsF(self.font())
+            fm = QFontMetricsF(self.settings.q_font)
             y = self._margins.top()
 
             viewport_width = self.viewport().width()

@@ -6,23 +6,44 @@ from ..util.cascade_dict import CascadeDict
 from .. import options
 import math
 from . import options as qt_options
-
+from ..core.conftree import ConfTree
+from ..core import Signal
+import logging
 
 class TextViewSettings(object):
-    def __init__(self, scheme):
-
-        self.scheme = scheme
-
-        fontname, fontsize = options.TextViewFont
+    def __init__(self, scheme, settings=None):
+        self.default_scheme = scheme
+        settings = (settings or ConfTree()).TextView
+        self.settings = settings   
+        settings.modified.connect(self._on_settings_changed)
+        self.reload_settings()
+        
+    def _on_settings_changed(self, key, val):
+        self.reload_settings()
+        
+    def reload_settings(self):
+        s = self.settings
+        
+        self.scheme = s.get('Scheme', self.default_scheme)
+        
+        try:
+            fontname, fontsize = s.get('Font', options.TextViewFont)
+        except:
+            logging.exception('Invalid font %r', s.get('Font', options.TextViewFont))
+            fontname, fontsize = options.TextViewFont
         
 
         self.q_font    = QFont(fontname)
         self.q_font.setPointSizeF(fontsize)
 
-        self.double_strike = options.TextViewDoubleStrike
+        self.double_strike = s.get('DoubleStrike', options.TextViewDoubleStrike, bool)
 
-        if options.TextViewIntegerMetrics:
+        if s.get('IntegerMetrics', options.TextViewIntegerMetrics, bool):
             self.q_font.setStyleStrategy(QFont.ForceIntegerMetrics | self.q_font.styleStrategy())
+        
+        antialias = s.get('Antialias', True, bool)
+        if not antialias:
+            self.q_font.setStyleStrategy(QFont.NoAntialias|self.q_font.styleStrategy())
             
         self.q_completion_bgcolor = to_q_color(self.scheme.bg)
         self.q_completion_bgcolor.setAlphaF(qt_options.CompletionViewOpacity)
@@ -32,11 +53,15 @@ class TextViewSettings(object):
         #self.q_bgcolor = QColor(self.scheme.bg) #QColor.fromRgb(0, 43, 54)
         #self.q_fgcolor = QColor(self.scheme.fg)
         #QColor.fromRgb(131, 148, 150) 
-        self.tab_stop  = 8
+        self.tab_stop  = s.get('TabStop', 8, int)
 
         self.word_wrap = False
-
-
+        self.reloaded()
+    @Signal
+    def reloaded(self):
+        pass
+        
+    
     completion_bgcolor = qcolor_marshaller('q_completion_bgcolor')
     bgcolor = qcolor_marshaller('q_bgcolor')
     fgcolor = qcolor_marshaller('q_fgcolor')

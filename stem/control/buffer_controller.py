@@ -35,8 +35,10 @@ class BufferController(Tagged, Responder):
         self.buffer             = buff
         self.view.lines         = self.buffer.lines
         self.view.keep          = self
+
         self.manipulator        = BufferManipulator(buff)
         self.config = config or conftree.ConfTree()
+        self.view.config        = self.config
 
         self.selection          = SelectionImpl(self.manipulator)
 
@@ -398,6 +400,10 @@ def dumptags(buff: BufferController):
 
     writer.write(fmt)
 
+
+@interactive('set')
+def set_config(bufctl: BufferController, key, *val):
+    bufctl.config.set_property(key, ast.literal_eval(' '.join(val)))
 
 
 advance_word_regex = re.compile(

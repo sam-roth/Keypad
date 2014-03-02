@@ -41,7 +41,6 @@ class BufferSetView(Responder, QMainWindow):
         qApp.focusChanged.connect(self.__app_focus_change)
 
         self.rebuild_menus()
-    
 
     @property
     def active_tab(self):
