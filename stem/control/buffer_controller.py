@@ -8,7 +8,7 @@ from .cua_interaction           import CUAInteractionMode
 from ..                         import util
 from ..buffers                  import ModifiedCursor, Cursor, BufferManipulator, Buffer, Span, Region
 from ..buffers.selection        import Selection, BacktabMixin
-from ..core                     import AttributedString, errors, Signal, write_atomically, color
+from ..core                     import AttributedString, errors, Signal, write_atomically, color, conftree
 from ..core.tag                 import Tagged, autoconnect
 from ..core.attributed_string   import lower_bound
 from ..core.key                 import *
@@ -23,7 +23,7 @@ class SelectionImpl(BacktabMixin, Selection):
 from .interactive import interactive
 
 class BufferController(Tagged, Responder):
-    def __init__(self, buffer_set, view, buff, provide_interaction_mode=True):
+    def __init__(self, buffer_set, view, buff, provide_interaction_mode=True, config=None):
         '''
         :type view: stem.qt.view.TextView
         :type buff: stem.buffers.Buffer
@@ -36,6 +36,7 @@ class BufferController(Tagged, Responder):
         self.view.lines         = self.buffer.lines
         self.view.keep          = self
         self.manipulator        = BufferManipulator(buff)
+        self.config = config or conftree.ConfTree()
 
         self.selection          = SelectionImpl(self.manipulator)
 
