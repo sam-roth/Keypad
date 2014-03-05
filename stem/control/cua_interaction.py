@@ -318,16 +318,16 @@ class CUAInteractionMode(Responder):
         plane_height, plane_width = self.controller.view.plane_size
 
         
-        full_redraw_needed = False
-
-        if self.view.start_line > self.curs.pos[0]:
-            self.view.scroll_to_line(self.curs.pos[0])
-            full_redraw_needed = True
-        elif self.view.start_line + self.view.buffer_lines_visible <= self.curs.pos[0]:
-            self.view.scroll_to_line(self.curs.pos[0] - self.view.buffer_lines_visible + 1)
-            full_redraw_needed = True
-
-        self.controller.refresh_view(full=full_redraw_needed)
+#         full_redraw_needed = False
+# 
+#         if self.view.start_line > self.curs.pos[0]:
+#             self.view.scroll_to_line(self.curs.pos[0])
+#             full_redraw_needed = True
+#         elif self.view.start_line + self.view.buffer_lines_visible <= self.curs.pos[0]:
+#             self.view.scroll_to_line(self.curs.pos[0] - self.view.buffer_lines_visible + 1)
+#             full_redraw_needed = True
+# 
+#         self.controller.refresh_view(full=full_redraw_needed)
         
 
 #@interactive('imode_map', 'mmap')

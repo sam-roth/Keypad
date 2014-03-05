@@ -1,6 +1,7 @@
 
 import re
 from stem.api import interactive, autoconnect, BufferController
+from stem.control.interactive import run as run_interactive
 from stem.buffers import Cursor, Span
 
 
@@ -92,7 +93,7 @@ def _get_searcher(bufctl):
 
 
 from stem.core import errors
-    
+
 @interactive('find', 'f')
 def find(bufctl: BufferController, *pattern):
     '''
@@ -105,6 +106,8 @@ def find(bufctl: BufferController, *pattern):
     
     : find boost((::|/|\.)\w+)*
     '''
+    assert isinstance(bufctl, BufferController)
+    
     searcher = _get_searcher(bufctl)
     pattern = ' '.join(pattern) if pattern else None
     res = searcher.search(bufctl.canonical_cursor.pos,
@@ -115,9 +118,7 @@ def find(bufctl: BufferController, *pattern):
 
     (y, x), _ = res
 
-    bufctl.canonical_cursor.move(y, x)
-    bufctl.anchor_cursor = None
-
+    bufctl.selection.move(y, x)
     bufctl.refresh_view()
 
 

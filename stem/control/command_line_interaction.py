@@ -47,35 +47,6 @@ class CommandLineInteractionMode(CUAInteractionMode):
         writer.text_written.connect(self.__on_write_text)
         
 
-#    def _on_key_press(self, evt):
-#        # FIXME: this isn't really the right way of doing this
-#
-#        anch = self.controller.anchor_cursor
-#        buf_lines = len(self.controller.buffer.lines)
-#
-#        curs = self.controller.canonical_cursor
-#
-#        # don't allow edit in read-only area
-#        no_super = curs.pos[0] != buf_lines - 1
-#            
-#
-#        # remove selections in read-only area
-#        if anch is not None and anch.pos[0] != buf_lines - 1:
-#            self.controller.anchor_cursor = None
-#            return    
-#
-#        # don't allow backspace into read-only area
-#        if Keys.backspace.optional(Keys.shift.alt.ctrl.meta).matches(evt.key):
-#            if curs.pos[1] == 0:
-#                return
-#                    
-#
-#        curs.last_line()
-#
-#        if not no_super:
-#            super()._on_key_press(evt)
-#
-
     def intercept_app_shortcut(self, event):
         if Keys.tab.matches(event.key):
             event.intercept()
@@ -89,6 +60,15 @@ class CommandLineInteractionMode(CUAInteractionMode):
     @property
     def current_cmdline(self):
         return self.__current_cmdline
+    
+    @current_cmdline.setter
+    def current_cmdline(self, value):
+        sel = self.controller.selection
+        sel.last_line().end()
+        with sel.select():
+            sel.move(col=self.cmdline_col)
+        with self.controller.history.transaction():
+            sel.replace(value)
     
     def push_history_item(self, text):
         self.__command_history.append(text)
@@ -133,11 +113,7 @@ class CommandLineInteractionMode(CUAInteractionMode):
         self.push_history_item(self.__current_cmdline)
         logging.debug('Current text: %r', self.__current_cmdline)
         self.accepted()
-        #try:
-        #    for error in self.accepted.errors:
-        #        writer.write(''.join(traceback.format_exception(type(error), error, error.__traceback__)))
-        #except Exception as exc:
-        #    logging.exception(exc)
+
         if not self.__wrote_newline:
             self.__next_line()
 
@@ -148,9 +124,6 @@ class CommandLineInteractionMode(CUAInteractionMode):
                 self.show_error('{} [{}]'.format(str(error), type(error).__name__))
 
             notification_queue.run_in_main_thread(error_shower)
-
-
-
 
     def __set_last_line(self, text):
         home = Cursor(self.controller.buffer).last_line().home()

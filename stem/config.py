@@ -106,6 +106,11 @@ menu(5.5,
       keybinding=Keys.ctrl.slash)
 
 
+menu(6,
+     'Edit/Find',
+     'set_cmdline', 'f ',
+     keybinding=Keys.ctrl.f)
+
 submenu(2, 'Window')
 
 menu(0,

@@ -3,6 +3,8 @@ import abc
 import contextlib
 import re
 
+from ..core import Signal
+
 
 _AdvanceWordRegex = re.compile(
     r'''
@@ -65,6 +67,10 @@ class Selection(object):
     @property
     def anchor_cursor(self): 
         return self._anchor_cursor
+        
+    @Signal
+    def moved(self):
+        pass
 
     def _pre_move(self):
         if self.select and not self._anchor_cursor:
@@ -74,7 +80,7 @@ class Selection(object):
             self._anchor_cursor = None
 
     def _post_move(self):
-        pass
+        self.moved()
 
     @contextlib.contextmanager
     def moving(self):

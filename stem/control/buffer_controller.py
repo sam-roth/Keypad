@@ -14,6 +14,7 @@ from ..core.attributed_string   import lower_bound
 from ..core.key                 import *
 from ..core.responder           import Responder
 from ..util.path                import search_upwards
+from ..core.notification_queue  import in_main_thread
 import configparser
 import fnmatch
 import ast
@@ -52,7 +53,7 @@ class BufferController(Tagged, Responder):
         buff.text_modified                  += self._after_buffer_modification
         self.history.transaction_committed  += self._after_history_transaction_committed
         self.view.closing                   += self.closing
-        
+        self.selection.moved                += self.scroll_to_cursor
         
         self.buffer_set = buffer_set
         self._prev_region = Region()
@@ -297,9 +298,17 @@ class BufferController(Tagged, Responder):
             self.view.partial_redraw()
 
     
+    @in_main_thread
+    # defer this until later in the event loop, since final scroll position
+    # position is hysteretic (path dependent)
     def scroll_to_cursor(self):
-        self.view.scroll_to_line(self.canonical_cursor.y)
-        self.refresh_view(full=True)
+        curs = self.selection.insert_cursor
+        if self.view.start_line > curs.pos[0]:
+            self.view.scroll_to_line(curs.pos[0])
+        elif self.view.start_line + self.view.buffer_lines_visible <= curs.pos[0]:
+            self.view.scroll_to_line(curs.pos[0] - self.view.buffer_lines_visible + 1)
+            
+        
 from ..abstract.application import app
 
 @interactive('show_error')

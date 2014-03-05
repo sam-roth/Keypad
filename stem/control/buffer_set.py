@@ -282,6 +282,13 @@ def destroy_buffer(bufs: BufferSetController):
 @interactive('activate_cmdline')
 def activate_cmdline(bufs: BufferSetController):
     bufs.activate_cmdline()
+    
+@interactive('set_cmdline')
+def set_cmdline(bufs: BufferSetController, text):
+    assert isinstance(bufs, BufferSetController)
+    bufs.activate_cmdline()
+    bufs._command_line_controller.interaction_mode.current_cmdline = text
+    
 
 @interactive('next_tab')
 def next_tab(bufs: BufferSetController, n_tabs=1):
