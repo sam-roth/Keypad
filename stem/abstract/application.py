@@ -43,6 +43,11 @@ class Application(Responder, metaclass=abc.ABCMeta):
         self.__clipboard_value = value
 
 
+    @abc.abstractmethod
+    def timer(self, time_s, callback):
+        pass
+
+
 def app():
     return Application.instance()
 

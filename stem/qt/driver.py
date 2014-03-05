@@ -89,6 +89,10 @@ class Application(AbstractApplication, QApplication, metaclass=ABCWithQtMeta):
 
     def _on_post(self):
         self.postEvent(self, _ProcessPosted())
+        
+        
+    def timer(self, time_s, callback):
+        QTimer.singleShot(int(time_s * 1000), callback)
 
 def _fatal_handler(*args, **kw):
     import os

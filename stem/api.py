@@ -5,7 +5,7 @@ from .control.buffer_set import BufferSetController
 from .control.interactive import interactive, menu, submenu
 from .core import Keys
 from .core.tag import autoextend, autoconnect
-
+from .abstract.application import app
 
 
 def bind(key, interactive_command_name):
@@ -30,6 +30,7 @@ def load_plugins(path, prefix):
 
 
 __all__ = '''
+    app
     bind
     unbind
     interactive
