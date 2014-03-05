@@ -24,15 +24,20 @@ class BufferSetView(Responder, QMainWindow):
         self._active_tab = None
 
         self._split = split = QSplitter(Qt.Vertical, self)
+        split.setHandleWidth(1)
 
         m = self._mdi = QMdiArea(split)
+        m.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         m.setViewMode(QMdiArea.TabbedView)
         m.setTabsClosable(True)
         m.setTabsMovable(True)
         m.setDocumentMode(True)
         m.subWindowActivated.connect(self._on_subwindow_activated)
+        
 
         split.addWidget(m)
+        
+        split.setStretchFactor(0, 9999999)
 
         self.setCentralWidget(split)
     
@@ -192,7 +197,13 @@ class BufferSetView(Responder, QMainWindow):
     def command_line_view(self):
         if self._command_line_view is None:
             self._command_line_view = TextView(self)
-            self._split.addWidget(self._command_line_view)
+            self._command_line_view.setMinimumHeight(
+                self._command_line_view.line_height*5
+            )
+            
+            self._command_line_view.setSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Minimum)
+            self._split.addWidget(self._command_line_view)   
+            self._split.setSizes([99999999, 1])   
 
         return self._command_line_view
 
