@@ -15,6 +15,7 @@ from ..core.key                 import *
 from ..core.responder           import Responder
 from ..util.path                import search_upwards
 from ..core.notification_queue  import in_main_thread
+from ..core                     import timer
 import configparser
 import fnmatch
 import ast
@@ -38,6 +39,7 @@ class BufferController(Tagged, Responder):
         self.buffer             = buff
         self.view.lines         = self.buffer.lines
         self.view.keep          = self
+        self.__file_mtime       = 0
 
         self.manipulator        = BufferManipulator(buff)
         self.config             = config or conftree.ConfTree()
@@ -54,6 +56,9 @@ class BufferController(Tagged, Responder):
         self.history.transaction_committed  += self._after_history_transaction_committed
         self.view.closing                   += self.closing
         self.selection.moved                += self.scroll_to_cursor
+        self.wrote_to_path                  += self.__update_file_mtime
+        self.loaded_from_path               += self.__update_file_mtime
+        self.closing                        += self.__on_closing
         
         self.buffer_set = buffer_set
         self._prev_region = Region()
@@ -65,8 +70,41 @@ class BufferController(Tagged, Responder):
             self.interaction_mode = CUAInteractionMode(self)
         else:
             self.interaction_mode = None
+            
 
         self.instance_tags_added.connect(self.__after_tags_added)
+        
+        self.__file_change_timer = timer.Timer(5)
+        self.__file_change_timer.timeout += self.__check_for_file_change
+        
+
+    def __check_for_file_change(self):
+        if not self.path:
+            self.__file_change_timer.running = False
+            return
+            
+        mtime = pathlib.Path(self.path).stat().st_mtime    
+        
+        if mtime > self.__file_mtime:
+            logging.warning('file modified')
+            result = self.view.run_modified_warning(self.is_modified)
+            
+            if result == 'reload':
+                with self.history.rec_transaction():
+                    self.replace_from_path(self.path)
+            
+            
+        
+        self.__file_mtime = mtime
+        
+    
+    
+    def __update_file_mtime(self, *dummy):
+        if self.path:
+            self.__file_change_timer.running = True
+            self.__file_mtime = pathlib.Path(self.path).stat().st_mtime
+        else:
+            self.__file_change_timer.running = False
     
     def __on_tag_cfg_changed(self, key, value):
         if key == ('Tag', 'Add'):
@@ -97,6 +135,12 @@ class BufferController(Tagged, Responder):
                         eval_v = ast.literal_eval(v)
                         self.config.set_property(k, eval_v)
             
+    
+    def __on_closing(self):
+        # remove all extensions from this object to ensure that its refcount goes to zero
+        self.extensions.clear()
+        self.remove_tags(list(self.tags))
+        
 
     @property
     def canonical_cursor(self):

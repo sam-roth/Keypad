@@ -88,6 +88,33 @@ class TextView(QAbstractScrollArea):
             logging.exception('error initting TextView')
             raise
             
+            
+    def run_modified_warning(self, modified):
+        self.setFocus(Qt.OtherFocusReason)
+        mb = QMessageBox(self)
+        mb.setIcon(QMessageBox.Warning)
+        mb.setText('This buffer has been modified externally since it was loaded.')
+        mb.setInformativeText('Saving the buffer will OVERWRITE the modifications.')
+        
+        mb.setWindowFlags(mb.windowFlags() | Qt.Sheet)
+        mb.setWindowModality(Qt.WindowModal)
+        
+        reload_text = 'Reload, Discarding Unsaved Changes' if modified else 'Reload'
+        reload_role = QMessageBox.DestructiveRole if modified else QMessageBox.YesRole
+        reload_btn = mb.addButton(reload_text, reload_role)
+        
+        cancel_btn = mb.addButton(QMessageBox.Cancel)
+        
+        if not modified:
+            mb.setDefaultButton(reload_btn)
+        
+        mb.exec()
+        
+        if mb.clickedButton() is reload_btn:
+            return 'reload'
+        else:
+            return 'cancel'
+            
     def _on_settings_reloaded(self):
         for line in self._lines:
             line.invalidate()
