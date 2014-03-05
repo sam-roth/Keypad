@@ -101,7 +101,6 @@ class CmdlineCompleter(AbstractCompleter):
                     
                     typed_rootpath = imode.current_cmdline[col-imode.cmdline_col:]
                     rootpath = _expand_user(typed_rootpath)
-                    logging.debug('rootpath: %r', rootpath)
                     if not rootpath.is_dir():
                         rootpath = rootpath.parent
                         typed_rootpath = os.path.join(*(os.path.split(typed_rootpath)[:-1]))
@@ -113,7 +112,6 @@ class CmdlineCompleter(AbstractCompleter):
                         1024
                     )
                     limited_glob = list(limited_glob)
-                    logging.debug('limited glob: %r', limited_glob)
                     
                     self.show_completions(list(limited_glob))
             
