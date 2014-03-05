@@ -13,8 +13,10 @@ from ..core.tag                 import Tagged, autoconnect
 from ..core.attributed_string   import lower_bound
 from ..core.key                 import *
 from ..core.responder           import Responder
-
-
+from ..util.path                import search_upwards
+import configparser
+import fnmatch
+import ast
 
 class SelectionImpl(BacktabMixin, Selection):
     pass
@@ -39,6 +41,8 @@ class BufferController(Tagged, Responder):
         self.manipulator        = BufferManipulator(buff)
         self.config = config or conftree.ConfTree()
         self.view.config        = self.config
+        self._tag_config = self.config.Tag
+        self._tag_config.modified.connect(self.__on_tag_cfg_changed)
 
         self.selection          = SelectionImpl(self.manipulator)
 
@@ -72,6 +76,36 @@ class BufferController(Tagged, Responder):
             self.interaction_mode = None
 
         self.instance_tags_added.connect(self.__after_tags_added)
+    
+    def __on_tag_cfg_changed(self, key, value):
+        if key == ('Tag', 'Add'):
+            self.add_tags(**value)
+        elif key == ('Tag', 'Remove'):
+            self.remove_tags(*value)
+        
+        
+    def __read_file_config(self, path):
+        if path is None: return
+        mdfile = next(search_upwards(path, '.stem-md.ini'), None)
+        if not mdfile: return
+        pathstr = str(path)        
+        config = configparser.ConfigParser()
+        config.optionxform = lambda x: x
+
+        config.read(str(mdfile))
+        
+        for section in config.values():
+            try:
+                globs = ast.literal_eval(section['glob']).split(',')
+            except KeyError:
+                continue
+            
+            if any(fnmatch.fnmatch(pathstr, glob) for glob in globs):
+                for k, v in section.items():
+                    if k and k[0].isupper():
+                        eval_v = ast.literal_eval(v)
+                        self.config.set_property(k, eval_v)
+            
 
     @property
     def canonical_cursor(self):
@@ -179,6 +213,7 @@ class BufferController(Tagged, Responder):
 
         self.canonical_cursor.move(0,0)
 
+        self.__read_file_config(path)
         self.loaded_from_path(path)
 
     def write_to_path(self, path):
@@ -190,6 +225,8 @@ class BufferController(Tagged, Responder):
         self.will_write_to_path(path)
         with write_atomically(path) as f:
             f.write(self.buffer.text.encode())
+            
+        self.__read_file_config(path)
         self.wrote_to_path(path)
         self.is_modified = False
     
