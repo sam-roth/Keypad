@@ -417,29 +417,28 @@ class TextView(QAbstractScrollArea):
             
             for i, row in enumerate(lines_to_display, self.start_line):
 
-                overlays = set()
-                for overlay_span, attr_key, attr_val in overlay_spans:
-                    start_pos, end_pos = overlay_span.start_curs.pos, overlay_span.end_curs.pos
-
-                    start_y, start_x = start_pos
-                    end_y, end_x = end_pos
-                    
-                    if start_y <= i <= end_y:
-                        line_start_x = 0 if i != start_y else start_x
-                        line_end_x = len(row) if i != end_y else end_x
+                overlays = set()                
+                if i < len(text_lines) + self.start_line:
+                    for overlay_span, attr_key, attr_val in overlay_spans:
+                        start_pos, end_pos = overlay_span.start_curs.pos, overlay_span.end_curs.pos
+    
+                        start_y, start_x = start_pos
+                        end_y, end_x = end_pos
                         
-                        overlays.add((line_start_x, line_end_x, attr_key, attr_val))
-
-                if i == cursor_line and should_draw_cursor:
-                    if self._cursor_type == self.CursorType.Rect:
-                        overlays.add((cursor_col, cursor_col+1, 'cartouche', self.settings.fgcolor))
-                    elif self._cursor_type == self.CursorType.FillRect:
-                        # FIXME: this should overwrite the selection overlay.
-                        overlays.add((cursor_col, cursor_col+1, 'bgcolor', self.settings.fgcolor))
-                        overlays.add((cursor_col, cursor_col+1, 'color', self.settings.bgcolor))
-
-
-                if i == len(text_lines) + self.start_line:
+                        if start_y <= i <= end_y:
+                            line_start_x = 0 if i != start_y else start_x
+                            line_end_x = len(row) if i != end_y else end_x
+                            
+                            overlays.add((line_start_x, line_end_x, attr_key, attr_val))
+    
+                    if i == cursor_line and should_draw_cursor:
+                        if self._cursor_type == self.CursorType.Rect:
+                            overlays.add((cursor_col, cursor_col+1, 'cartouche', self.settings.fgcolor))
+                        elif self._cursor_type == self.CursorType.FillRect:
+                            # FIXME: this should overwrite the selection overlay.
+                            overlays.add((cursor_col, cursor_col+1, 'bgcolor', self.settings.fgcolor))
+                            overlays.add((cursor_col, cursor_col+1, 'color', self.settings.bgcolor))
+                elif i == len(text_lines) + self.start_line:
                     text_lines_end = y
                     modeline_start = y = self.height() - height * len(self.modelines) - self._margins.bottom()
 
