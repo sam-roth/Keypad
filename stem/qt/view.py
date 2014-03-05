@@ -222,7 +222,17 @@ class TextView(QAbstractScrollArea):
 
     def show_completions(self):
         x,y = self.map_from_plane(*self.cursor_pos)
-        self.completion_view.move_(self.mapToGlobal(QPoint(x, y + self.line_height)))
+        
+        normal_compl_rect = QRect(self.mapToGlobal(QPoint(x, y + self.line_height)), 
+                                  self.completion_view.size())
+        intersect = QApplication.desktop().screenGeometry().intersected(normal_compl_rect)
+        if intersect != normal_compl_rect:
+            normal_compl_rect.moveBottomLeft(
+                self.mapToGlobal(
+                    QPoint(x, y - self.line_height)))
+        
+            
+        self.completion_view.move_(normal_compl_rect.topLeft())
         self.completion_view.show()
 
 
