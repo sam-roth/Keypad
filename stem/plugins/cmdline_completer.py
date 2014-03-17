@@ -19,7 +19,7 @@ import inspect
 import logging
 import itertools
 import os.path
-
+import collections
 def _expand_user(p):
     return pathlib.Path(os.path.expanduser(str(p)))
 
@@ -31,22 +31,38 @@ def _as_posix_or_none(x):
 
 
 def _get_directory_contents_rec(path):
+    queue = collections.deque()
     path = pathlib.Path(path)
-    if not path.is_dir():
-        yield path
-    else:
-        for item in path.iterdir():
-            if not item.is_dir() and not item.name.startswith('.'):
-                yield item
-                
-        for item in path.iterdir():
-            if item.is_dir() and not item.name.startswith('.'):
-                try:
-                    yield from _get_directory_contents_rec(item)
-                except OSError:
-                    pass # skip over things like infinite symlinks
 
+    queue.appendleft(path)    
+    while queue:
+        item = queue.pop()
+        for subitem in item.iterdir():
+            if subitem.is_dir():
+                queue.appendleft(subitem)
+            yield subitem
 
+    
+# 
+# 
+# def _get_directory_contents_rec(path):
+#     path = pathlib.Path(path)
+#     if not path.is_dir():
+#         yield path
+#     else:
+#         for item in path.iterdir():
+#             if not item.is_dir() and not item.name.startswith('.'):
+#                 yield item
+#                 
+#         for item in path.iterdir():
+#             if item.is_dir() and not item.name.startswith('.'):
+#                 try:
+#                     yield from _get_directory_contents_rec(item)
+#                 except OSError:
+#                     pass # skip over things like infinite symlinks
+# 
+
+    
 @autoextend(BufferController,
             lambda tags: tags.get('cmdline'))
 class CmdlineCompleter(AbstractCompleter):
