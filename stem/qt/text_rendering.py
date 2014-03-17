@@ -9,6 +9,7 @@ from . import options as qt_options
 from ..core.conftree import ConfTree
 from ..core import Signal
 import logging
+from ..core.color import Color
 
 class TextViewSettings(object):
     def __init__(self, scheme, settings=None):
@@ -17,6 +18,8 @@ class TextViewSettings(object):
         self.settings = settings   
         settings.modified.connect(self._on_settings_changed)
         self.reload_settings()
+        self.tab_glyph = '⟩'
+
         
     def _on_settings_changed(self, key, val):
         self.reload_settings()
@@ -54,7 +57,7 @@ class TextViewSettings(object):
         #self.q_fgcolor = QColor(self.scheme.fg)
         #QColor.fromRgb(131, 148, 150) 
         self.tab_stop  = s.get('TabStop', 8, int)
-
+        self.q_tab_color = to_q_color(self.scheme.bg.mean(self.scheme.fg))
         self.word_wrap = False
         self.reloaded()
     @Signal
@@ -124,7 +127,7 @@ def paint_attr_text(painter, text, bounding_rect, cfg):
         sel_color   = attributes.get('sel_color')
         error       = attributes.get('error', False)
         cartouche   = attributes.get('cartouche') # color of rectangle around text
-
+        tab         = attributes.get('tab', False)
 
         if sel_bgcolor == 'auto':
             sel_bgcolor = cfg.scheme.selection_bg
@@ -132,7 +135,7 @@ def paint_attr_text(painter, text, bounding_rect, cfg):
         if sel_color == 'auto':
             sel_color = cfg.scheme.selection_fg
 
-
+        
             
         actual_color = sel_color or color
         actual_bgcolor = sel_bgcolor or bgcolor
@@ -168,10 +171,21 @@ def paint_attr_text(painter, text, bounding_rect, cfg):
                 painter.drawRect(xc, 0, width-1, fm.lineSpacing()-1)
         
         painter.setPen(to_q_color(actual_color))
+        
+        if tab and string == '\t':
+            with restoring(painter):
+                pen = painter.pen()
+                pen.setColor(cfg.q_tab_color)
+                painter.setPen(pen)
+                painter.drawText(QRectF(QPointF(xc, 0), QSizeF(width-1, fm.lineSpacing()-1)), 
+                                 Qt.AlignRight,
+                                 cfg.tab_glyph)
+            
         painter.drawText(QPointF(xc, yc), tab_expanded_string)# string)
         if cfg.double_strike:
             # greatly improves legibility on dark backgrounds when using FreeType
             painter.drawText(QPointF(xc, yc), tab_expanded_string)
+            
         if error:
             with restoring(painter):
                 pen = painter.pen()
@@ -249,6 +263,10 @@ def apply_overlay(text, overlay):
 
     return text
 
+def tab_mark(text):
+    for i, ch in enumerate(text.text):
+        if ch == '\t':
+            text.set_attributes(i, i+1, tab=True) 
 
 
 # Updates will be overlayed with a translucent red box if set to True.
@@ -283,8 +301,12 @@ def draw_attr_text(painter, rect, text, settings, partial=False, overlay=frozens
     
 
     if no_cache:
-        if overlay:
-            text_to_draw = apply_overlay(text, overlay)
+        if overlay or '\t' in text.text:
+            text_to_draw = text
+            if overlay:
+                text_to_draw = apply_overlay(text_to_draw, overlay)
+            
+            tab_mark(text_to_draw)
             text.caches[overlay_key] = overlay
         else:
             text_to_draw = text

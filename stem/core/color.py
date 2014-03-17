@@ -75,4 +75,9 @@ class Color(namedtuple('Color', 'red green blue alpha')):
     @property
     def css_rgba(self):
         return 'rgba({}, {}, {}, {}%)'.format(self.red, self.green, self.blue, self.alpha/255*100)
-
+    
+    
+    def mean(self, other):
+        return Color(*[int((x+y)/2) for (x,y) in zip(self, other)])
+        
+        
