@@ -289,7 +289,6 @@ class CompletionView(QWidget, AbstractCompletionView, metaclass=ABCWithQtMeta):
 
 
     def moveEvent(self, event):
-        print('moved', event.pos(), event.oldPos(), self._pos_locked)
         if self._pos_locked is not None and event.pos() != self._pos_locked:
             self.move(self._pos_locked)
         else:

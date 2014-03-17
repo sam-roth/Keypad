@@ -111,7 +111,6 @@ class CommandLineInteractionMode(CUAInteractionMode):
 
         self.__wrote_newline = False
         self.push_history_item(self.__current_cmdline)
-        logging.debug('Current text: %r', self.__current_cmdline)
         self.accepted()
 
         if not self.__wrote_newline:

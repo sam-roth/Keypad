@@ -91,7 +91,6 @@ class CmdlineCompleter(AbstractCompleter):
         imode = self.buf_ctl.interaction_mode
         line, col = self._start_pos
         current_cmdline = imode.current_cmdline[:col-imode.cmdline_col]
-        logging.debug('cmdline %r (%d)', current_cmdline, col)
 
 
         tokens = list(shlex.shlex(current_cmdline))
