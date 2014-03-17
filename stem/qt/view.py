@@ -35,6 +35,7 @@ class TextView(QAbstractScrollArea):
     def __init__(self, parent=None):
         try:
             super().__init__(parent)
+            self.setFrameStyle(QFrame.NoFrame)
             self._config = None
             self._completion_view = None
             self.setAttribute(Qt.WA_OpaquePaintEvent, True)

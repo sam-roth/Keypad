@@ -26,7 +26,10 @@ class BufferSetView(Responder, QMainWindow):
         self._split = split = QSplitter(Qt.Vertical, self)
         split.setHandleWidth(1)
 
+        split.setFrameStyle(QFrame.NoFrame)
+        
         m = self._mdi = QMdiArea(split)
+        m.setFrameStyle(QFrame.NoFrame)
         m.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         m.setViewMode(QMdiArea.TabbedView)
         m.setTabsClosable(True)
