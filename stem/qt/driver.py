@@ -118,9 +118,15 @@ def _message_handler(ty, msg):
     else:
         handler('%s', _decode_if_needed(msg))
 
+USE_IPYTHON = True
+
+
+
+
 def main():
     import sys
     import logging
+
     logfmt = '[%(asctime)s|%(module)s:%(lineno)d|%(levelname)s]\n  %(message)s'
 
     logging.basicConfig(level=logging.DEBUG,
@@ -141,10 +147,25 @@ def main():
         
     
     qInstallMsgHandler(_message_handler)    
-   
+#   
+
+ 
+    if USE_IPYTHON:
+        from ..control import BufferController
+        @interactive('embedipython')
+        def embed_ipython(bc: BufferController):
+            import IPython
+            IPython.embed()
+#         import threading
+#         def target():
+#             import IPython
+#             IPython.embed()
+#         thd = threading.Thread(target=target)
+#         thd.start()
+#         
     sys.exit(Application(sys.argv).exec_())
-
-
+    
+        
 #@interactive('reload')
 def reload_all(app: Application):
     '''

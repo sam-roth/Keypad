@@ -33,6 +33,7 @@ class BufferController(Tagged, Responder):
         :type buff: stem.buffers.Buffer
         '''
         super().__init__()
+        
 
         self.last_canonical_cursor_pos = 0,0
         self._view              = view
@@ -482,3 +483,32 @@ def dumptags(buff: BufferController):
 def set_config(bufctl: BufferController, key, *val):
     bufctl.config.set_property(key, ast.literal_eval(' '.join(val)))
 
+@interactive('pdb')
+def runpdb(bufctl: BufferController):
+    import pdb
+    from PyQt4.QtCore import pyqtRemoveInputHook
+    pyqtRemoveInputHook()
+    pdb.set_trace()
+
+# import gc
+# import logging
+# import weakref
+# import pprint
+# 
+# last = None
+# @interactive('getrefs')
+# def getrefs(bctl: BufferController):
+#     global last
+#     gc.set_debug(gc.DEBUG_LEAK)
+#     if last is None:
+#         last = weakref.ref(bctl)
+#     else:
+#         gc.collect()
+#         gc.collect()
+#         
+#         l = last()
+#         if l is not None:    
+#             pprint.pprint(gc.get_referrers(last()))
+#         else:
+#             print('no refs remain')
+# 
