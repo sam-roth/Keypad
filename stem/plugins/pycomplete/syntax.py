@@ -101,7 +101,10 @@ def pylexer():
     NUMBER = dict(lexcat='literal')
 
     FloatLiteral = regex(r'\b\d*\.\d+', NUMBER)
-    IntLiteral   = regex(r'\b(?:0[xbo])?\d+L?', NUMBER)
+    IntLiteral   = regex(r'\b\d+L?', NUMBER)
+    HexLiteral   = regex(r'\b0x' + HEX + r'+L?', NUMBER)
+    OctLiteral   = regex(r'\b0o[0-7]+L?', NUMBER)
+    BinLiteral   = regex(r'\b0b[01]+L?', NUMBER)
 
     FuncDef = regex(r'(?:(?<=def)|(?<=class)|(?<=@))\s+\w+', FUNCTION)
     Deco    = regex(r'(?<=@)\s*[\w.]+', FUNCTION)
@@ -119,6 +122,9 @@ def pylexer():
         RSQString,
         RDQString,
         IntLiteral,
+        HexLiteral,
+        OctLiteral,
+        BinLiteral,
         FloatLiteral,
         Comment,
         FuncDef,
