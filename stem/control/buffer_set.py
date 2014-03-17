@@ -18,6 +18,8 @@ from ..core.conftree import ConfTree
 import sys
 import logging
 
+from ..util.path import same_file
+
 class Tracer(object):
     def __init__(self):
         self.f = open('/tmp/stem-dump.txt', 'w')
@@ -198,7 +200,7 @@ class BufferSetController(Responder):
 
     def find(self, path):
         for c in self._buffer_controllers:
-            if c.path == path:
+            if same_file(c.path, path):
                 return c
 
     def add_buffer_controller(self, buffer_controller):
