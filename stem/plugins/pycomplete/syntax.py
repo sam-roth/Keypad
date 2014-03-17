@@ -2,13 +2,15 @@
 import re
 import keyword
 import logging
+import builtins
 
 from stem.api import BufferController, autoconnect
 from stem.plugins.semantics.syntax import SyntaxHighlighter, lazy
 
+
 _python_kwlist = frozenset(keyword.kwlist) - frozenset('from import None False True'.split())
-
-
+_python_builtins = frozenset(x for x in dir(builtins) if not isinstance(getattr(builtins, x), type))
+_python_types = frozenset(x for x in dir(builtins) if isinstance(getattr(builtins, x), type))
 
 @lazy
 def pylexer():
@@ -16,7 +18,8 @@ def pylexer():
 
     Keyword     = keyword(_python_kwlist, dict(lexcat='keyword'))
     Import      = keyword('from import'.split(), dict(lexcat='preprocessor'))
-    Const       = keyword('None True False'.split(), dict(lexcat='function'))
+    Const       = keyword(_python_builtins, dict(lexcat='function'))
+    Type        = keyword(_python_types, dict(lexcat='type'))
 
     
     ESCAPE      = dict(lexcat='escape')
@@ -131,7 +134,8 @@ def pylexer():
         CommAt,
         RTSQString,
         RTDQString,
-        Deco
+        Deco,
+        Type
     ]
 
     DQDoctest.contains = tuple(PythonLexers)
