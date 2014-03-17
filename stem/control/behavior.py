@@ -101,7 +101,11 @@ def setup_buffer(controller):
 def autoindent(controller, chg):
     if chg.insert.endswith('\n'):
         beg_curs = Cursor(controller.buffer).move(*chg.pos)
-        indent = re.match(r'^\s*', beg_curs.line.text)
+        for _ in beg_curs.walklines(-1):
+            indent = re.match(r'^\s*', beg_curs.line.text)
+            if beg_curs.line.text:
+                break
+                
         if indent is not None:
             curs = Cursor(controller.buffer)\
                 .move(*chg.insert_end_pos)

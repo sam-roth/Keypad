@@ -147,15 +147,13 @@ class Selection(object):
             self._insert_cursor.last_line()
         return self
 
-    @property
-    def text(self):
+    def get_text(self):
         if not self._anchor_cursor:
             return ''
         else:
             return self._anchor_cursor.text_to(self._insert_cursor)
 
-    @text.setter
-    def text(self, value):
+    def set_text(self, value):
         if self._anchor_cursor:
             self._anchor_cursor.remove_to(self._insert_cursor)
 
@@ -164,6 +162,12 @@ class Selection(object):
 
         if not value:
             self._anchor_cursor = None
+
+    @property
+    def text(self): return self.get_text()
+    
+    @text.setter
+    def text(self, value): self.set_text(value)
 
     def replace(self, text):
         self.text = text
