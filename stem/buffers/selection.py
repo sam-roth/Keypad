@@ -61,6 +61,15 @@ class Selection(object):
         self.indent = '    '
 
     @property
+    def pos(self):
+        return self.insert_cursor.pos
+
+    @pos.setter
+    def pos(self, value):
+        y, x = value
+        self.move(y, x)
+        
+    @property
     def insert_cursor(self): 
         return self._insert_cursor
 
