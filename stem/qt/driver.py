@@ -26,7 +26,7 @@ class _ProcessPosted(QEvent):
     
     def __init__(self):
         super().__init__(_ProcessPosted.ProcessPostedType)
-
+from ..core.processmgr.client import AsyncServerProxy
 
 class Application(AbstractApplication, QApplication, metaclass=ABCWithQtMeta):
 
@@ -75,7 +75,9 @@ class Application(AbstractApplication, QApplication, metaclass=ABCWithQtMeta):
 
         notification_queue.register_post_handler(self._on_post)
 
-        return super().exec_()
+        result = super().exec_()
+        AsyncServerProxy.shutdown_all()        
+        
 
     
     def event(self, evt):

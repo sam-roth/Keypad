@@ -16,6 +16,7 @@ from ..core.responder           import Responder
 from ..util.path                import search_upwards
 from ..core.notification_queue  import in_main_thread
 from ..core                     import timer
+from .completion import CompletionController
 import configparser
 import fnmatch
 import ast
@@ -33,8 +34,7 @@ class BufferController(Tagged, Responder):
         :type buff: stem.buffers.Buffer
         '''
         super().__init__()
-        
-
+                
         self.last_canonical_cursor_pos = 0,0
         self._view              = view
         self.buffer             = buff
@@ -48,10 +48,12 @@ class BufferController(Tagged, Responder):
         self._tag_config        = self.config.Tag
         
         self.selection          = SelectionImpl(self.manipulator)        
+        self._code_model = None
         
         self._tag_config.modified           += self.__on_tag_cfg_changed
         self.view.scrolled                  += self._on_view_scrolled      
         self.manipulator.executed_change    += self.user_changed_buffer
+        self.manipulator.executed_change    += self.__on_user_changed_buffer
         buff.text_modified                  += self.buffer_was_changed 
         buff.text_modified                  += self._after_buffer_modification
         self.history.transaction_committed  += self._after_history_transaction_committed
@@ -59,6 +61,8 @@ class BufferController(Tagged, Responder):
         self.selection.moved                += self.scroll_to_cursor
         self.wrote_to_path                  += self.__update_file_mtime
         self.loaded_from_path               += self.__update_file_mtime
+        self.loaded_from_path               += self.__path_change
+        self.wrote_to_path                  += self.__path_change
         self.closing                        += self.__on_closing
         
         self.buffer_set = buffer_set
@@ -77,8 +81,35 @@ class BufferController(Tagged, Responder):
         
         self.__file_change_timer = timer.Timer(5)
         self.__file_change_timer.timeout += self.__check_for_file_change
+        self.completion_controller = CompletionController(self)        
+    
+    def __path_change(self, path):
+        if self.code_model is not None:
+            self.code_model.path = self.path
+    
+    @property
+    def code_model(self):
+        return self._code_model
+        
+    @code_model.setter
+    def code_model(self, value):
+        if self._code_model is not None:
+            self.remove_next_responders(self.completion_controller)
+        self._code_model = value
+        if self._code_model is not None:
+            self.add_next_responders(self.completion_controller)
         
 
+    
+    def __on_user_changed_buffer(self, chg):
+        if self.code_model is not None and chg.insert.endswith('\n'):
+            curs = self.selection.insert_cursor.clone().home()
+            m = curs.searchline('^\s*$')
+            if m:
+                curs.remove_to(curs.clone().end())
+                curs.insert(self.config.TextView.get('IndentText', '    ', str) 
+                    * self.code_model.indent_level(curs.y))
+        
     def __check_for_file_change(self):
         if not self.path:
             self.__file_change_timer.running = False
@@ -141,6 +172,8 @@ class BufferController(Tagged, Responder):
         # remove all extensions from this object to ensure that its refcount goes to zero
         self.extensions.clear()
         self.remove_tags(list(self.tags))
+        if self.code_model is not None:
+            self.code_model.dispose()
         
 
     @property
@@ -307,8 +340,10 @@ class BufferController(Tagged, Responder):
     def refresh_view(self, full=False):
         self.view.lines = self.buffer.lines
 
-        
-        self.buffer_needs_highlight()
+        if self.code_model is not None:
+            self.code_model.highlight()
+        else:
+            self.buffer_needs_highlight()
 
         curs = self.canonical_cursor
         if curs is not None:
@@ -489,6 +524,26 @@ def runpdb(bufctl: BufferController):
     from PyQt4.QtCore import pyqtRemoveInputHook
     pyqtRemoveInputHook()
     pdb.set_trace()
+
+@interactive('dumpdecl')
+def dumpdecl(bc: BufferController):
+    cm = bc.code_model
+    res = cm.find_related_async(bc.selection.pos, cm.RelatedNameType.all)
+    print(res.result())
+    
+# @interactive('test_cmcomplete')
+# def test_cmcomplete(bufctl: BufferController):
+#     bufctl.completion_controller.complete()
+    
+#     
+#     def callback(result):
+#         with bufctl.history.transaction():
+#             for row in result.result().rows:
+#                 print(row)
+#                 
+# 
+#     bufctl.code_model.completions_async(
+#         bufctl.selection.pos).add_done_callback(in_main_thread(callback))
 
 # import gc
 # import logging

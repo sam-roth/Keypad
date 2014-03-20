@@ -80,12 +80,14 @@ def interactive_command_help(_: object, interactive_name: 'Interactive'):
 def setup_buffer(controller):
     path = controller.path
     if path.suffix == '.py':
+        from ..plugins.pymodel.pymodel import PythonCodeModel
+        controller.code_model = PythonCodeModel(controller.buffer, controller.config)
         controller.add_tags(
-            syntax='python',
-            autoindent=True,
+#             syntax='python',
+#             autoindent=True,
             parmatch=True
         )
-
+# 
         controller.refresh_view()
     elif path.suffix in ('.cpp', '.hpp', '.cc', '.hh', '.h', '.C'):
         controller.add_tags(

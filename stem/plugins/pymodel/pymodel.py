@@ -1,0 +1,225 @@
+import os
+from stem.abstract.code import AbstractCodeModel, AbstractCompletionResults, RelatedName
+from stem.buffers import Cursor
+from stem.plugins.pycomplete import syntax
+from stem.core.processmgr.client import AsyncServerProxy
+
+class IndentRetainingCodeModel(AbstractCodeModel):
+    
+    def highlight(self):
+        pass
+                
+    def completions_async(self, pos):
+        raise NotImplementedError
+    
+    def indent_level(self, line):
+        c = Cursor(self.buffer).move(line, 0).up()
+                
+        for _ in c.walklines(-1):
+            m = c.searchline(r'^\s*')
+            if m:
+                tstop = self.conf.TextView.get('TabStop', 4, int)
+                indent_text = self.conf.TextView.get('IndentText', '    ', str)
+                
+                itext = m.group(0)
+                itext = itext.expandtabs(tstop)
+                ilevel = len(itext) // len(indent_text.expandtabs(tstop))
+                return ilevel
+        else:
+            return 0
+    
+    def dispose(self):
+        pass
+
+# from . import worker
+# from stem.core.taskserver import TaskServer, AbstractTask
+from stem.core import AttributedString
+import jedi
+import re
+class PythonCompletionResults(AbstractCompletionResults):
+    def __init__(self, token_start, results, runner):
+        super().__init__(token_start)
+               
+        self._rows = []
+        for res in results:
+            self._rows.append((AttributedString(res), ))
+        
+        self._filt_rows = self._rows
+        self._filt_indices = list(range(len(self._rows)))
+        self._runner = runner
+    @property
+    def rows(self):
+        return self._filt_rows
+    
+    def text(self, index):
+        return self.rows[index][0].text
+    
+    def filter(self, pattern):
+        self._filt_rows = []
+        rgx = re.compile('.*?' + '.*?'.join(map(re.escape, pattern.lower())))
+        
+        filt_rows = []
+        for i, row in enumerate(self._rows):
+            if rgx.match(row[0].text.lower()):
+                filt_rows.append((i, row))
+                
+        filt_rows.sort(key=lambda key: len(key[1][0]))
+        
+        self._filt_rows = [r[1] for r in filt_rows]
+        self._filt_indices = [r[0] for r in filt_rows]
+        
+    def doc_async(self, index):
+        real_index = self._filt_indices[index]
+        return self._runner.submit(GetDocs(real_index))
+        
+    def dispose(self):
+        pass # TODO
+
+from stem.util import dump_object
+import logging
+
+class WorkerTask(object):
+    def __init__(self, filename, pos, unsaved):
+        self.filename = filename
+        self.pos = pos
+        self.unsaved = unsaved
+        
+    def __call__(self, worker):
+#         print('%s', dump_object(self))
+        line, col = self.pos
+        script = jedi.Script(self.unsaved, line+1, col, self.filename)
+        self.worker = worker
+        return self.process(script)
+    
+class Complete(WorkerTask):
+    def process(self, script):
+        compls = script.completions()
+        result = [c.name for c in compls]
+        self.worker.last_result = compls
+        
+        return result
+        
+class GetDocs(object):
+    def __init__(self, index):
+        self.index = index
+        
+    def __call__(self, worker):
+        try:
+            defn = next(iter(worker.last_result[self.index].follow_definition()), None)
+            if defn is None:
+                return []
+            else:
+                lines = str(defn.doc).splitlines()
+                return [AttributedString(line) for line in lines]
+                
+        except Exception as exc:
+            # workaround for Jedi bug
+            if "has no attribute 'isinstance'" not in str(exc):
+                logging.exception('Error getting documentation')
+            return []
+        
+
+class FindRelated(WorkerTask):
+    def __init__(self, types, *args, **kw):
+        super().__init__(*args, **kw)
+        self.types = types
+        
+        
+    @staticmethod
+    def __convert_related(rel, ty):
+        if rel.line is not None and rel.column is not None:
+            pos = rel.line, rel.column
+        else:
+            pos = None
+
+        return RelatedName(
+            ty,
+            rel.module_path,
+            pos,
+            rel.full_name
+        )
+
+    def process(self, script):
+        results = []        
+        if self.types & RelatedName.Type.defn:
+            for rel in script.goto_definitions():
+                results.append(self.__convert_related(rel, RelatedName.Type.defn))
+        
+        if self.types & RelatedName.Type.assign or self.types & RelatedName.Type.decl:
+            for rel in script.goto_assignments():
+                results.append(self.__convert_related(rel, RelatedName.Type.assign))
+            
+        return results
+            
+                    
+            
+        
+
+
+import string
+class PythonCodeModel(IndentRetainingCodeModel):
+    def __init__(self, *args, **kw):
+
+        super().__init__(*args, **kw)
+        self.highlighter = syntax.SyntaxHighlighter(
+            'stem.plugins.pycomplete.syntax', 
+            syntax.pylexer(), 
+            dict(lexcat=None)
+        )
+        self.runner = AsyncServerProxy() #TaskServer()
+        self.runner.start()        
+        self.disposed = False
+
+    def highlight(self):
+        self.highlighter.highlight_buffer(self.buffer)
+
+    def _transform_results(self, tok_start, results):
+        return PythonCompletionResults(tok_start, results, self.runner)
+
+    def _find_token_start(self, pos):
+        c = Cursor(self.buffer).move(pos)
+
+        wordchars = string.ascii_letters + string.digits + '_$'
+        for i, ch in reversed(list(enumerate(c.line[:c.x]))):
+            if ch not in wordchars:
+                break
+        else:
+            i = -1
+            
+
+        return c.y, i + 1
+            
+    
+    def completions_async(self, pos):
+        tok_start = self._find_token_start(pos)
+        return self.runner.submit(
+            Complete(
+                str(self.path),
+                tok_start,
+                self.buffer.text
+            ),
+            transform=lambda res: self._transform_results(tok_start, res)
+        )
+
+    def find_related_async(self, pos, types):
+        tok_start = self._find_token_start(pos)
+        return self.runner.submit(
+            FindRelated(
+                types,
+#                 decl,
+#                 defn,
+#                 assign,
+#                 use,
+                str(self.path),
+                tok_start,
+                self.buffer.text
+            ),
+#             transform=lambda res: self._transform_results(tok_start, res)
+        )        
+        
+    def dispose(self):
+        try:
+            self.runner.shutdown()
+        finally:
+            self.disposed = True
+
