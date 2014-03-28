@@ -1,6 +1,8 @@
 
 import re
 
+
+
 def fuzzy_regex(pattern):
     if pattern:
         return re.compile('.*?' + '.*?'.join(map(re.escape, pattern)))
@@ -13,12 +15,18 @@ class Filter(object):
         fcoll = [(index, item) for (index, item) 
                                 in enumerate(coll)
                                 if pred(item)]        
+        self._rebuild(fcoll)
+        
+    def _rebuild(self, fcoll):
         self.indices = [x[0] for x in fcoll]
         self.rows = [x[1] for x in fcoll]
         
     def enumerate(self):
         return zip(self.indices, self.rows)
         
+    def sort(self, key):
+        pairs = sorted(self.enumerate(), key=lambda item: key(item[1]))
+        self._rebuild(pairs)
         
 
     

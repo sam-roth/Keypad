@@ -52,13 +52,16 @@ class CXXCompletionResults(AbstractCompletionResults):
         '''
         
         fm = FuzzyMatcher(text)
-        self._filt = fm.filter(self._results, lambda item: item[0].text)    
+        self._filt = fm.filter(self._results, lambda item: item[0].text)
+        # sort exact matches first
+        self._filt.sort(lambda item: 0 if item[0].text.startswith(text) else 1)
         
     def dispose(self):
         pass
         
 
 class CXXCodeModel(IndentRetainingCodeModel):
+    completion_triggers = ['.', '::', '->']
     def __init__(self, *args, **kw):
         super().__init__(*args, **kw)
         self.cxx_config = CXXConfig.from_config(self.conf)
