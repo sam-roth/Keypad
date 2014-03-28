@@ -101,6 +101,7 @@ class CommandLineInteractionMode(CUAInteractionMode):
         self.__current_cmdline = ''
 
         self.controller.history.clear()
+        self.controller.scroll_to_cursor()
 
     def accept(self):
         self.update_cmdline()
