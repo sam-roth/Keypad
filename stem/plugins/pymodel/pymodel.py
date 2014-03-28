@@ -1,35 +1,12 @@
 import os
-from stem.abstract.code import AbstractCodeModel, AbstractCompletionResults, RelatedName
+from stem.abstract.code import (AbstractCodeModel, 
+                                AbstractCompletionResults, 
+                                RelatedName,
+                                IndentRetainingCodeModel)
+ 
 from stem.buffers import Cursor
 from stem.plugins.pycomplete import syntax
 from stem.core.processmgr.client import AsyncServerProxy
-
-class IndentRetainingCodeModel(AbstractCodeModel):
-    
-    def highlight(self):
-        pass
-                
-    def completions_async(self, pos):
-        raise NotImplementedError
-    
-    def indent_level(self, line):
-        c = Cursor(self.buffer).move(line, 0).up()
-                
-        for _ in c.walklines(-1):
-            m = c.searchline(r'^\s*')
-            if m:
-                tstop = self.conf.TextView.get('TabStop', 4, int)
-                indent_text = self.conf.TextView.get('IndentText', '    ', str)
-                
-                itext = m.group(0)
-                itext = itext.expandtabs(tstop)
-                ilevel = len(itext) // len(indent_text.expandtabs(tstop))
-                return ilevel
-        else:
-            return 0
-    
-    def dispose(self):
-        pass
 
 # from . import worker
 # from stem.core.taskserver import TaskServer, AbstractTask
@@ -128,7 +105,7 @@ class FindRelated(WorkerTask):
     @staticmethod
     def __convert_related(rel, ty):
         if rel.line is not None and rel.column is not None:
-            pos = rel.line, rel.column
+            pos = rel.line - 1, rel.column
         else:
             pos = None
 

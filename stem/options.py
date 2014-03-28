@@ -4,6 +4,7 @@ import pathlib
 import platform
 
 from .core import colorscheme
+from .core.nconfig import ConfigGroup, Field
 
 
 OnPosixSystem       = os.name == 'posix'
@@ -46,3 +47,22 @@ TextViewDoubleStrike            = False
 CursorBlinkRate_Hz  = 1
 CursorDutyCycle     = 0.8
 
+
+
+
+class TextViewSettings(ConfigGroup):
+    integer_metrics = Field(bool, True)
+    double_strike = Field(bool, False)
+    
+    cursor_blink_rate = Field(float, 1)
+    cursor_duty_cycle = Field(float, 0.8)
+    
+    tab_stop = Field(int, 4)
+    expand_tabs = Field(bool, True)
+    
+    driver_mod = Field(str, 'stem.qt.driver')
+    colorscheme = Field(str, 'stem.core.colorscheme.SolarizedDark')
+    user_config_home = Field(pathlib.Path, pathlib.Path(os.path.expanduser('~/.stem')))
+    
+    
+    

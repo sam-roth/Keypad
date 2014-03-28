@@ -145,8 +145,9 @@ class SemanticEngine(object):
     @property
     def engine(self):
         if self._engine is None:
-            if options.ClangLibrary is not None:
-                cindex.Config.set_library_file(str(options.ClangLibrary))
+            clanglib = self._config.get('ClangLibrary', options.ClangLibrary)
+            if clanglib is not None:
+                cindex.Config.set_library_file(str(clanglib))
             self._engine = WorkerSemanticEngine(self._config)
         return self._engine
 

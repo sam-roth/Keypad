@@ -75,7 +75,7 @@ class AbstractCodeModel(metaclass=ABCMeta):
     
     :ivar buffer:      The buffer that this code model is built from.
     :ivar path:        The path where the buffer will be saved
-    :ivar conf:        The ConfTree containing configuration information for this object.
+    :ivar conf:        The object containing configuration information for this object.
     '''
     
     RelatedNameType = RelatedNameType
@@ -84,7 +84,6 @@ class AbstractCodeModel(metaclass=ABCMeta):
     def __init__(self, buff, conf):
         '''
         :type buff: stem.buffers.Buffer
-        :type conf: stem.core.conftree.ConfTree
         '''
         self.buffer = buff
         self.path = None
@@ -135,3 +134,33 @@ class AbstractCodeModel(metaclass=ABCMeta):
         '''
         Release system resources held by the model.
         '''
+        
+from stem.buffers.cursor import Cursor
+
+class IndentRetainingCodeModel(AbstractCodeModel):
+    
+    def highlight(self):
+        pass
+                
+    def completions_async(self, pos):
+        raise NotImplementedError
+    
+    def indent_level(self, line):
+        c = Cursor(self.buffer).move(line, 0).up()
+                
+        for _ in c.walklines(-1):
+            m = c.searchline(r'^\s*')
+            if m:
+                tstop = self.conf.TextView.get('TabStop', 4, int)
+                indent_text = self.conf.TextView.get('IndentText', '    ', str)
+                
+                itext = m.group(0)
+                itext = itext.expandtabs(tstop)
+                ilevel = len(itext) // len(indent_text.expandtabs(tstop))
+                return ilevel
+        else:
+            return 0
+    
+    def dispose(self):
+        pass
+        
