@@ -74,7 +74,10 @@ def server_proxy_thread(q):
             if not keep_running:
                 return
             try:
-                result = sp.send(task)
+                if future.set_running_or_notify_cancel():
+                    result = sp.send(task)
+                else:
+                    continue
             except RemoteError as exc:
                 future.set_exception(exc)
             else:

@@ -4,7 +4,7 @@ import pathlib
 import platform
 
 from .core import colorscheme
-from .core.nconfig import ConfigGroup, Field
+from .core.nconfig import Settings, Field
 
 
 OnPosixSystem       = os.name == 'posix'
@@ -50,8 +50,8 @@ CursorDutyCycle     = 0.8
 
 
 
-class GeneralConfig(ConfigGroup):
-    _ns_ = 'stem.general'
+class GeneralSettings(Settings):
+    _ns_ = 'stem.GeneralSettings'
     
     integer_metrics = Field(bool, TextViewIntegerMetrics)
     double_strike = Field(bool, TextViewDoubleStrike)
@@ -70,3 +70,6 @@ class GeneralConfig(ConfigGroup):
     
     font_family = Field(str, TextViewFont[0])
     font_size   = Field(str, TextViewFont[1])
+
+
+GeneralConfig = GeneralSettings # deprecated alias

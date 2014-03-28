@@ -86,9 +86,23 @@ class BufferController(Tagged, Responder):
         self.__file_change_timer.timeout += self.__check_for_file_change
         self.completion_controller = CompletionController(self)        
     
+        self._last_path = None
+        
     def __path_change(self, path):
+        if path != self._last_path:
+            self._last_path = path
+        else:
+            return
+            
         if self.code_model is not None:
             self.code_model.path = self.path
+        
+        
+        config_path = next(search_upwards(path, '.stemdir.yaml'), None)
+        if config_path is not None:
+            with config_path.open('rb') as f:
+                self.config.load_yaml_safely(f)
+        
     
     @property
     def code_model(self):

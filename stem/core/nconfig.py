@@ -1,6 +1,7 @@
 
 
 import yaml
+import warnings
 
 class Conversions:   
     _entries = {}
@@ -26,14 +27,19 @@ class Conversions:
                 ))
 
 class Field(object):
-    def __init__(self, type, default=None):
+    def __init__(self, type, default=None, safe=False):
         '''
         Denote that the field should have the given type and default value.
+        
+        `safe` fields are ones that are "safe" to read from untrusted configuration
+        files. ("Safe" might be sanely interpreted as meaning that no injection of arbitrary
+        code is possible, and no data loss will occur.)
         '''
         self.type = type
         self.default = default
         self.name = None
-
+        self.safe = safe
+        
     def __repr__(self):
         return 'Field{!r}'.format((self.type, self.default, self.name))
         
@@ -52,6 +58,13 @@ class Field(object):
 
     def __set__(self, instance, value):
         instance._values_[self.name] = Conversions.convert(self.type, value)
+        
+    def set_safely(self, instance, value):
+        if self.safe:
+            self.__set__(instance, value)
+        else:
+            warnings.warn(UserWarning('Field {} is not marked as safe; it is not permitted ' 
+                                      'to be read from an untrusted configuration file.'.format(self.name)))
     
 _config_namespaces = {}        
 
@@ -75,6 +88,7 @@ class ConfigMeta(type):
         if hasattr(result, '_ns_'):
             yaml.add_representer(result, result.to_yaml)
             yaml.add_constructor(result.yaml_tag, result.from_yaml)
+            yaml.SafeLoader.add_constructor(result.yaml_tag, result.from_yaml_safely)
             _config_namespaces[result._ns_] = result
         
         return result
@@ -97,13 +111,16 @@ class Config(object):
     def dump_yaml(self, sink=None, **kw):
         return yaml.dump(list(self.groups.values()), sink, **kw)
     
-    
+    def load_yaml_safely(self, source):
+        for item in yaml.safe_load(source):
+            self.groups[type(item)] = item
+            
 Config.root = Config()
         
 
         
     
-class ConfigGroup(metaclass=ConfigMeta): 
+class Settings(metaclass=ConfigMeta): 
     '''
     A group of configuration values.
     
@@ -126,7 +143,7 @@ class ConfigGroup(metaclass=ConfigMeta):
     >>> global_app_conf.max_undo
     10    
     '''
-
+    
     def __init__(self):
         super().__init__()
         self._values_ = {}
@@ -165,6 +182,16 @@ class ConfigGroup(metaclass=ConfigMeta):
             result._fields_[k].__set__(result, v)
         return result
     
+    @classmethod
+    def from_yaml_safely(cls, loader, node):
+        result = cls()
+        for k, v in loader.construct_mapping(node).items():
+            result._fields_[k].set_safely(result, v)
+        return result
+
+
+
+ConfigGroup = Settings # deprecated alias
 
 import pathlib
 import pprint
@@ -174,7 +201,7 @@ Conversions.register(pathlib.Path, pathlib.Path)
 class Example(ConfigGroup):
     _ns_ = 'stem.test_config'
 
-    tab_stop = Field(int, 4)
+    tab_stop = Field(int, 4, safe=True)
     libpath  = Field(pathlib.Path)
     
 class OtherExample(ConfigGroup):
@@ -220,11 +247,18 @@ testdoc = '''
 
 
 - !stem.other_test_config
-    clang: 1
+    clang: 'a'
 
 
 
 '''
+if __name__ == '__main__':
+    conf = Config()
+    conf.load_yaml_safely(testdoc)
+    import pprint
+    tc = Example.from_config(conf)
+    pprint.pprint(tc.to_dict())
+    
 # conf = Config()
 # conf.load_yaml(testdoc)
 # 
