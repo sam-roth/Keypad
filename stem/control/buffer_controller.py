@@ -16,6 +16,9 @@ from ..core.responder           import Responder
 from ..util.path                import search_upwards
 from ..core.notification_queue  import in_main_thread
 from ..core                     import timer
+from ..core.nconfig             import Config
+from ..options                  import GeneralConfig
+
 from .completion import CompletionController
 import configparser
 import fnmatch
@@ -34,7 +37,7 @@ class BufferController(Tagged, Responder):
         :type buff: stem.buffers.Buffer
         '''
         super().__init__()
-                
+
         self.last_canonical_cursor_pos = 0,0
         self._view              = view
         self.buffer             = buff
@@ -43,14 +46,12 @@ class BufferController(Tagged, Responder):
         self.__file_mtime       = 0
 
         self.manipulator        = BufferManipulator(buff)
-        self.config             = config or conftree.ConfTree()
+        self.config             = config or Config.root
         self.view.config        = self.config
-        self._tag_config        = self.config.Tag
         
         self.selection          = SelectionImpl(self.manipulator)        
         self._code_model = None
         
-        self._tag_config.modified           += self.__on_tag_cfg_changed
         self.view.scrolled                  += self._on_view_scrolled      
         self.manipulator.executed_change    += self.user_changed_buffer
         self.manipulator.executed_change    += self.__on_user_changed_buffer
@@ -107,8 +108,13 @@ class BufferController(Tagged, Responder):
             m = curs.searchline('^\s*$')
             if m:
                 curs.remove_to(curs.clone().end())
-                curs.insert(self.config.TextView.get('IndentText', '    ', str) 
-                    * self.code_model.indent_level(curs.y))
+                curs.insert(
+                    GeneralConfig.from_config(self.config).indent_text
+                    * self.code_model.indent_level(curs.y)
+                )
+
+                #curs.insert(self.config.TextView.get('IndentText', '    ', str) 
+                #    * self.code_model.indent_level(curs.y))
         
     def __check_for_file_change(self):
         if not self.path:
@@ -138,34 +144,6 @@ class BufferController(Tagged, Responder):
         else:
             self.__file_change_timer.running = False
     
-    def __on_tag_cfg_changed(self, key, value):
-        if key == ('Tag', 'Add'):
-            self.add_tags(**value)
-        elif key == ('Tag', 'Remove'):
-            self.remove_tags(*value)
-        
-        
-    def __read_file_config(self, path):
-        if path is None: return
-        mdfile = next(search_upwards(path, '.stem-md.ini'), None)
-        if not mdfile: return
-        pathstr = str(path)        
-        config = configparser.ConfigParser()
-        config.optionxform = lambda x: x
-
-        config.read(str(mdfile))
-        
-        for section in config.values():
-            try:
-                globs = ast.literal_eval(section['glob']).split(',')
-            except KeyError:
-                continue
-            
-            if any(fnmatch.fnmatch(pathstr, glob) for glob in globs):
-                for k, v in section.items():
-                    if k and k[0].isupper():
-                        eval_v = ast.literal_eval(v)
-                        self.config.set_property(k, eval_v)
             
     
     def __on_closing(self):
@@ -282,7 +260,6 @@ class BufferController(Tagged, Responder):
 
         self.canonical_cursor.move(0,0)
 
-        self.__read_file_config(path)
         self.loaded_from_path(path)
 
     def write_to_path(self, path):
@@ -295,7 +272,6 @@ class BufferController(Tagged, Responder):
         with write_atomically(path) as f:
             f.write(self.buffer.text.encode())
             
-        self.__read_file_config(path)
         self.wrote_to_path(path)
         self.is_modified = False
     
@@ -547,18 +523,27 @@ def goto_related(bc: BufferController, ty):
     else:
         cm = bc.code_model
         assert isinstance(cm, AbstractCodeModel)
-        f = cm.find_related_async(bc.selection.pos, ty)
+        f = cm.find_related_async(bc.selection.pos, RelatedName.Type.all)
         
         @in_main_thread
         def callback(future):
             results = future.result()
-            if results:
-                result = results[0]
-                assert isinstance(result, RelatedName)
-                y, x = result.pos
-                interactive.run('edit', str(result.path), y)
-                bc.refresh_view(full=True)
-                
+            
+            for result in results:
+                if result.type == ty:
+                    break
+            else:
+                if results:
+                    result = results[0]
+                else:
+                    raise errors.NameNotFoundError('Could not find name.')
+            
+            result = results[0]
+            assert isinstance(result, RelatedName)
+            y, x = result.pos
+            interactive.run('edit', str(result.path), y + 1)
+            bc.refresh_view(full=True)
+            
         f.add_done_callback(callback)
 
 

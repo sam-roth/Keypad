@@ -32,15 +32,10 @@ def serve(fd_r, fd_w):
                 res = msg(ns)
             except (Exception, GeneratorExit) as exc:
                 logging.exception('Translating error')
-#                 try:
                 pickle.dump(Result(result=None, error=exc), fout)
-#                 except:
-#                     logging.exception('pickle failed')
             else:
-#                 try:
-                    pickle.dump(Result(result=res, error=None), fout)
-#                 except:
-#                     logging.exception('pickle failed')
+                pickle.dump(Result(result=res, error=None), fout)
+
             finally:
                 fout.flush()
                 

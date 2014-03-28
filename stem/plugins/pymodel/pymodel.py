@@ -1,4 +1,12 @@
 import os
+import re
+import logging
+import string
+
+import jedi
+
+
+
 from stem.abstract.code import (AbstractCodeModel, 
                                 AbstractCompletionResults, 
                                 RelatedName,
@@ -7,12 +15,9 @@ from stem.abstract.code import (AbstractCodeModel,
 from stem.buffers import Cursor
 from stem.plugins.pycomplete import syntax
 from stem.core.processmgr.client import AsyncServerProxy
-
-# from . import worker
-# from stem.core.taskserver import TaskServer, AbstractTask
 from stem.core import AttributedString
-import jedi
-import re
+from stem.util import dump_object
+
 class PythonCompletionResults(AbstractCompletionResults):
     def __init__(self, token_start, results, runner):
         super().__init__(token_start)
@@ -24,6 +29,7 @@ class PythonCompletionResults(AbstractCompletionResults):
         self._filt_rows = self._rows
         self._filt_indices = list(range(len(self._rows)))
         self._runner = runner
+
     @property
     def rows(self):
         return self._filt_rows
@@ -52,8 +58,6 @@ class PythonCompletionResults(AbstractCompletionResults):
     def dispose(self):
         pass # TODO
 
-from stem.util import dump_object
-import logging
 
 class WorkerTask(object):
     def __init__(self, filename, pos, unsaved):
@@ -62,7 +66,6 @@ class WorkerTask(object):
         self.unsaved = unsaved
         
     def __call__(self, worker):
-#         print('%s', dump_object(self))
         line, col = self.pos
         script = jedi.Script(self.unsaved, line+1, col, self.filename)
         self.worker = worker
@@ -79,7 +82,7 @@ class Complete(WorkerTask):
 class GetDocs(object):
     def __init__(self, index):
         self.index = index
-        
+
     def __call__(self, worker):
         try:
             defn = next(iter(worker.last_result[self.index].follow_definition()), None)
@@ -100,8 +103,7 @@ class FindRelated(WorkerTask):
     def __init__(self, types, *args, **kw):
         super().__init__(*args, **kw)
         self.types = types
-        
-        
+
     @staticmethod
     def __convert_related(rel, ty):
         if rel.line is not None and rel.column is not None:
@@ -128,12 +130,9 @@ class FindRelated(WorkerTask):
             
         return results
             
-                    
-            
-        
 
 
-import string
+
 class PythonCodeModel(IndentRetainingCodeModel):
     def __init__(self, *args, **kw):
 
@@ -143,8 +142,8 @@ class PythonCodeModel(IndentRetainingCodeModel):
             syntax.pylexer(), 
             dict(lexcat=None)
         )
-        self.runner = AsyncServerProxy() #TaskServer()
-        self.runner.start()        
+        self.runner = AsyncServerProxy()
+        self.runner.start()
         self.disposed = False
 
     def highlight(self):
@@ -183,16 +182,11 @@ class PythonCodeModel(IndentRetainingCodeModel):
         return self.runner.submit(
             FindRelated(
                 types,
-#                 decl,
-#                 defn,
-#                 assign,
-#                 use,
                 str(self.path),
                 tok_start,
                 self.buffer.text
             ),
-#             transform=lambda res: self._transform_results(tok_start, res)
-        )        
+        )
         
     def dispose(self):
         try:

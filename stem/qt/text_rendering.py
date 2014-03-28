@@ -11,41 +11,57 @@ from ..core import Signal
 import logging
 from ..core.color import Color
 
+from ..options import GeneralConfig
+from ..core.nconfig import Config
+
+import warnings
+import importlib
+
+def resolve_dotted_name(name):
+    modname, objname = name.rsplit('.', 1)
+    mod = importlib.import_module(modname)
+    return getattr(mod, objname)
+
 class TextViewSettings(object):
     def __init__(self, scheme, settings=None):
         self.default_scheme = scheme
-        settings = (settings or ConfTree()).TextView
+        if not isinstance(settings, Config):
+            warnings.warn(DeprecationWarning('The settings parameter must now receive an argument of '
+                'type Config'))
+            settings = None
+
+        settings = GeneralConfig.from_config(settings or Config.root)
+
+        #(settings or ConfTree()).TextView
         self.settings = settings   
-        settings.modified.connect(self._on_settings_changed)
+        #settings.modified.connect(self._on_settings_changed)
         self.reload_settings()
         self.tab_glyph = '⟩'
 
         
-    def _on_settings_changed(self, key, val):
-        self.reload_settings()
-        
     def reload_settings(self):
         s = self.settings
         
-        self.scheme = s.get('Scheme', self.default_scheme)
+        self.scheme = resolve_dotted_name(s.colorscheme)()
+
+        #s.get('Scheme', self.default_scheme)
         
-        try:
-            fontname, fontsize = s.get('Font', options.TextViewFont)
-        except:
-            logging.exception('Invalid font %r', s.get('Font', options.TextViewFont))
-            fontname, fontsize = options.TextViewFont
+        fontname, fontsize = s.font_family, s.font_size
         
 
         self.q_font    = QFont(fontname)
         self.q_font.setPointSizeF(fontsize)
+        
+        self.double_strike = s.double_strike
 
-        self.double_strike = s.get('DoubleStrike', options.TextViewDoubleStrike, bool)
-
-        if s.get('IntegerMetrics', options.TextViewIntegerMetrics, bool):
+        #self.double_strike = s.get('DoubleStrike', options.TextViewDoubleStrike, bool)
+        
+        #if s.get('IntegerMetrics', options.TextViewIntegerMetrics, bool):
+        if s.integer_metrics:
             self.q_font.setStyleStrategy(QFont.ForceIntegerMetrics | self.q_font.styleStrategy())
         
-        antialias = s.get('Antialias', True, bool)
-        if not antialias:
+        #antialias = s.get('Antialias', True, bool)
+        if not s.antialias:
             self.q_font.setStyleStrategy(QFont.NoAntialias|self.q_font.styleStrategy())
             
         self.q_completion_bgcolor = to_q_color(self.scheme.bg)
@@ -56,7 +72,8 @@ class TextViewSettings(object):
         #self.q_bgcolor = QColor(self.scheme.bg) #QColor.fromRgb(0, 43, 54)
         #self.q_fgcolor = QColor(self.scheme.fg)
         #QColor.fromRgb(131, 148, 150) 
-        self.tab_stop  = s.get('TabStop', 8, int)
+        self.tab_stop  = s.tab_stop
+        #s.get('TabStop', 8, int)
         self.q_tab_color = to_q_color(self.scheme.bg.mean(self.scheme.fg))
         self.word_wrap = False
         self.reloaded()

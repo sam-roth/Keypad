@@ -136,6 +136,7 @@ class AbstractCodeModel(metaclass=ABCMeta):
         '''
         
 from stem.buffers.cursor import Cursor
+from stem.options import GeneralConfig
 
 class IndentRetainingCodeModel(AbstractCodeModel):
     
@@ -147,12 +148,16 @@ class IndentRetainingCodeModel(AbstractCodeModel):
     
     def indent_level(self, line):
         c = Cursor(self.buffer).move(line, 0).up()
-                
+        
         for _ in c.walklines(-1):
             m = c.searchline(r'^\s*')
             if m:
-                tstop = self.conf.TextView.get('TabStop', 4, int)
-                indent_text = self.conf.TextView.get('IndentText', '    ', str)
+                tv_settings = GeneralConfig.from_config(self.conf)
+                tstop = tv_settings.tab_stop
+                indent_text = tv_settings.indent_text
+                
+#                 tstop = self.conf.TextView.get('TabStop', 4, int)
+#                 indent_text = self.conf.TextView.get('IndentText', '    ', str)
                 
                 itext = m.group(0)
                 itext = itext.expandtabs(tstop)

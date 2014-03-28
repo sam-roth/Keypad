@@ -6,7 +6,7 @@ from ..control import behavior # module contains autoconnects
 
 import pathlib
 
-from ..core import notification_queue
+from ..core import notification_queue, errors
 from ..control.buffer_set import BufferSetController
 from .buffer_set import BufferSetView
 
@@ -78,11 +78,14 @@ class Application(AbstractApplication, QApplication, metaclass=ABCWithQtMeta):
         result = super().exec_()
         AsyncServerProxy.shutdown_all()        
         
-
+    
+    def _queue_exc_handler(self, exc):
+        if isinstance(exc, errors.UserError):
+            interactive.run('show_error', exc)
     
     def event(self, evt):
         if evt.type() == _ProcessPosted.ProcessPostedType:
-            notification_queue.process_events()
+            notification_queue.process_events(self._queue_exc_handler)
             return True
         else:
             return super().event(evt)

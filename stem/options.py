@@ -50,19 +50,23 @@ CursorDutyCycle     = 0.8
 
 
 
-class TextViewSettings(ConfigGroup):
-    integer_metrics = Field(bool, True)
-    double_strike = Field(bool, False)
+class GeneralConfig(ConfigGroup):
+    _ns_ = 'stem.general'
     
-    cursor_blink_rate = Field(float, 1)
-    cursor_duty_cycle = Field(float, 0.8)
+    integer_metrics = Field(bool, TextViewIntegerMetrics)
+    double_strike = Field(bool, TextViewDoubleStrike)
+    antialias = Field(bool, True)
+    
+    cursor_blink_rate = Field(float, CursorBlinkRate_Hz)
+    cursor_duty_cycle = Field(float, CursorDutyCycle)
     
     tab_stop = Field(int, 4)
+    indent_text = Field(str, '    ')
     expand_tabs = Field(bool, True)
     
     driver_mod = Field(str, 'stem.qt.driver')
     colorscheme = Field(str, 'stem.core.colorscheme.SolarizedDark')
     user_config_home = Field(pathlib.Path, pathlib.Path(os.path.expanduser('~/.stem')))
     
-    
-    
+    font_family = Field(str, TextViewFont[0])
+    font_size   = Field(str, TextViewFont[1])

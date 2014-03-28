@@ -93,12 +93,7 @@ class CXXCodeModel(IndentRetainingCodeModel):
     
     def find_related_async(self, pos, types):
         '''
-        Find related names for the token at the given position.
-        
-        decl       - find declarations
-        defn       - find definitions
-        assign     - find assignments
-        
+        Find related names for the token at the given position.      
         
         Raises NotImplementedError by default.
         

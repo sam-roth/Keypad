@@ -75,13 +75,13 @@ def interactive_command_help(_: object, interactive_name: 'Interactive'):
         writer.write(header + '\n' + textwrap.indent(inspect.getdoc(handler), '  '))
 
 
-
+from stem.core.nconfig import Config
 @autoconnect(BufferController.path_changed)
 def setup_buffer(controller):
     path = controller.path
     if path.suffix == '.py':
         from ..plugins.pymodel.pymodel import PythonCodeModel
-        controller.code_model = PythonCodeModel(controller.buffer, controller.config)
+        controller.code_model = PythonCodeModel(controller.buffer, Config.root)
         controller.add_tags(
 #             syntax='python',
 #             autoindent=True,

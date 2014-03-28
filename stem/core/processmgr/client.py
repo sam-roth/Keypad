@@ -5,6 +5,7 @@ import pickle
 import concurrent.futures
 import threading
 import queue
+import logging
 
 import os
 
@@ -12,7 +13,6 @@ class RemoteError(RuntimeError): pass
 
 class ServerProxy(object):
     def start(self):
-#         smod = 'processmgr.servermain'
         from . import servermain
         smod = servermain.__name__
         
@@ -21,6 +21,9 @@ class ServerProxy(object):
         
         self.fin = open(lr, 'rb')
         self.fout = open(lw, 'wb')
+    
+        child_env = dict(os.environ)
+        child_env['PYTHONPATH'] = os.pathsep.join(sys.path)
         
         self.proc = subprocess.Popen([
             sys.executable,
@@ -28,17 +31,25 @@ class ServerProxy(object):
             smod,
             str(rr),
             str(rw)
-        ], pass_fds=(rr, rw))
+        ], pass_fds=(rr, rw), env=child_env)
     
     def send(self, msg):
-        pickle.dump(msg, self.fout)
-        self.fout.flush()
-        res = pickle.load(self.fin)
+        try:
+            pickle.dump(msg, self.fout)
+            self.fout.flush()
+            res = pickle.load(self.fin)
+        except OSError:
+            retcode = self.proc.poll()
+            if retcode is not None:
+                logging.error('Worker process terminated unexpectedly. Return code: %d.', retcode)
+            raise
+                           
+                
         if res.error is not None:
             raise RemoteError('Failed to execute task on server.') from res.error
         else:
             return res.result
-            
+
     def shutdown(self):
         from .server import ShutdownMessage
         try:
@@ -70,7 +81,7 @@ def server_proxy_thread(q):
                 if transform is not None:
                     try:
                         result = transform(result)
-                    except RuntimeError as exc:
+                    except Exception as exc:
                         future.set_exception(exc)
                     else:
                         future.set_result(result)
@@ -82,7 +93,8 @@ class AsyncServerProxy(object):
     def __init__(self):
         self.q = queue.Queue()
         self.thread = threading.Thread(target=server_proxy_thread, args=(self.q,))
-    
+        self.thread.daemon = True
+        
     @classmethod
     def shutdown_all(cls):
         for p in list(cls.running_instances):
