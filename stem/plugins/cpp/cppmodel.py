@@ -11,7 +11,7 @@ from stem.buffers import Cursor
 
 from .syntax import cpplexer
 from .worker import SemanticEngine
-from .modelworker import InitWorkerTask, CompletionTask, FindRelatedTask, GetDocsTask
+from .modelworker import InitWorkerTask, CompletionTask, FindRelatedTask, GetDocsTask, GetDiagnosticsTask
 from .config import CXXConfig        
 class CXXCompletionResults(AbstractCompletionResults):
     def __init__(self, token_start, runner, results):
@@ -148,6 +148,19 @@ class CXXCodeModel(IndentRetainingCodeModel):
         
         highlighter.highlight_buffer(self.buffer)
     
+    
+    @property
+    def can_provide_diagnostics(self):
+        return True
+        
+    def diagnostics_async(self):
+        return self.prox.submit(
+            GetDiagnosticsTask(
+                self.path,
+                None,
+                [(str(self.path), self.buffer.text)]
+            )
+        )
     
     def dispose(self):
         '''

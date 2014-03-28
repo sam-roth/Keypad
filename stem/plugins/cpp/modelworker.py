@@ -1,9 +1,10 @@
 
 from stem.core import AttributedString
-from stem.abstract.code import RelatedName
+from stem.abstract.code import RelatedName, Diagnostic
 from clang import cindex
 from .config import CXXConfig
 import textwrap
+import logging
 ClangOptions = (cindex.TranslationUnit.PARSE_INCLUDE_BRIEF_COMMENTS_IN_CODE_COMPLETION |
                                   cindex.TranslationUnit.PARSE_INCOMPLETE | 
                                   cindex.TranslationUnit.PARSE_CACHE_COMPLETION_RESULTS |
@@ -41,6 +42,28 @@ def frombytes(s):
     else:
         return s
 
+
+_kind_names = {
+    'CXX_METHOD': AttributedString('method', lexcat='function'),
+    'FUNCTION_DECL': AttributedString('function', lexcat='function'),
+    'FUNCTION_TEMPLATE': AttributedString('function template', lexcat='function'),
+    'DESTRUCTOR': AttributedString('destructor', lexcat='function'),
+    'CONSTRUCTOR': AttributedString('constructor', lexcat='function'),
+    'PARM_DECL': AttributedString('argument', lexcat='docstring'),
+    'FIELD_DECL': AttributedString('field', lexcat='docstring'),
+    'VAR_DECL': AttributedString('variable', lexcat='docstring'),
+    'ENUM_CONSTANT_DECL': AttributedString('variable', lexcat='docstring'),
+    'CLASS_DECL': AttributedString('class', lexcat='type'),
+    'STRUCT_DECL': AttributedString('struct', lexcat='type'),
+    'CLASS_TEMPLATE': AttributedString('class template', lexcat='type'),
+    'TYPEDEF_DECL': AttributedString('typedef', lexcat='type'),
+    'NAMESPACE': AttributedString('namespace', lexcat='preprocessor'),
+    'MACRO_DEFINITION': AttributedString('macro', lexcat='preprocessor'),
+    'NOT_IMPLEMENTED': AttributedString('not implemented', italic=True, lexcat='comment')
+}
+
+_empty = AttributedString()
+
 class Engine:
     def __init__(self, config):
         assert isinstance(config, CXXConfig)
@@ -65,7 +88,8 @@ class Engine:
         results = []
         
         for item in cr.results:
-            results.append((AttributedString(self.typed_text(item.string)), ))
+            results.append((AttributedString(self.typed_text(item.string)), 
+                                             _kind_names.get(item.kind.name, _empty)))
         
         return results
     
@@ -83,7 +107,12 @@ class Engine:
         
     
     def unit(self, filename, unsaved):
-        unsaved = self.encode_unsaved(unsaved)
+        try:
+            unsaved = self.encode_unsaved(unsaved)
+        except AssertionError:
+            logging.exception()
+            raise cindex.TranslationUnitLoadError
+            
         res = self.index.parse(
             tobytes(str(filename)),
             args=[],
@@ -91,7 +120,7 @@ class Engine:
             options=ClangOptions
         )
         res.reparse(unsaved, options=ClangOptions)    
-        
+        self.tu = res
         return res
         
     @staticmethod
@@ -191,7 +220,15 @@ class FindRelatedTask(AbstractCodeTask):
                 results.append(make_related_name(RelatedName.Type.defn, defn))
     
         if self.types & RelatedName.Type.decl:
-            decl = curs.canonical
+            defn = curs.get_definition()
+            if defn is None:
+                decl = None
+            else:
+                decl = defn.canonical
+            
+            if decl is None:
+                decl = curs.canonical
+            
             if decl is not None:
                 results.append(make_related_name(RelatedName.Type.decl, decl))
         
@@ -211,3 +248,53 @@ class GetDocsTask(object):
         engine = worker.engine
         assert isinstance(engine, Engine)
         return engine.completion_docs(self.index)
+        
+severity_map = {
+    cindex.Diagnostic.Note: Diagnostic.Severity.note,
+    cindex.Diagnostic.Warning: Diagnostic.Severity.warning,
+    cindex.Diagnostic.Error: Diagnostic.Severity.error,
+    cindex.Diagnostic.Fatal: Diagnostic.Severity.fatal
+}
+        
+class GetDiagnosticsTask(AbstractCodeTask):
+    def process(self, engine):
+        assert isinstance(engine, Engine)
+        
+        try:
+            tu = engine.unit(self.filename, self.unsaved_files)
+        except cindex.TranslationUnitLoadError:
+            return []
+        
+        results = []
+        
+        for diag in tu.diagnostics:
+            assert isinstance(diag, cindex.Diagnostic)
+            severity = severity_map.get(diag.severity, Diagnostic.Severity.unknown)
+            loc = diag.location
+            assert isinstance(loc, cindex.SourceLocation)
+            ranges = []
+            for r in diag.ranges:
+                assert isinstance(r, cindex.SourceRange)
+                if r.start.file is None:
+                    fname = frombytes(loc.file.name)
+                else:
+                    fname = frombytes(r.start.file.name)
+                start = r.start.line - 1, r.start.column - 1
+                end = r.end.line - 1, r.end.column - 1
+                
+                if not any(x < 0 for x in start + end):
+                    ranges.append((fname, start, end))
+            if not ranges and loc.line > 0 and loc.column > 1:
+                ranges.append((frombytes(loc.file.name),
+                              (loc.line-1, loc.column-2),
+                              (loc.line-1, loc.column-1)))
+            
+            results.append(
+                Diagnostic(
+                    severity,
+                    frombytes(diag.spelling),
+                    ranges,
+                )
+            )
+        
+        return results

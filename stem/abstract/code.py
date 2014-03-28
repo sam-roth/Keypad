@@ -1,6 +1,6 @@
 
 from abc import ABCMeta, abstractmethod
-from enum import IntEnum
+from enum import IntEnum, Enum
 
 class AbstractCompletionResults(metaclass=ABCMeta):
 
@@ -68,6 +68,30 @@ class RelatedName(object):
             self.name
         ))
         
+class DiagnosticSeverity(Enum):
+    unknown = -1
+    fatal = 0
+    error = 1
+    warning = 2
+    note = 3
+
+
+class Diagnostic(object):
+    Severity = DiagnosticSeverity
+    
+    def __init__(self, severity, text, ranges):
+        self.severity = severity
+        self.text = text
+        self.ranges = ranges
+    
+    def __repr__(self):
+        return 'Diagnostic{!r}'.format((
+            self.severity,
+            self.ranges,
+            self.text
+        ))
+
+    
 class AbstractCodeModel(metaclass=ABCMeta):   
     '''
     The code model represents the editor's knowledge of the semantics of the
@@ -134,6 +158,14 @@ class AbstractCodeModel(metaclass=ABCMeta):
         '''
         Release system resources held by the model.
         '''
+        
+    
+    @property
+    def can_provide_diagnostics(self):
+        return False
+        
+    def diagnostics_async(self):
+        raise NotImplementedError
         
 from stem.buffers.cursor import Cursor
 from stem.options import GeneralConfig

@@ -30,6 +30,8 @@ class FuzzyMatcher(object):
         self.__regex = fuzzy_regex(pattern)
         
     def match(self, string):
+        if not self.__case_sensitive:
+            string = string.lower()
         return self.__regex.match(string) is not None
   
     def filter(self, items, key=None):

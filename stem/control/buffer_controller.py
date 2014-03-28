@@ -5,6 +5,7 @@ import re
 import pathlib
 
 from .cua_interaction           import CUAInteractionMode
+from .diagnostics               import DiagnosticsController
 from ..                         import util
 from ..buffers                  import ModifiedCursor, Cursor, BufferManipulator, Buffer, Span, Region
 from ..buffers.selection        import Selection, BacktabMixin
@@ -66,6 +67,7 @@ class BufferController(Tagged, Responder):
         self.wrote_to_path                  += self.__path_change
         self.closing                        += self.__on_closing
         
+        self._diagnostics_controller = None
         self.buffer_set = buffer_set
         self._prev_region = Region()
         self._is_modified = False
@@ -96,12 +98,29 @@ class BufferController(Tagged, Responder):
     def code_model(self, value):
         if self._code_model is not None:
             self.remove_next_responders(self.completion_controller)
+            dc = self._diagnostics_controller
+            if dc is not None:
+                dc.overlays_changed.disconnect(
+                    self.__on_diagnostic_overlay_change)
+                try:
+                    del self.view.overlay_spans['diagnostics']
+                except KeyError:
+                    pass
+                    
+            self._diagnostics_controller = None
+            
         self._code_model = value
+        
         if self._code_model is not None:
             self.add_next_responders(self.completion_controller)
+            if self._code_model.can_provide_diagnostics:
+                dc = DiagnosticsController(self.config, self._code_model, self.buffer)
+                dc.overlays_changed.connect(self.__on_diagnostic_overlay_change)
+                self._diagnostics_controller = dc
+                
+    def __on_diagnostic_overlay_change(self):
+        self.view.overlay_spans['diagnostics'] = self._diagnostics_controller.overlays
         
-
-    
     def __on_user_changed_buffer(self, chg):
         if self.code_model is not None and chg.insert.endswith('\n'):
             curs = self.selection.insert_cursor.clone().home()
@@ -545,3 +564,19 @@ def goto_related(bc: BufferController, ty):
         f.add_done_callback(callback)
 
 
+
+@interactive('show_diagnostics')
+def show_diagnostics(bc: BufferController):
+    assert isinstance(bc, BufferController)
+    
+#     if bc._diagnostics_controller is None:
+#         return interactive.call_next
+        
+    
+    bc._diagnostics_controller.update()
+    
+    
+#     diags = bc.code_model.diagnostics_async().result()
+    
+#     for diag in diags:
+#         print(diag)
