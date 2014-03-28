@@ -105,14 +105,17 @@ class Config(object):
         return result
             
     def load_yaml(self, source):
-        for item in yaml.load(source):
+        items = yaml.load(source)
+        for item in items:
             self.groups[type(item)] = item
     
     def dump_yaml(self, sink=None, **kw):
         return yaml.dump(list(self.groups.values()), sink, **kw)
     
     def load_yaml_safely(self, source):
-        for item in yaml.safe_load(source):
+        items = yaml.safe_load(source)
+        if items is None: return
+        for item in items:
             self.groups[type(item)] = item
             
 Config.root = Config()

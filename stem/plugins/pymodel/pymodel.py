@@ -138,7 +138,7 @@ class FindRelated(WorkerTask):
         
         if self.types & RelatedName.Type.assign or self.types & RelatedName.Type.decl:
             for rel in script.goto_assignments():
-                results.append(self.__convert_related(rel, RelatedName.Type.assign))
+                results.append(self.__convert_related(rel, RelatedName.Type.assign | RelatedName.Type.decl))
             
         return results
             
@@ -182,7 +182,7 @@ class PythonCodeModel(IndentRetainingCodeModel):
         tok_start = self._find_token_start(pos)
         return self.runner.submit(
             Complete(
-                str(self.path),
+                str(self.path) if self.path else None,
                 tok_start,
                 self.buffer.text
             ),
@@ -194,7 +194,7 @@ class PythonCodeModel(IndentRetainingCodeModel):
         return self.runner.submit(
             FindRelated(
                 types,
-                str(self.path),
+                str(self.path) if self.path else None,
                 tok_start,
                 self.buffer.text
             ),

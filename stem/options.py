@@ -60,9 +60,9 @@ class GeneralSettings(Settings):
     cursor_blink_rate = Field(float, CursorBlinkRate_Hz)
     cursor_duty_cycle = Field(float, CursorDutyCycle)
     
-    tab_stop = Field(int, 4)
-    indent_text = Field(str, '    ')
-    expand_tabs = Field(bool, True)
+    tab_stop = Field(int, 4, safe=True)
+    indent_text = Field(str, '    ', safe=True)
+    expand_tabs = Field(bool, True, safe=True)
     
     driver_mod = Field(str, 'stem.qt.driver')
     colorscheme = Field(str, 'stem.core.colorscheme.SolarizedDark')

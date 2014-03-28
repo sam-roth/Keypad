@@ -50,7 +50,7 @@ class BufferController(Tagged, Responder):
         self.config             = config or Config.root
         self.view.config        = self.config
         
-        self.selection          = SelectionImpl(self.manipulator)        
+        self.selection          = SelectionImpl(self.manipulator, self.config)        
         self._code_model = None
         
         self.view.scrolled                  += self._on_view_scrolled      
@@ -102,7 +102,8 @@ class BufferController(Tagged, Responder):
         if config_path is not None:
             with config_path.open('rb') as f:
                 self.config.load_yaml_safely(f)
-        
+            logging.debug('loaded file config from %r, indent text is %r', config_path, 
+                GeneralConfig.from_config(self.config).indent_text)
     
     @property
     def code_model(self):
@@ -153,8 +154,10 @@ class BufferController(Tagged, Responder):
         if not self.path:
             self.__file_change_timer.running = False
             return
-            
-        mtime = pathlib.Path(self.path).stat().st_mtime    
+        try:            
+            mtime = pathlib.Path(self.path).stat().st_mtime    
+        except IOError:
+            return
         
         if mtime > self.__file_mtime:
             logging.warning('file modified')
@@ -173,7 +176,10 @@ class BufferController(Tagged, Responder):
     def __update_file_mtime(self, *dummy):
         if self.path:
             self.__file_change_timer.running = True
-            self.__file_mtime = pathlib.Path(self.path).stat().st_mtime
+            try:
+                self.__file_mtime = pathlib.Path(self.path).stat().st_mtime
+            except IOError:
+                pass
         else:
             self.__file_change_timer.running = False
     
@@ -549,7 +555,7 @@ def find_definition(bc: BufferController):
 @interactive('find_declaration')
 def find_definition(bc: BufferController):
     return goto_related(bc, RelatedName.Type.decl)
-    
+
 def goto_related(bc: BufferController, ty):
     if bc.code_model is None:
         return interactive.call_next
