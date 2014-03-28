@@ -76,7 +76,16 @@ class BasicSpan(object):
     @property
     def text(self):
         return self.start_curs.text_to(self.end_curs)
+        
+    @text.setter
+    def text(self, value):
+        self.start_curs.remove_to(self.end_curs)
+        p = self.start_curs.pos
+        self.start_curs.insert(value)
+        self.start_curs.pos = p
 
+    def remove(self):
+        self.text = ''
 class Span(BasicSpan):
     def __init__(self, start_curs, end_curs):
         assert isinstance(start_curs, Cursor)

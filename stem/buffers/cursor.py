@@ -1,6 +1,7 @@
 
 from .buffer import TextModification, Buffer
 import re
+
 class Cursor(object):
 
     class Chirality:
@@ -72,6 +73,13 @@ class Cursor(object):
 
     def searchline(self, regex, flags=0):
         return re.search(regex, self.line.text, flags)
+
+    def line_span_matching(self, regex, flags=0):
+        match = self.searchline(regex, flags)
+        if match:
+            from . import span
+            return span.Span(self.clone().move(col=match.start()),
+                             self.clone().move(col=match.end()))
 
     def walk(self, stride):
         '''
@@ -249,22 +257,18 @@ class Cursor(object):
         return self._clone(Cursor)
         
     def move(self, line=None, col=None):
-
-        y, x = self.pos
-
         if isinstance(line, tuple): # check if line is actually a pair y, x
             if col is not None:
                 raise TypeError('too many arguments')
             
-            y, x = line
+            self.pos = line
         else:
-            if line is not None:
-                y = line
-
-            if col is not None:
-                x = col
-
-        self.pos = y, x
+            if line is not None and col is not None:
+                self.pos = line, col
+            elif line is not None:
+                self.down(line - self.y)
+            elif col is not None:
+                self.right(col - self.x)
 
         return self
     
