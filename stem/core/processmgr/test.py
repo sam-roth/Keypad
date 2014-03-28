@@ -1,32 +1,42 @@
 
-
-from .client import ServerProxy, AsyncServerProxy
-import pickle
+import unittest
+from .client import AsyncServerProxy, UnexpectedWorkerTerminationError
+import logging
 from . import testfunc
 
+class TestAsyncServerProxyRestart(unittest.TestCase):
 
-
-
-if __name__ == '__main__':
-    from .server import ShutdownMessage
-    from PyQt4 import Qt
-    import sys
-    app = Qt.QCoreApplication(sys.argv)
-    import time
-    sp = AsyncServerProxy()
-    with sp:
-        f = sp.submit(testfunc.say_hello)
-        print(f.result())
-#         f = sp.run_async(testfunc.raise_exc)
-#         print(f.result())        
-        
-        print(sp.submit(testfunc.make_qcoreapp).result())
-        
-#         sp.send(testfunc.raise_exc)
-
-#     pickle.dump(testfunc.say_hello, sp.fout)
-#     sp.fout.flush()
-#     pickle.load(sp.fin)
-#     pickle.dump(ShutdownMessage(), sp.fout)
-#     sp.fout.flush()
+    def setUp(self):
+        self.runner = AsyncServerProxy(testfunc.InitServer())
+        self.runner.start()
     
+    def tearDown(self):
+        self.runner.shutdown()
+        
+    def test_that_server_is_initialized_initially(self):
+        assert self.runner.submit(testfunc.TestServerInitialized()).result()
+    
+    def test_that_server_is_initialized_after_crash(self):
+        try:
+            self.runner.submit(testfunc.CrashServer()).result()
+        except UnexpectedWorkerTerminationError:
+            pass
+        assert self.runner.submit(testfunc.TestServerInitialized()).result()
+    
+    
+
+def test_that_fourth_error_is_fatal():
+    try:
+        prox = AsyncServerProxy(testfunc.CrashServer())
+        prox.start()
+        prox.submit(testfunc.InitServer()).result()
+    except UnexpectedWorkerTerminationError:
+        pass
+    else:
+        assert False, 'expected error'
+        
+    
+    
+if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG)
+    unittest.main()

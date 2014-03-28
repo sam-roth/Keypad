@@ -57,7 +57,19 @@ class PythonCompletionResults(AbstractCompletionResults):
         
     def dispose(self):
         pass # TODO
-
+        
+class WorkerStart(object):
+    def __call__(self, worker):
+        worker.refs = [
+            Cursor, syntax, AsyncServerProxy,
+            AttributedString,
+            dump_object,
+            RelatedName,
+            WorkerTask,
+            Complete,
+            GetDocs,
+            FindRelated
+        ]
 
 class WorkerTask(object):
     def __init__(self, filename, pos, unsaved):
@@ -142,7 +154,7 @@ class PythonCodeModel(IndentRetainingCodeModel):
             syntax.pylexer(), 
             dict(lexcat=None)
         )
-        self.runner = AsyncServerProxy()
+        self.runner = AsyncServerProxy(WorkerStart())
         self.runner.start()
         self.disposed = False
 
