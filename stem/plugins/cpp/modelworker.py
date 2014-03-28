@@ -231,9 +231,7 @@ class FindRelatedTask(AbstractCodeTask):
             
             if decl is not None:
                 results.append(make_related_name(RelatedName.Type.decl, decl))
-        
-        import pprint
-        pprint.pprint(results)
+
         return results
 
 class CompletionTask(AbstractCodeTask):

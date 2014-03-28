@@ -12,8 +12,18 @@ from stem.abstract.code import RelatedName
 import pprint
 
 
+
 cxx_config = CXXConfig.from_config(Config.root)
 cxx_config.clang_library = '/Library/Developer/CommandLineTools/usr/lib/libclang.dylib'
+
+def add_to_buffer(buff, text):
+    result = []
+    for part in text.split('%%'):
+        buff.insert(buff.end_pos, part)
+        result.append(buff.end_pos)
+    result.pop()
+    return result
+    
 
 class TestCXXCodeModel(unittest.TestCase):
     @classmethod
@@ -52,56 +62,58 @@ class TestCXXCodeModel(unittest.TestCase):
         else:
             self.fail('Expected abcdef when completing on s')
         
-#         
-#     def test_completion_docstring(self):
-#         self.buffer.insert(
-#             (0,0),
-#             'def foo():\n'
-#             '  "bar"\n'
-#             'foo'
-#         )
-#         
-#         pos = self.buffer.end_pos
-#         
-#         f = self.cmodel.completions_async(pos)
-#         
-#         res = f.result(timeout=5)
-#         
-#         for i, row in enumerate(res.rows):
-#             if row and row[0].text == 'foo':
-#                 doc = res.doc_async(i).result(5)
-#                 assert len(doc) == 3
-#                 assert doc[2].text == 'bar'
-#                 break
-#         else:
-#             self.fail('Expected that "foo" should be available as a completion result.')
-#                 
-        
         
     def test_find_decl(self):
         
-        self.buffer.insert(
-            (0,0),
-            'struct S { int i; };\n'
+        decl_pos, find_decl_pos = add_to_buffer(
+            self.buffer,
+            '''
+            void %%foo();
+            
+            void foo() { }
+            
+            void bar()
+            {
+                foo%%();
+            }
+            '''
         )
-        pos = self.buffer.end_pos
-        
-        self.buffer.insert(
-            pos,
-            'S abcd;\n'
-            'void foo() { abcd'
-        )
-        
-        f = self.cmodel.find_related_async(self.buffer.end_pos, self.cmodel.RelatedNameType.decl)
+
+        f = self.cmodel.find_related_async(find_decl_pos, self.cmodel.RelatedNameType.decl)
         
         res = f.result(timeout=5)
         
-        assert len(res) == 2
+        assert len(res) == 1
         result = res[0]
         
-        print(res)
         assert isinstance(result, RelatedName)
-        assert result.pos[0] == 1
-        assert res[1].pos[0] == 2
+        assert result.pos == decl_pos
+        
 
-    
+    def test_find_defn(self):
+        
+        defn_pos, find_defn_pos = add_to_buffer(
+            self.buffer,
+            '''
+            void foo();
+            
+            void %%foo() { }
+            
+            void bar()
+            {
+                foo%%();
+            }
+            '''
+        )
+        
+        
+        f = self.cmodel.find_related_async(find_defn_pos, self.cmodel.RelatedNameType.defn)
+        
+        res = f.result(timeout=5)
+        
+        assert len(res) == 1
+        result = res[0]
+        
+        assert isinstance(result, RelatedName)
+        assert result.pos == defn_pos
+        
