@@ -530,40 +530,35 @@ def dumpdecl(bc: BufferController):
     cm = bc.code_model
     res = cm.find_related_async(bc.selection.pos, cm.RelatedNameType.all)
     print(res.result())
-    
-# @interactive('test_cmcomplete')
-# def test_cmcomplete(bufctl: BufferController):
-#     bufctl.completion_controller.complete()
-    
-#     
-#     def callback(result):
-#         with bufctl.history.transaction():
-#             for row in result.result().rows:
-#                 print(row)
-#                 
-# 
-#     bufctl.code_model.completions_async(
-#         bufctl.selection.pos).add_done_callback(in_main_thread(callback))
 
-# import gc
-# import logging
-# import weakref
-# import pprint
-# 
-# last = None
-# @interactive('getrefs')
-# def getrefs(bctl: BufferController):
-#     global last
-#     gc.set_debug(gc.DEBUG_LEAK)
-#     if last is None:
-#         last = weakref.ref(bctl)
-#     else:
-#         gc.collect()
-#         gc.collect()
-#         
-#         l = last()
-#         if l is not None:    
-#             pprint.pprint(gc.get_referrers(last()))
-#         else:
-#             print('no refs remain')
-# 
+from ..abstract.code import AbstractCodeModel, RelatedName
+
+@interactive('find_definition')
+def find_definition(bc: BufferController):
+    return goto_related(bc, RelatedName.Type.defn)
+    
+@interactive('find_declaration')
+def find_definition(bc: BufferController):
+    return goto_related(bc, RelatedName.Type.decl)
+    
+def goto_related(bc: BufferController, ty):
+    if bc.code_model is None:
+        return interactive.call_next
+    else:
+        cm = bc.code_model
+        assert isinstance(cm, AbstractCodeModel)
+        f = cm.find_related_async(bc.selection.pos, ty)
+        
+        @in_main_thread
+        def callback(future):
+            results = future.result()
+            if results:
+                result = results[0]
+                assert isinstance(result, RelatedName)
+                y, x = result.pos
+                interactive.run('edit', str(result.path), y)
+                bc.refresh_view(full=True)
+                
+        f.add_done_callback(callback)
+
+

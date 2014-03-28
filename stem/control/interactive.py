@@ -70,7 +70,10 @@ class InteractiveDispatcher(object):
     def find_all(self, name):
         return self._registry[name].items()
     
-    def find(self, responder, name, *args):
+
+        
+    def try_to_find(self, responder, name, *args):    
+
         handlers = self._registry[name]
 
         tried = set()
@@ -92,8 +95,10 @@ class InteractiveDispatcher(object):
                 else:
                     return None
         
-        result = rec_helper(responder)
-
+        return rec_helper(responder)
+        
+    def find(self, responder, name, *args):
+        result = self.try_to_find(responder, name, *args)
         if result is None:
             raise errors.NoSuchCommandError('No applicable command {!r}'.format(name))
 
@@ -101,10 +106,21 @@ class InteractiveDispatcher(object):
 
     def dispatch(self, responder, name, *args):
         ty, resp, handler = self.find(responder, name, *args)
-        handler(resp, *args)
-
-
-
+        res = handler(resp, *args)
+        if res is interactive.call_next:
+            for nresp in resp.next_responders:
+                try:
+                    self.dispatch(nresp, name, *args)
+                except errors.NoSuchCommandError:
+                    pass
+                else:
+                    return
+            else:
+                raise errors.NoSuchCommandError('No applicable command {!r}'.format(name))
+                
+                
+        
+        
 class Menu(object):
     def __init__(self, inline=False):
         self._items = {}
@@ -193,12 +209,20 @@ def get_menu_item(path):
     return _get_item_by_path(root_menu, path.split('/'))
 
 
-def interactive(*names):
-    def result(func):
-        for name in names:
+class interactive(object):
+    call_next = object()
+    
+    @classmethod
+    def run(cls, name, *args):
+        run(name, *args)
+
+    def __init__(self, *names):
+        self.names = names
+
+    def __call__(self, func):
+        for name in self.names:
             dispatcher.register(name, func)
-        return func
-    return result
+        return func        
 
 
 def run(name, *args):
