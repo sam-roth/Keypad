@@ -555,7 +555,7 @@ def find_definition(bc: BufferController):
 @interactive('find_declaration')
 def find_definition(bc: BufferController):
     return goto_related(bc, RelatedName.Type.decl)
-
+    
 def goto_related(bc: BufferController, ty):
     if bc.code_model is None:
         return interactive.call_next
@@ -567,11 +567,16 @@ def goto_related(bc: BufferController, ty):
         @in_main_thread
         def callback(future):
             results = future.result()
+            fallback = None
             for result in results:
-                if result.type == ty:
-                    break
+                if result.path is not None:
+                    fallback = result
+                    if result.type & ty:
+                        break
             else:
-                if results:
+                if fallback is not None:
+                    result = fallback
+                elif results:
                     result = results[0]
                 else:
                     raise errors.NameNotFoundError('Could not find name.')
@@ -582,6 +587,9 @@ def goto_related(bc: BufferController, ty):
             bc.refresh_view(full=True)
             
         f.add_done_callback(callback)
+
+
+
 
 
 
@@ -600,3 +608,5 @@ def show_diagnostics(bc: BufferController):
     
 #     for diag in diags:
 #         print(diag)
+
+
