@@ -3,6 +3,7 @@ from stem.core import AttributedString
 from stem.abstract.code import RelatedName
 from clang import cindex
 from .config import CXXConfig
+import textwrap
 ClangOptions = (cindex.TranslationUnit.PARSE_INCLUDE_BRIEF_COMMENTS_IN_CODE_COMPLETION |
                                   cindex.TranslationUnit.PARSE_INCOMPLETE | 
                                   cindex.TranslationUnit.PARSE_CACHE_COMPLETION_RESULTS |
@@ -59,13 +60,27 @@ class Engine:
             unsaved_files=self.encode_unsaved(unsaved),
         )
         
+        self.last_completion_results = cr
+        
         results = []
         
         for item in cr.results:
-#             chunks = [chunk.spelling.decode() for chunk in item.string]
-            results.append((self.decode_completion_string(item.string), ))
+            results.append((AttributedString(self.typed_text(item.string)), ))
         
         return results
+    
+    def completion_docs(self, index):
+        cr = self.last_completion_results.results[index]
+        assert isinstance(cr, cindex.CodeCompletionResult)
+        
+        lines = []
+        comment = frombytes(cr.string.briefComment.spelling)
+        if comment is not None:
+            for line in textwrap.wrap(comment, 35):
+                lines.append(AttributedString(line))
+        
+        return lines
+        
     
     def unit(self, filename, unsaved):
         unsaved = self.encode_unsaved(unsaved)
@@ -78,6 +93,21 @@ class Engine:
         res.reparse(unsaved, options=ClangOptions)    
         
         return res
+        
+    @staticmethod
+    def typed_text(cstring):
+        '''
+        Get only the typed text portion of a completion string.
+        '''
+        
+        assert isinstance(cstring, cindex.CompletionString)
+        
+        def gen():
+            for chunk in cstring:
+                if chunk.isKindTypedText():
+                    yield frombytes(chunk.spelling)
+        return ' '.join(gen())
+    
     @staticmethod
     def decode_completion_string(cstring):
         '''
@@ -120,6 +150,8 @@ class AbstractCodeTask(object):
         engine = worker.engine
         return self.process(engine)
 
+
+
 def make_related_name(ty, c):
     loc = c.location
     return RelatedName(
@@ -130,10 +162,13 @@ def make_related_name(ty, c):
     )
     
 class FindRelatedTask(AbstractCodeTask):
+    def __init__(self, types, *args, **kw):
+        super().__init__(*args, **kw)
+        self.types = types
     def process(self, engine):
         assert isinstance(engine, Engine)
         tu = engine.unit(self.filename, self.unsaved_files)
-        enc_filename = str(self.filename).encode()
+        enc_filename = tobytes(str(self.filename))
         line, col = self.pos
         
         curs = cindex.Cursor.from_location(
@@ -150,17 +185,29 @@ class FindRelatedTask(AbstractCodeTask):
         
         results = []
         
-        defn = curs.get_definition()
-        if defn is not None:
-            results.append(make_related_name(RelatedName.Type.defn, defn))
+        if self.types & RelatedName.Type.defn:
+            defn = curs.get_definition()
+            if defn is not None:
+                results.append(make_related_name(RelatedName.Type.defn, defn))
+    
+        if self.types & RelatedName.Type.decl:
+            decl = curs.canonical
+            if decl is not None:
+                results.append(make_related_name(RelatedName.Type.decl, decl))
         
-        decl = curs.canonical
-        if decl is not None:
-            results.append(make_related_name(RelatedName.Type.decl, decl))
-            
+        import pprint
+        pprint.pprint(results)
         return results
 
 class CompletionTask(AbstractCodeTask):
     def process(self, engine):
         assert isinstance(engine, Engine)
         return engine.completions(self.filename, self.pos, self.unsaved_files)
+        
+class GetDocsTask(object):
+    def __init__(self, index):
+        self.index = index
+    def __call__(self, worker):
+        engine = worker.engine
+        assert isinstance(engine, Engine)
+        return engine.completion_docs(self.index)

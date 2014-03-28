@@ -528,7 +528,6 @@ def goto_related(bc: BufferController, ty):
         @in_main_thread
         def callback(future):
             results = future.result()
-            
             for result in results:
                 if result.type == ty:
                     break
@@ -538,7 +537,6 @@ def goto_related(bc: BufferController, ty):
                 else:
                     raise errors.NameNotFoundError('Could not find name.')
             
-            result = results[0]
             assert isinstance(result, RelatedName)
             y, x = result.pos
             interactive.run('edit', str(result.path), y + 1)

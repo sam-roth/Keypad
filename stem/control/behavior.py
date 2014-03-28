@@ -90,9 +90,13 @@ def setup_buffer(controller):
 # 
         controller.refresh_view()
     elif path.suffix in ('.cpp', '.hpp', '.cc', '.hh', '.h', '.C'):
+        from ..plugins.cpp.cppmodel import CXXCodeModel
+        
+        controller.code_model = CXXCodeModel(controller.buffer, Config.root)
+        
         controller.add_tags(
-            syntax='c++',
-            autoindent=True,
+#             syntax='c++',
+#             autoindent=True,
             parmatch=True,
             commentchar='//'
         )
