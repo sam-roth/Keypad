@@ -71,6 +71,7 @@ class Engine:
         if config.clang_library is not None:
             cindex.Config.set_library_file(str(config.clang_library))
         self.index = cindex.Index.create()
+        self._translation_units = {}
 
     def completions(self, filename, pos, unsaved):
         tu = self.unit(filename, unsaved)
@@ -107,18 +108,23 @@ class Engine:
         
     
     def unit(self, filename, unsaved):
-        try:
-            unsaved = self.encode_unsaved(unsaved)
-        except AssertionError:
-            logging.exception()
-            raise cindex.TranslationUnitLoadError
-            
-        res = self.index.parse(
-            tobytes(str(filename)),
-            args=[],
-            unsaved_files=unsaved,
-            options=ClangOptions
-        )
+        unsaved = self.encode_unsaved(unsaved)
+        if filename not in self._translation_units:
+            try:
+                res = self.index.parse(
+                    tobytes(str(filename)),
+                    args=[],
+                    unsaved_files=unsaved,
+                    options=ClangOptions
+                )
+            except AssertionError:
+                logging.exception()
+                raise cindex.TranslationUnitLoadError
+            else:
+                self._translation_units[filename] = res
+        else:
+            res = self._translation_units[filename]
+
         res.reparse(unsaved, options=ClangOptions)    
         self.tu = res
         return res
