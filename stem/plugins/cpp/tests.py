@@ -8,7 +8,7 @@ from .cppmodel import CXXCodeModel, CXXCompletionResults
 from .config import CXXConfig
 from stem.core.nconfig import Config
 from stem.buffers import Buffer, Cursor, Span
-from stem.abstract.code import RelatedName
+from stem.abstract.code import RelatedName, Diagnostic
 import pprint
 
 
@@ -117,3 +117,27 @@ class TestCXXCodeModel(unittest.TestCase):
         assert isinstance(result, RelatedName)
         assert result.pos == defn_pos
         
+        
+    def test_get_diagnostics(self):
+        
+        missing_semicolon_pos, = add_to_buffer(
+            self.buffer,
+            '''
+            void bar();
+            
+            void foo()
+            {
+                bar()%%
+            }
+            '''
+        )
+        
+        assert self.cmodel.can_provide_diagnostics
+        
+        diags = self.cmodel.diagnostics_async().result()
+        assert len(diags) == 1
+        diag = diags[0]
+        
+        assert isinstance(diag, Diagnostic)
+        assert len(diag.ranges) == 1
+        assert diag.ranges[0][2] == missing_semicolon_pos
