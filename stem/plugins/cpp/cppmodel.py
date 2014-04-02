@@ -65,6 +65,8 @@ class CXXCodeModel(IndentRetainingCodeModel):
     def __init__(self, *args, **kw):
         super().__init__(*args, **kw)
         self.cxx_config = CXXConfig.from_config(self.conf)
+        self.cxx_config.value_changed.connect(self._update_configuration)
+        
         self.prox = AsyncServerProxy()
         self.prox.start()
         self.prox.submit(InitWorkerTask(self.cxx_config)).result()
@@ -85,6 +87,10 @@ class CXXCodeModel(IndentRetainingCodeModel):
         '''
         
         return self.prox.submit(task, transform)
+
+    def _update_configuration(self, k, v):
+        self.submit_task(InitWorkerTask(self.cxx_config))
+        
 
     def _find_token_start(self, pos):
         c = Cursor(self.buffer).move(pos)

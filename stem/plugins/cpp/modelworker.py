@@ -5,11 +5,12 @@ from clang import cindex
 from .config import CXXConfig
 import textwrap
 import logging
+import os
+
 ClangOptions = (cindex.TranslationUnit.PARSE_INCLUDE_BRIEF_COMMENTS_IN_CODE_COMPLETION |
-                                  cindex.TranslationUnit.PARSE_INCOMPLETE | 
                                   cindex.TranslationUnit.PARSE_CACHE_COMPLETION_RESULTS |
                                   cindex.TranslationUnit.PARSE_PRECOMPILED_PREAMBLE)
-
+ClangHeaderOptions = ClangOptions | cindex.TranslationUnit.PARSE_INCOMPLETE
 def expect(v, ty):
     if not isinstance(v, ty):
         try:
@@ -64,12 +65,22 @@ _kind_names = {
 
 _empty = AttributedString()
 
+
+def _might_be_header(filename):
+    '''
+    Determine if the filename conforms to known header extensions.
+    '''
+    
+    _, ext = os.path.splitext(filename)
+    
+    return ext.lower() in (b'.h', b'.hpp', b'.hh')
+    
+
 class Engine:
     def __init__(self, config):
         assert isinstance(config, CXXConfig)
         self.config = config
-        if config.clang_library is not None:
-            cindex.Config.set_library_file(str(config.clang_library))
+
         self.index = cindex.Index.create()
         self._translation_units = {}
 
@@ -108,24 +119,26 @@ class Engine:
         
     
     def unit(self, filename, unsaved):
+        possibly_header = _might_be_header(filename)
+        
         unsaved = self.encode_unsaved(unsaved)
         if filename not in self._translation_units:
             try:
                 res = self.index.parse(
                     tobytes(str(filename)),
-                    args=[],
+                    args=self.config.clang_header_flags if possibly_header else self.config.clang_flags,
                     unsaved_files=unsaved,
-                    options=ClangOptions
+                    options=ClangHeaderOptions if possibly_header else ClangOptions
                 )
             except AssertionError:
-                logging.exception()
+                logging.exception('assertion failure in cindex')
                 raise cindex.TranslationUnitLoadError
             else:
                 self._translation_units[filename] = res
         else:
             res = self._translation_units[filename]
 
-        res.reparse(unsaved, options=ClangOptions)    
+        res.reparse(unsaved, options=ClangHeaderOptions if possibly_header else ClangOptions)    
         self.tu = res
         return res
         
@@ -170,6 +183,8 @@ class InitWorkerTask(object):
         self.config = config
 
     def __call__(self, worker):
+        if getattr(worker, 'engine', None) is None and self.config.clang_library is not None:
+            cindex.Config.set_library_file(str(self.config.clang_library))
         worker.engine = Engine(self.config)
 
 class AbstractCodeTask(object):
@@ -302,3 +317,4 @@ class GetDiagnosticsTask(AbstractCodeTask):
             )
         
         return results
+
