@@ -2,6 +2,10 @@
 
 import yaml
 import warnings
+import enum
+import types
+
+
 
 class Conversions:   
     _entries = {}
@@ -54,7 +58,9 @@ class Field(object):
                     return getattr(instance._chain_, self.name)
                 else:
                     return self.default
-
+                    
+    def clear(self, instance):
+        del instance._values_[self.name]
 
     def __set__(self, instance, value):
         instance._values_[self.name] = Conversions.convert(self.type, value)
@@ -65,8 +71,130 @@ class Field(object):
         else:
             warnings.warn(UserWarning('Field {} is not marked as safe; it is not permitted ' 
                                       'to be read from an untrusted configuration file.'.format(self.name)))
+                                    
+        
+
+    def _test_iterable(self, xs):
+        try:
+            iter(xs)
+            return True
+        except TypeError:
+            warnings.warn(UserWarning('Can only append or remove a list from {!r}'.format(self.name)))
+            return False
+            
+    def set(self, instance, value, safe):
+        if safe:
+            self.set_safely(instance, value)
+        else:
+            self.__set__(instance, value)
     
+                
+    def append(self, instance, value, safe):
+        if not self._test_iterable(value): return
+        
+        if issubclass(self.type, tuple):
+            self.set(instance, self.__get__(instance, None) + value, safe)
+        elif issubclass(self.type, frozenset):
+            self.set(instance, self.__get__(instance, None) | frozenset(value), safe)
+        else:
+            warnings.warn(UserWarning('Field {} cannot be appended.'.format(self.name)))
+    
+    def remove(self, instance, value, safe):
+        if not self._test_iterable(value): return
+    
+        if issubclass(self.type, tuple):
+            curval = list(self.__get__(instance, None))
+            for val in value:
+                try:
+                    curval.remove(val)
+                except ValueError:
+                    return
+            self.set(instance, tuple(curval), safe)
+        elif issubclass(self.type, frozenset):
+            self.set(instance, self.__get__(instance, None) - frozenset(value), safe)
+        else:
+            warnings.warn(UserWarning('Field {} cannot be removed from.'.format(self.name)))            
+                                    
+class SafetyContext(enum.IntEnum):
+    safe = 1
+    unsafe = 2
+    either = safe | unsafe
+    neither = 0
+    
+    
+class EnumField(Field):
+    def __init__(self, type, choices, default=None, safe=False, allow_others=SafetyContext.neither):
+        super().__init__(type, default, safe)
+        self.choices = dict(choices)
+        self.allow_others = allow_others
+    
+    def _set(self, instance, value, context):
+        if value in self.choices.values():
+            super().__set__(instance, value)
+        elif value in self.choices:
+            super().__set__(instance, self.choices[value])
+        elif self.allow_others & context:
+            super().__set__(instance, value)
+        else:
+            raise ValueError('Invalid value for enumeration field when set from this context.')
+        
+    def __set__(self, instance, value):
+        self._set(instance, value, SafetyContext.safe)
+    
+    def set_safely(self, instance, value):
+        if self.safe:
+            self._set(instance, value, SafetyContext.unsafe)
+        else:
+            super().set_safely(instance, value)
+        
+import logging
+class SetField(Field):
+    def __init__(self, etype, default=frozenset(), choices=None, safe=False, allow_others=SafetyContext.neither):
+        super().__init__(frozenset, default, safe)
+        self.choices = dict(choices) if choices is not None else None
+        self.allow_others = allow_others
+        self.etype = etype
+        
+    def _set(self, instance, values, context):
+#         print(values)
+        normvals = []
+        
+        if self.choices is not None:
+            for value in values:
+                if value in self.choices.values():
+                    normvals.append(value)
+                elif value in self.choices:
+                    normvals.append(self.choices[value])
+                elif self.allow_others & context:
+                    normvals.append(Conversions.convert(self.etype, value))
+                else:
+                    raise ValueError('invalid value for set field when set from this context')
+        else:
+            normvals = [Conversions.convert(self.etype, v) for v in values]
+            
+        super().__set__(instance, self.__get__(instance, None) | frozenset(normvals))
+        
+    def __set__(self, instance, value):
+        try:
+            self._set(instance, value, SafetyContext.safe)
+        except:
+            logging.exception('setfield')
+            
+    def set_safely(self, instance, value):
+        try:
+            if self.safe:
+                self._set(instance, value, SafetyContext.unsafe)
+            else:
+                super().set_safely(instance, value)        
+                
+        except:
+            logging.exception('setfield')
+
+
 _config_namespaces = {}        
+
+def namespaces():
+    return types.MappingProxyType(_config_namespaces)
 
 class ConfigMeta(type):
     def __new__(cls, name, bases, classdict):
@@ -86,9 +214,9 @@ class ConfigMeta(type):
         result = super().__new__(cls, name, bases, classdict)
         
         if hasattr(result, '_ns_'):
-            yaml.add_representer(result, result.to_yaml)
-            yaml.add_constructor(result.yaml_tag, result.from_yaml)
-            yaml.SafeLoader.add_constructor(result.yaml_tag, result.from_yaml_safely)
+#             yaml.add_representer(result, result.to_yaml)
+#             yaml.add_constructor(result.yaml_tag, result.from_yaml)
+#             yaml.SafeLoader.add_constructor(result.yaml_tag, result.from_yaml_safely)
             _config_namespaces[result._ns_] = result
         
         return result
@@ -104,19 +232,44 @@ class Config(object):
         result.chain = self
         return result
             
-    def load_yaml(self, source):
-        items = yaml.load(source)
-        for item in items:
-            self.groups[type(item)] = item
-    
     def dump_yaml(self, sink=None, **kw):
         return yaml.dump(list(self.groups.values()), sink, **kw)
     
+    def load_yaml(self, source, safe):
+        if safe:
+            items = yaml.safe_load(source)
+        else:
+            items = yaml.load(source)
+
+        if not isinstance(items, dict):
+            warnings.warn(UserWarning('Top level of YAML configuration file must be dictionary. Got {!r}.'
+                                      .format(type(items).__name__)))
+            return
+
+        for k, v in items.items():
+            try:
+                ns = _config_namespaces[k]
+            except KeyError:
+                warnings.warn(UserWarning('Unknown config namespace: {!r}.'.format(ns)))
+            else:
+                settings = ns.from_config(self)
+                settings.update(v, safe)
     def load_yaml_safely(self, source):
-        items = yaml.safe_load(source)
-        if items is None: return
-        for item in items:
-            self.groups[type(item)] = item
+        return self.load_yaml(source, safe=True)
+
+#         try:
+#             print(items[0]._values_)
+#         except:
+#             pass
+#        if items is None: return
+#        for item in items:
+#            item_type = type(item)
+#            item_type.from_config(self).merge_from(item)
+#            
+#             if item_type in self.groups:
+#                 self.groups[item_type].merge_from(item)
+#             else:
+#                 self.groups[item_type] = item
             
 Config.root = Config()
         
@@ -180,7 +333,10 @@ class Settings(metaclass=ConfigMeta):
         
     @classmethod
     def from_yaml(cls, loader, node):
-        result = cls()
+        return cls().self_from_yaml(loader, node)
+        
+    def self_from_yaml(self, loader, node):
+        result =  self
         for k, v in loader.construct_mapping(node).items():
             result._fields_[k].__set__(result, v)
         return result
@@ -188,11 +344,52 @@ class Settings(metaclass=ConfigMeta):
     @classmethod
     def from_yaml_safely(cls, loader, node):
         result = cls()
-        for k, v in loader.construct_mapping(node).items():
-            result._fields_[k].set_safely(result, v)
+        result.self_from_yaml_safely(loader, node)
         return result
 
+    def self_from_yaml_safely(self, loader, node):
+        result = self
 
+        for k, v in loader.construct_mapping(node, deep=True).items():
+#             print('a', k,v)
+            result._fields_[k].set_safely(result, v)
+        return result
+        
+    def merge_from(self, other):
+        for k, v in other._values_.items():
+            self._fields_[k].__set__(self, v)
+
+    def update(self, mapping, safe):
+        for k, v in mapping.items():
+            parts = k.split('.')
+            if len(parts) == 1:
+                try:
+                    field = self._fields_[k]
+                except KeyError:
+                    warnings.warn(UserWarning('Unknown configuration key {!r}.'.format(k)))
+                else:
+                    field.set(self, v, safe)
+                    
+            elif len(parts) == 2:
+                k, m = parts
+                try:
+                    field = self._fields_[k]
+                except KeyError:
+                    warnings.warn(UserWarning('Unknown configuration key {!r}.'.format(k)))
+                else:
+                    if m == 'add':
+                        field.append(self, v, safe)
+                    elif m == 'remove':
+                        field.remove(self, v, safe)
+                    else:
+                        warnings.warn(UserWarning('Unknown method {m!r} for field {k!r}'.format(**locals())))
+            else:
+                warnings.warn(UserWarning('Too many dots in name {!r}.'.format(k)))
+
+
+    
+#     def clear(self, name):
+#         self._fields_[k].clear()
 
 ConfigGroup = Settings # deprecated alias
 
