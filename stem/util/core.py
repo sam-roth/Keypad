@@ -5,6 +5,8 @@ import inspect
 import functools
 import warnings
 
+
+
 class ImmutableListView(collections.Sequence):
     def __init__(self, list_):
         self._list =  list_
@@ -15,7 +17,8 @@ class ImmutableListView(collections.Sequence):
     def __getitem__(self, i):
         return self._list[i]
 
-
+def singleton(cls):
+    return cls()
 
 def dump_object(obj):
     header = type(obj).__name__ + "{\n    "
