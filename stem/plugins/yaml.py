@@ -9,8 +9,11 @@ from stem.plugins.semantics.syntax import SyntaxHighlighter, lazy
 from stem.abstract.code import IndentRetainingCodeModel, AbstractCompletionResults
 from stem.core import AttributedString
 from stem.buffers.cursor import Cursor
-from stem.core import nconfig
+from stem.core import nconfig, filetype
 from stem.core.fuzzy import FuzzyMatcher
+from stem.core.executors import future_wrap
+
+from stem.plugins.semantics.syntaxlib import RegexLexer
 
 @lazy
 def yaml_lexer():
@@ -96,23 +99,20 @@ class YAMLCompletionResults(AbstractCompletionResults):
 
             
         self.filter()        
-
+    
+    @future_wrap
     def doc_async(self, index):
         '''
         Return a Future for the documentation for a given completion result as a list of 
         AttributedString.        
         '''
         
-        # We'll do this synchronously since it's very fast.        
-        f = futures.Future()
         d = self.docs[self._filtered.indices[index]]
         if d is None:
-            f.set_result([])
+            return []
         else:
-            f.set_result([AttributedString.join(': ', [
-                AttributedString(d.name),
-                AttributedString(d.type.__name__, lexcat='type')
-            ])])
+            return [AttributedString.join(': ', [AttributedString(d.name),
+                                                 AttributedString(d.type.__name__, lexcat='type')])]
         return f
         
     @property
@@ -157,7 +157,8 @@ class YAMLCodeModel(IndentRetainingCodeModel):
     
         highlighter.highlight_buffer(self.buffer)
 
-
+    
+    @future_wrap
     def completions_async(self, pos):
         '''
         Return a future to the completions available at the given position in the document.
@@ -202,7 +203,6 @@ class YAMLCodeModel(IndentRetainingCodeModel):
         
         compls = [] 
         compls += [(AttributedString(s), namespace, None) for s in nconfig.namespaces()]
-        #self.buffer.text.split()]
         
         if cur_key is not None:
             try:
@@ -212,8 +212,11 @@ class YAMLCodeModel(IndentRetainingCodeModel):
             else:
                 compls += [(AttributedString(f.name), sfield if f.safe else ufield, f) for f in ns._fields_.values()]
         compls += [(AttributedString(s), buffer_text, None) for s in re.findall(r'[\w\d]+', self.buffer.text)]
-        result = futures.Future()
-        result.set_result(YAMLCompletionResults(pos, compls))
-        return result
+        return YAMLCompletionResults(pos, compls)
+
 
     
+filetype.Filetype('yaml',
+                  suffixes=('.yaml', ),
+                  code_model=YAMLCodeModel,
+                  tags={'parmatch': True})
