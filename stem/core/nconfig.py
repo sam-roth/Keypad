@@ -5,6 +5,7 @@ import warnings
 import enum
 import types
 
+from .signal import Signal
 
 
 class Conversions:   
@@ -29,6 +30,7 @@ class Conversions:
                     value,
                     ty.__name__
                 ))
+
 
 class Field(object):
     def __init__(self, type, default=None, safe=False):
@@ -63,7 +65,10 @@ class Field(object):
         del instance._values_[self.name]
 
     def __set__(self, instance, value):
-        instance._values_[self.name] = Conversions.convert(self.type, value)
+        conv_value = Conversions.convert(self.type, value)
+        changed = conv_value != instance._values_.get(self.name, object())
+        instance._values_[self.name] = conv_value
+        instance.value_changed(self.name, conv_value)
         
     def set_safely(self, instance, value):
         if self.safe:
@@ -305,6 +310,10 @@ class Settings(metaclass=ConfigMeta):
         self._values_ = {}
         self._chain_ = None
     
+    @Signal
+    def value_changed(self, fieldname, value):
+        pass
+    
     @classmethod
     def from_config(cls, config):
         if cls in config.groups:
@@ -397,6 +406,7 @@ import pathlib
 import pprint
 
 Conversions.register(pathlib.Path, pathlib.Path)
+Conversions.register(tuple, tuple)
 
 class Example(ConfigGroup):
     _ns_ = 'stem.test_config'
