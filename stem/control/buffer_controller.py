@@ -16,7 +16,7 @@ from ..core.key                 import *
 from ..core.responder           import Responder
 from ..util.path                import search_upwards
 from ..core.notification_queue  import in_main_thread
-from ..core                     import timer
+from ..core                     import timer, filetype
 from ..core.nconfig             import Config
 from ..options                  import GeneralConfig
 
@@ -71,6 +71,8 @@ class BufferController(Tagged, Responder):
         self.buffer_set = buffer_set
         self._prev_region = Region()
         self._is_modified = False
+        self.__filetype = None
+        self.__set_filetype(filetype.Filetype.default())        
 
         view.controller = self
 
@@ -80,20 +82,33 @@ class BufferController(Tagged, Responder):
             self.interaction_mode = None
             
 
-        self.instance_tags_added.connect(self.__after_tags_added)
+#         self.instance_tags_added.connect(self.__after_tags_added)
         
         self.__file_change_timer = timer.Timer(5)
         self.__file_change_timer.timeout += self.__check_for_file_change
-        self.completion_controller = CompletionController(self)        
+        self.completion_controller = CompletionController(self)    
     
         self._last_path = None
         
+    def __set_filetype(self, ft):
+        if ft != self.__filetype:
+            self.__filetype = ft
+            self.add_tags(**ft.tags)
+            self.code_model = ft.make_code_model(self.buffer, self.config)
+            
+            
+            
     def __path_change(self, path):
         if path != self._last_path:
             self._last_path = path
         else:
             return
-            
+        
+        if path is None:
+            self.__set_filetype(filetype.Filetype.default())
+        else:
+            self.__set_filetype(filetype.Filetype.by_suffix(pathlib.Path(path).suffix))
+        
         if self.code_model is not None:
             self.code_model.path = self.path
         
@@ -104,7 +119,8 @@ class BufferController(Tagged, Responder):
                 self.config.load_yaml_safely(f)
             logging.debug('loaded file config from %r, indent text is %r', config_path, 
                 GeneralConfig.from_config(self.config).indent_text)
-    
+                
+        self.path_changed()
     @property
     def code_model(self):
         return self._code_model
@@ -121,12 +137,15 @@ class BufferController(Tagged, Responder):
                     del self.view.overlay_spans['diagnostics']
                 except KeyError:
                     pass
-                    
+
             self._diagnostics_controller = None
+            self._code_model.dispose()
             
         self._code_model = value
         
+        
         if self._code_model is not None:
+            self._code_model.path = self.path
             self.add_next_responders(self.completion_controller)
             if self._code_model.can_provide_diagnostics:
                 dc = DiagnosticsController(self.config, self._code_model, self.buffer)
@@ -224,15 +243,11 @@ class BufferController(Tagged, Responder):
 
     def _after_history_transaction_committed(self):
         self.refresh_view()
-
-    def __after_tags_added(self, tags):
-        if 'path' in tags:
-            self.path_changed()
-
-
-    @Signal
-    def path_changed(self):
-        pass
+# 
+#     def __after_tags_added(self, tags):
+#         if 'path' in tags:
+#             self.path_changed()
+# 
 
         
     @property
@@ -327,7 +342,10 @@ class BufferController(Tagged, Responder):
     def loaded_from_path(self, path):
         pass
 
-
+    @Signal
+    def path_changed(self):
+        pass
+    
     @Signal
     def user_changed_buffer(self, change):
         pass

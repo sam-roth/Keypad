@@ -51,7 +51,7 @@ CursorDutyCycle     = 0.8
 
 
 class GeneralSettings(Settings):
-    _ns_ = 'stem.GeneralSettings'
+    _ns_ = 'general'
     
     integer_metrics = Field(bool, TextViewIntegerMetrics)
     double_strike = Field(bool, TextViewDoubleStrike)

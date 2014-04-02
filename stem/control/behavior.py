@@ -76,36 +76,39 @@ def interactive_command_help(_: object, interactive_name: 'Interactive'):
 
 
 from stem.core.nconfig import Config
-@autoconnect(BufferController.path_changed)
-def setup_buffer(controller):
-    path = controller.path
-    if path.suffix == '.py':
-        from ..plugins.pymodel.pymodel import PythonCodeModel
-        controller.code_model = PythonCodeModel(controller.buffer, controller.config)
-        controller.add_tags(
+# @autoconnect(BufferController.path_changed)
+# def setup_buffer(controller):
+#     path = controller.path
+#     if path.suffix == '.py':
+#         from ..plugins.pymodel.pymodel import PythonCodeModel
+#         controller.code_model = PythonCodeModel(controller.buffer, controller.config)
+#         controller.add_tags(
 #             syntax='python',
 #             autoindent=True,
-            parmatch=True
-        )
+#             parmatch=True
+#         )
 # 
-        controller.refresh_view()
-    elif path.suffix in ('.cpp', '.hpp', '.cc', '.hh', '.h', '.C'):
-        from ..plugins.cpp.cppmodel import CXXCodeModel
-        
-        controller.code_model = CXXCodeModel(controller.buffer, controller.config)
-        
-        controller.add_tags(
-#             syntax='c++',
-#             autoindent=True,
-            parmatch=True,
-            commentchar='//'
-        )
-        controller.refresh_view()
-    elif path.suffix == '.yaml':
-        from ..plugins.yaml import YAMLCodeModel
-        
-        controller.code_model = YAMLCodeModel(controller.buffer, controller.config)
-
+#         controller.refresh_view()
+#     if path.suffix in ('.cpp', '.hpp', '.cc', '.hh', '.h', '.C'):
+#         from ..plugins.cpp.cppmodel import CXXCodeModel
+#         
+#         controller.code_model = CXXCodeModel(controller.buffer, controller.config)
+#         
+#         controller.add_tags(
+# #             syntax='c++',
+# #             autoindent=True,
+#             parmatch=True,
+#             commentchar='//'
+#         )
+#         controller.refresh_view()
+#     elif path.suffix == '.yaml':
+#         from ..plugins.yaml import YAMLCodeModel
+#         
+#         controller.code_model = YAMLCodeModel(controller.buffer, controller.config)
+#         controller.add_tags(
+#             parmatch=True
+#         )
+# 
 @autoconnect(BufferController.user_changed_buffer, 
              lambda tags: tags.get('autoindent'))
 def autoindent(controller, chg):

@@ -6,10 +6,10 @@ from stem.core.nconfig import ConfigGroup, Field
 from stem.core.timer import Timer
 
 class DiagnosticsConfig(ConfigGroup):
-    _ns_ = 'stem.diagnostics'
+    _ns_ = 'diagnostics'
     
-    enabled = Field(bool, False)
-    update_period_s = Field(float, 5)
+    enabled = Field(bool, True, safe=True)
+    update_period_s = Field(float, 1)
 
 import logging
 class DiagnosticsController(object):
@@ -23,19 +23,28 @@ class DiagnosticsController(object):
         self.buffer = buffer
         self.config = DiagnosticsConfig.from_config(config)
         
+        buffer.text_modified.connect(self.__on_buffer_change)
+        
         self.clear_attrs = dict(error=None)
         self.default_diag_attrs = dict(error=True)
         self._overlays = ()
         
         self.__timer = Timer(self.config.update_period_s)
         self.__timer.timeout.connect(self.__tick)
-        self.__timer.running = True
+        self.__timer.reset_countdown()
+#         self.__timer.running = True
+#         self.__buffer_modified_yet = False
+    
+    def __on_buffer_change(self, chg):
+#         self.__buffer_modified_yet = True
+        self.__timer.reset_countdown()
         
     def __tick(self):
-        if self.config.enabled:
+        if self.config.enabled: # and self.__buffer_modified_yet:
             self.update()
+            self.__buffer_modified_yet = False
             # suspend timer while performing updates
-            self.__timer.running = False
+#             self.__timer.running = False
     
     def update(self):
         try:
@@ -72,8 +81,8 @@ class DiagnosticsController(object):
             self.__set_overlays(spans)
         except:
             logging.exception('error in __update_callback')
-        finally:
-            self.__timer.running = True
+#         finally:
+#             self.__timer.running = True
             
     def __set_overlays(self, overlays):
         self._overlays = tuple(overlays)
