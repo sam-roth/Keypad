@@ -81,7 +81,7 @@ def setup_buffer(controller):
     path = controller.path
     if path.suffix == '.py':
         from ..plugins.pymodel.pymodel import PythonCodeModel
-        controller.code_model = PythonCodeModel(controller.buffer, Config.root)
+        controller.code_model = PythonCodeModel(controller.buffer, controller.config)
         controller.add_tags(
 #             syntax='python',
 #             autoindent=True,
@@ -92,7 +92,7 @@ def setup_buffer(controller):
     elif path.suffix in ('.cpp', '.hpp', '.cc', '.hh', '.h', '.C'):
         from ..plugins.cpp.cppmodel import CXXCodeModel
         
-        controller.code_model = CXXCodeModel(controller.buffer, Config.root)
+        controller.code_model = CXXCodeModel(controller.buffer, controller.config)
         
         controller.add_tags(
 #             syntax='c++',
@@ -101,6 +101,10 @@ def setup_buffer(controller):
             commentchar='//'
         )
         controller.refresh_view()
+    elif path.suffix == '.yaml':
+        from ..plugins.yaml import YAMLCodeModel
+        
+        controller.code_model = YAMLCodeModel(controller.buffer, controller.config)
 
 @autoconnect(BufferController.user_changed_buffer, 
              lambda tags: tags.get('autoindent'))
