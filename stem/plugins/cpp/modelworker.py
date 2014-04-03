@@ -6,6 +6,8 @@ from .config import CXXConfig
 import textwrap
 import logging
 import os
+import re
+
 
 ClangOptions = (cindex.TranslationUnit.PARSE_INCLUDE_BRIEF_COMMENTS_IN_CODE_COMPLETION |
                                   cindex.TranslationUnit.PARSE_CACHE_COMPLETION_RESULTS |
@@ -43,6 +45,16 @@ def frombytes(s):
     else:
         return s
 
+def format_synopsis(syn):
+    syn, _ = re.subn(r'\s+', ' ', syn)
+
+    syn, _ = re.subn(r'''\s* ( [(){}\[\]<>] ) \s*''',
+                     r'\1',
+                     syn,
+                     flags=re.VERBOSE)
+    syn, _ = re.subn(r'\s*(\*|&)\s*(?=\w)', r' \1', syn)
+    syn, _ = re.subn(r'\s*,\s*', ', ', syn)
+    return syn
 
 _kind_names = {
     'CXX_METHOD': AttributedString('method', lexcat='function'),
@@ -109,10 +121,13 @@ class Engine:
         cr = self.last_completion_results.results[index]
         assert isinstance(cr, cindex.CodeCompletionResult)
         
-        lines = []
+        synopsis = format_synopsis(' '.join(chunk.spelling for chunk in cr.string))
+            
+        
+        lines = [AttributedString(synopsis)]
         comment = frombytes(cr.string.briefComment.spelling)
         if comment is not None:
-            for line in textwrap.wrap(comment, 35):
+            for line in textwrap.wrap(comment, 50): # FIXME: implement proper wrapping in the UI
                 lines.append(AttributedString(line))
         
         return lines
@@ -252,6 +267,7 @@ class FindRelatedTask(AbstractCodeTask):
                 decl = None
             else:
                 decl = defn.canonical
+                
                 
 #                 if suitable(decl):
 #                     print('**found defn.canon:', decl.spelling, '**')

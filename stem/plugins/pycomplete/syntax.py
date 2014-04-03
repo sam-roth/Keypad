@@ -26,8 +26,13 @@ def pylexer():
     STRING      = dict(lexcat='literal')
     COMMENT     = dict(lexcat='comment')
     FUNCTION    = dict(lexcat='function')
-
-    Comment     = regex(r'#.*', COMMENT)
+    TODO        = dict(lexcat='todo')
+    
+    Todo        = regex(r'\btodo:|\bfixme:|\bhack:', TODO, flags=re.IGNORECASE)
+    Comment     = region(guard=regex('#'),
+                         exit=regex('$'),
+                         contains=[Todo],
+                         attrs=COMMENT)
 
     HEX         = r'[a-fA-F0-9]'
     

@@ -39,6 +39,7 @@ from abc import abstractmethod
 import re
 
 class Lexer(metaclass=abc.ABCMeta):
+    atomic = False
     def __init__(self, attrs=None):
         self.attrs = attrs or {}
         self.contains = ()
@@ -73,7 +74,7 @@ class NothingLexer(Lexer):
 Nothing = NothingLexer()
 
 class RegexLexer(Lexer):
-
+    atomic = True
     def __init__(self, regex, attrs=None, flags=0):
         super().__init__(attrs)
         self.regex = re.compile(regex, flags)
@@ -107,7 +108,7 @@ class RegionLexer(Lexer):
     
     def exit_match(self, string, start, stop):
         return self.exit.guard_match(string, start, stop)
-
+import logging
 
 class Tokenizer(object):
     def __init__(self, lexer):
@@ -128,7 +129,7 @@ class Tokenizer(object):
         
         lexer_stack = self.lexer_stack
 
-        while lexer_stack and start < stop:
+        while lexer_stack and start <= stop:
             # find the expected end of the lexer (if it isn't occluded by a contained expression)
             exit_match = lexer_stack[-1].exit_match(string, start, stop)
             if exit_match:
@@ -222,3 +223,6 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+

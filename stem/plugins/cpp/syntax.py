@@ -12,7 +12,7 @@ def cpplexer():
 
     keywords = '''
         alignas alignof and and_eq asm bitand bitor break case catch
-        class compl constexpr const_cast continue
+        class compl const_cast continue
         default delete do double dynamic_cast else enum explicit export extern false
         for friend goto if inline namespace new noexcept not
         not_eq nullptr operator or or_eq private protected public
@@ -21,13 +21,17 @@ def cpplexer():
         union using virtual while xor xor_eq
     '''.split()
     
+    context_keywords = 'final override'.split()
     
     cpp_types = '''
     int long bool auto char16_t char32_t char const register mutable void volatile wchar_t
-    float short signed unsigned decltype
+    float short signed unsigned decltype size_t ssize_t constexpr
     '''.split()
-
     
+    
+    cpp_types += ['{}int{}_t'.format(u, 2**n) for u in ('u', '') for n in range(3, 7)]
+
+    CONTEXT_KW  = dict(lexcat='function')    
     KEYWORD     = dict(lexcat='keyword')
     ESCAPE      = dict(lexcat='escape')
     STRING      = dict(lexcat='literal')
@@ -40,11 +44,16 @@ def cpplexer():
 
     HEX         = r'[a-fA-F0-9]'
     
-
-    Preproc = regex(r'^\s*#\s*\w+', PREPROC)
+    IncludeString = regex(r'<[^>]*>', STRING)
+    
+    Preproc = region(guard=regex(r'^\s*#\s*\w+'),
+                     exit=regex('$'),
+                     contains=[IncludeString],
+                     attrs=PREPROC)
 
 
     Keyword = keyword(keywords, KEYWORD) 
+    CtxKeywords = keyword(context_keywords, CONTEXT_KW)
     Type    = keyword(cpp_types, TYPE)
 
     
@@ -103,10 +112,11 @@ def cpplexer():
             exit=None,
             contains=[DQString, Keyword, CPPComment, 
                       CComment, DoxyCPPComment, DoxyCComment,
-                      Preproc, Type, HexLit, DecLit, FloatLit, CharLit]
+                      Preproc, Type, HexLit, DecLit, FloatLit, CharLit,
+                      CtxKeywords]
         )
 
-
+    Preproc.contains += CPP.contains
     return CPP
 
 

@@ -127,6 +127,7 @@ def paint_attr_text(painter, text, bounding_rect, cfg):
 
     italic = False
     underline = False
+    bold = False
 
     for string, deltas in text.iterchunks():
     
@@ -157,16 +158,19 @@ def paint_attr_text(painter, text, bounding_rect, cfg):
         actual_color = sel_color or color
         actual_bgcolor = sel_bgcolor or bgcolor
 
-        new_italic      = attributes.get('italic', italic)
-        new_underline   = attributes.get('underline', underline)
+        new_italic      = attributes.get('italic', False)
+        new_underline   = attributes.get('underline', False)
+        new_bold        = attributes.get('bold', False)
 
-        if new_italic != italic or new_underline != underline:
+        if new_italic != italic or new_underline != underline or new_bold != bold:
             italic = new_italic
             underline = new_underline
+            bold = new_bold
 
             font = painter.font()
             font.setItalic(new_italic)
             font.setUnderline(new_underline)
+            font.setBold(new_bold)
             painter.setFont(font)
         
         # tab_expanded_string used for width calculations
