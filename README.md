@@ -67,6 +67,7 @@ substituting the path with one appropriate for your system.
 
 ```
 #!python
+import pathlib
 import stem.plugins.cpp.options
 stem.plugins.cpp.options.ClangLibrary = pathlib.Path('/Library/Developer/CommandLineTools/usr/lib/libclang.dylib')
 ```
