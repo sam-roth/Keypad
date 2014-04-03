@@ -73,7 +73,7 @@ def _might_be_header(filename):
     
     _, ext = os.path.splitext(filename)
     
-    return ext.lower() in (b'.h', b'.hpp', b'.hh')
+    return not ext or ext.lower() in (b'.h', b'.hpp', b'.hh')
     
 
 class Engine:
@@ -85,7 +85,7 @@ class Engine:
         self._translation_units = {}
 
     def completions(self, filename, pos, unsaved):
-        tu = self.unit(filename, unsaved)
+        tu = self.unit(filename, unsaved, reparse=False)
 
         line, col = pos
 
@@ -118,7 +118,7 @@ class Engine:
         return lines
         
     
-    def unit(self, filename, unsaved):
+    def unit(self, filename, unsaved, reparse=True):
         possibly_header = _might_be_header(filename)
         
         unsaved = self.encode_unsaved(unsaved)
@@ -130,6 +130,7 @@ class Engine:
                     unsaved_files=unsaved,
                     options=ClangHeaderOptions if possibly_header else ClangOptions
                 )
+                reparse = True
             except AssertionError:
                 logging.exception('assertion failure in cindex')
                 raise cindex.TranslationUnitLoadError
@@ -138,7 +139,8 @@ class Engine:
         else:
             res = self._translation_units[filename]
 
-        res.reparse(unsaved, options=ClangHeaderOptions if possibly_header else ClangOptions)    
+        if reparse:
+            res.reparse(unsaved, options=ClangHeaderOptions if possibly_header else ClangOptions)    
         self.tu = res
         return res
         
@@ -240,19 +242,46 @@ class FindRelatedTask(AbstractCodeTask):
             if defn is not None:
                 results.append(make_related_name(RelatedName.Type.defn, defn))
     
+    
+        def suitable(c):
+            return c is not None and c != curs and c.location is not None and c.location.file is not None
+                
         if self.types & RelatedName.Type.decl:
             defn = curs.get_definition()
             if defn is None:
                 decl = None
             else:
                 decl = defn.canonical
+                
+#                 if suitable(decl):
+#                     print('**found defn.canon:', decl.spelling, '**')
             
-            if decl is None:
+            if not suitable(decl):
+                decl = curs.referenced_cursor
+                
+#                 if suitable(decl):
+#                     print('**found rc:', decl.spelling, '**')
+            if not suitable(decl):
                 decl = curs.canonical
-            
-            if decl is not None:
+#                 if suitable(decl):
+#                     print('**found canon:', decl, '**')
+                    
+            if not suitable(decl):
+                dtype = curs.type
+                if dtype is not None:
+                    while dtype.kind == cindex.TypeKind.POINTER:
+                        p = dtype.get_pointee()
+                        if p is not None:
+                            dtype = p
+                        else:
+                            break
+                            
+                    decl = dtype.get_declaration()
+                    
+            if suitable(decl):
                 results.append(make_related_name(RelatedName.Type.decl, decl))
 
+        #print('**results found', results, '**')
         return results
 
 class CompletionTask(AbstractCodeTask):

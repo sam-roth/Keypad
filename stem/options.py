@@ -69,7 +69,7 @@ class GeneralSettings(Settings):
     user_config_home = Field(pathlib.Path, pathlib.Path(os.path.expanduser('~/.stem')))
     
     font_family = Field(str, TextViewFont[0])
-    font_size   = Field(str, TextViewFont[1])
+    font_size   = Field(int, TextViewFont[1])
 
 
 GeneralConfig = GeneralSettings # deprecated alias

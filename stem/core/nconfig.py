@@ -255,7 +255,7 @@ class Config(object):
             try:
                 ns = _config_namespaces[k]
             except KeyError:
-                warnings.warn(UserWarning('Unknown config namespace: {!r}.'.format(ns)))
+                warnings.warn(UserWarning('Unknown config namespace: {!r}.'.format(k)))
             else:
                 settings = ns.from_config(self)
                 settings.update(v, safe)

@@ -63,6 +63,10 @@ def cpplexer():
                     contains=Escs,
                     attrs=STRING
                 )
+    CharLit     = region(guard=regex(r"'(?!'')"),
+                         exit=regex(r"'"),
+                         contains=Escs,
+                         attrs=STRING)
 
     HexLit      = regex(r'\b0x[0-9a-fA-F]+L?\b', NUMBER)
     DecLit      = regex(r'\b[\d]+L?\b', NUMBER)
@@ -99,7 +103,7 @@ def cpplexer():
             exit=None,
             contains=[DQString, Keyword, CPPComment, 
                       CComment, DoxyCPPComment, DoxyCComment,
-                      Preproc, Type, HexLit, DecLit, FloatLit]
+                      Preproc, Type, HexLit, DecLit, FloatLit, CharLit]
         )
 
 

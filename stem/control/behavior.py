@@ -76,9 +76,19 @@ def interactive_command_help(_: object, interactive_name: 'Interactive'):
 
 
 from stem.core.nconfig import Config
-# @autoconnect(BufferController.path_changed)
-# def setup_buffer(controller):
-#     path = controller.path
+@autoconnect(BufferController.path_changed)
+def setup_buffer(controller):
+    
+    path = controller.path
+    
+    if '/c++/' in str(path):
+        from ..core.filetype import Filetype
+        cpp = Filetype.by_suffix('.cpp')
+        
+        controller.code_model = cpp.make_code_model(controller.buffer, controller.config)
+        
+
+    
 #     if path.suffix == '.py':
 #         from ..plugins.pymodel.pymodel import PythonCodeModel
 #         controller.code_model = PythonCodeModel(controller.buffer, controller.config)
