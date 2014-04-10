@@ -97,16 +97,23 @@ class PythonCallTip(AbstractCallTip):
         self.text = text
         
     def to_astring(self, index):
-        return AttributedString(self.text)
+        return self.text
     
 class GetCallTip(WorkerTask):
     def process(self, script):
         assert isinstance(script, jedi.Script)
         
-        signature = next(iter(script.call_signatures()))
-        param_names = [p.name for p in signature.params]
+        signature = next(iter(script.call_signatures()), None)
+        if signature is None:
+            return None
+
+        param_names = [AttributedString(getattr(p,'name','*'), 
+                                        bold=i==signature.index,
+                                        underline=i==signature.index) 
+                       for (i, p) in enumerate(signature.params)]
         
-        return PythonCallTip(signature.name + '(' + ', '.join(param_names) + ')')
+        return PythonCallTip(AttributedString.join(
+            [signature.name, AttributedString('('), AttributedString.join(', ', param_names), AttributedString(')')]))
 
 class GetDocs(object):
     def __init__(self, index):
@@ -163,6 +170,8 @@ class FindRelated(WorkerTask):
 
 
 class PythonCodeModel(IndentRetainingCodeModel):
+    call_tip_triggers = ['(', ')', ',', '\n']
+    
     def __init__(self, *args, **kw):
 
         super().__init__(*args, **kw)
