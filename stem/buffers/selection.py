@@ -252,3 +252,5 @@ class BacktabMixin(object):
             self.delete(-ts)
 
 
+class BacktabSelection(BacktabMixin, Selection):
+    pass

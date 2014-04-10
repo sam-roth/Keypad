@@ -50,7 +50,9 @@ class BufferController(Tagged, Responder):
         self.config             = config or Config.root
         self.view.config        = self.config
         
-        self.selection          = SelectionImpl(self.manipulator, self.config)        
+        gs = GeneralConfig.from_config(self.config)
+        
+        self.selection          = gs.selection(self.manipulator, self.config)
         self._code_model = None
         
         self.view.scrolled                  += self._on_view_scrolled      

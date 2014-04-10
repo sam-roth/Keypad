@@ -4,6 +4,7 @@ import yaml
 import warnings
 import enum
 import types
+import importlib
 
 from .signal import Signal
 
@@ -17,7 +18,7 @@ class Conversions:
         
     @classmethod
     def convert(cls, ty, value):
-        if isinstance(value, ty):
+        if value is None or isinstance(value, ty):
             return value
         else:
             try:
@@ -31,6 +32,39 @@ class Conversions:
                     ty.__name__
                 ))
 
+def safe_float(x):
+    if isinstance(x, (float, int)):
+        return float(x)
+    else:
+        raise ValueError
+
+def safe_int(x):
+    if isinstance(x, (float, int)):
+        return int(x)
+    else:
+        raise ValueError
+        
+Conversions.register(int, safe_int)
+Conversions.register(float, safe_float)
+
+class Factory(object):
+    def __init__(self, dotted_name):
+        self.dotted_name = dotted_name
+        
+    @property
+    def constructor(self):
+        try:
+            return self._constructor
+        except AttributeError:
+            head, tail = self.dotted_name.rsplit('.', 1)
+            mod = importlib.import_module(head)
+            self._constructor = getattr(mod, tail)
+            return self._constructor
+    
+    def __call__(self, *args, **kw):
+        return self.constructor(*args, **kw)
+        
+Conversions.register(Factory, Factory)
 
 class Field(object):
     def __init__(self, type, default=None, safe=False):
@@ -42,7 +76,7 @@ class Field(object):
         code is possible, and no data loss will occur.)
         '''
         self.type = type
-        self.default = default
+        self.default = Conversions.convert(type, default)
         self.name = None
         self.safe = safe
         
@@ -98,7 +132,7 @@ class Field(object):
         if not self._test_iterable(value): return
         
         if issubclass(self.type, tuple):
-            self.set(instance, self.__get__(instance, None) + value, safe)
+            self.set(instance, self.__get__(instance, None) + tuple(value), safe)
         elif issubclass(self.type, frozenset):
             self.set(instance, self.__get__(instance, None) | frozenset(value), safe)
         else:

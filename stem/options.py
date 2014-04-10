@@ -4,7 +4,7 @@ import pathlib
 import platform
 
 from .core import colorscheme
-from .core.nconfig import Settings, Field
+from .core.nconfig import Settings, Field, Factory
 
 
 OnPosixSystem       = os.name == 'posix'
@@ -65,14 +65,15 @@ class GeneralSettings(Settings):
     expand_tabs = Field(bool, True, safe=True)
     
     driver_mod = Field(str, 'stem.qt.driver')
-    colorscheme = Field(str, 'stem.core.colorscheme.SolarizedDark')
+    colorscheme = Field(Factory, 'stem.core.colorscheme.SolarizedDark')
     user_config_home = Field(pathlib.Path, pathlib.Path(os.path.expanduser('~/.stem')))
     
     font_family = Field(str, TextViewFont[0])
     font_size   = Field(int, TextViewFont[1])
     font_yoffset = Field(float, 0.0)
     
-
+    selection = Field(Factory, 'stem.buffers.selection.BacktabSelection')
+    
 class CallTipSettings(Settings):
     _ns_ = 'call_tip'
     

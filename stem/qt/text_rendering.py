@@ -46,7 +46,8 @@ class TextViewSettings(object):
     def reload_settings(self, *args):
         s = self.settings
         
-        self.scheme = resolve_dotted_name(s.colorscheme)()
+        self.scheme = s.colorscheme()
+#         self.scheme = resolve_dotted_name(s.colorscheme)()
 
         #s.get('Scheme', self.default_scheme)
         
