@@ -27,11 +27,14 @@ class DiagnosticsController(object):
         
         self.clear_attrs = dict(error=None)
         self.default_diag_attrs = dict(error=True)
+        self.diagnostics = []
+        
         self._overlays = ()
         
         self.__timer = Timer(self.config.update_period_s)
         self.__timer.timeout.connect(self.__tick)
         self.__timer.reset_countdown()
+        
 #         self.__timer.running = True
 #         self.__buffer_modified_yet = False
     
@@ -70,6 +73,7 @@ class DiagnosticsController(object):
     def __update_callback(self, future):
         try:
             result = future.result()
+            self.diagnostics = result
             spans = []
             for diag in result:
                 for filename, p1, p2 in diag.ranges:

@@ -629,17 +629,33 @@ def goto_related(bc: BufferController, ty):
 
 
 
+from stem.abstract.code import Diagnostic, AbstractCallTip
+
+
+class SimpleCallTip(AbstractCallTip):
+    def __init__(self, tip):
+        super().__init__()
+        self.tip = tip
+        
+    def to_astring(self, _=None):
+        return self.tip
 
 
 @interactive('show_diagnostics')
 def show_diagnostics(bc: BufferController):
     assert isinstance(bc, BufferController)
+
     
-#     if bc._diagnostics_controller is None:
-#         return interactive.call_next
-        
+    if bc._diagnostics_controller is None:
+        return interactive.call_next
     
-    bc._diagnostics_controller.update()
+    for diag in bc._diagnostics_controller.diagnostics:
+        assert isinstance(diag, Diagnostic)
+        for f, p1, p2 in diag.ranges:
+            if p1 is not None and p1[0] == bc.selection.pos[0]:
+                bc.view.call_tip_model = SimpleCallTip(AttributedString(diag.text))
+    
+#     bc._diagnostics_controller.update()
     
     
 #     diags = bc.code_model.diagnostics_async().result()
