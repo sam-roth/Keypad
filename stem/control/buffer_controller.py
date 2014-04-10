@@ -61,6 +61,7 @@ class BufferController(Tagged, Responder):
         self.history.transaction_committed  += self._after_history_transaction_committed
         self.view.closing                   += self.closing
         self.selection.moved                += self.scroll_to_cursor
+        self.selection.moved                += self.selection_moved
         self.wrote_to_path                  += self.__update_file_mtime
         self.loaded_from_path               += self.__update_file_mtime
         self.loaded_from_path               += self.__path_change
@@ -89,6 +90,9 @@ class BufferController(Tagged, Responder):
         self.completion_controller = CompletionController(self)    
     
         self._last_path = None
+    @Signal
+    def selection_moved(self):
+        pass
         
     def __set_filetype(self, ft):
         if ft != self.__filetype:

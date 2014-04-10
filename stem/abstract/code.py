@@ -43,7 +43,7 @@ class AbstractCompletionResults(metaclass=ABCMeta):
 
 class AbstractCallTip(metaclass=ABCMeta):    
     @abstractmethod
-    def to_astring(self, arg_index):
+    def to_astring(self, arg_index=None):
         pass
 
 
@@ -110,6 +110,7 @@ class AbstractCodeModel(metaclass=ABCMeta):
     
     RelatedNameType = RelatedNameType
     completion_triggers = ['.']
+    call_tip_triggers = []
     
     def __init__(self, buff, conf):
         '''

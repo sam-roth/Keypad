@@ -7,6 +7,8 @@ from .interactive import interactive
 from ..core.responder import Responder
 from concurrent.futures import CancelledError
 
+import logging
+
 class CompletionController(Responder):
     
     def __init__(self, bufctl):
@@ -17,6 +19,7 @@ class CompletionController(Responder):
         
         self.bufctl = bufctl
         bufctl.user_changed_buffer.connect(self.__on_user_changed_buffer)
+#         bufctl.selection_moved += self.__on_selection_moved
         bufctl.view.completion_view.done.connect(self.__accept_completion)
         bufctl.view.completion_view.row_changed.connect(self.__show_doc)
         
@@ -38,6 +41,20 @@ class CompletionController(Responder):
         self.__future = future = self.__code_model.completions_async(self.bufctl.selection.pos)
         future.add_done_callback(in_main_thread(self.__completion_done))
         
+        
+    def show_call_tip(self):
+        
+        @in_main_thread
+        def callback(result):
+            try:
+                self.__view.call_tip_model = result.result()
+            except:
+                logging.exception('showing call tip')
+                self.__view.call_tip_model = None
+            
+        f = self.__code_model.call_tip_async(self.bufctl.selection.pos)
+        f.add_done_callback(callback)
+        
 
     ######################### PRIVATE ########################### 
     
@@ -50,6 +67,7 @@ class CompletionController(Responder):
         
         try:
             completions = future.result()
+#             self.__view.call_tip_model = None
         except CancelledError:
             return
             
@@ -58,6 +76,7 @@ class CompletionController(Responder):
         self.__completions = completions
         self.__refilter_typed()
         self.__view.show_completions()
+        self.__view.completion_view.raise_()
     
     def __show_doc(self, row):
         if self.__completions is None:
@@ -116,11 +135,30 @@ class CompletionController(Responder):
             if trigger is not None:
                 if self.__completions is not None:
                     self.__accept_completion(self.bufctl.view.completion_view.current_row,
-                                             icurs.x - len(trigger))                    
+                                             icurs.x - len(trigger))
                 self.complete()
+                
+            else:
+                
+                for trigger in self.bufctl.code_model.call_tip_triggers:
+                    if line_text.endswith(trigger):
+                        break
+                else:
+                    trigger = None
+                
+                if trigger is not None:
+                    self.show_call_tip()
+        elif self.bufctl.code_model is not None and chg.remove\
+            and chg.remove in self.bufctl.code_model.call_tip_triggers:
+                self.show_call_tip()
         self.__refilter_typed()
-        
-        
+#     
+#     def __on_selection_moved(self):                        
+#         ic = self.bufctl.selection.insert_cursor
+#         text_to_curs = ic.line.text[:ic.x]
+#         
+# 
+    
     def __refilter_typed(self):
         span = self.__span
         if span is not None:
@@ -149,3 +187,6 @@ class CompletionController(Responder):
 def complete(cc: CompletionController):
     cc.complete()
 
+@interactive('calltip')
+def calltip(cc: CompletionController):
+    cc.show_call_tip()

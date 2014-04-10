@@ -3,10 +3,10 @@
 from PyQt4.Qt import *
 
 from .. import control, buffers
-from . import view
+from . import basic_view
 
 
-class TextWidget(view.TextView):
+class TextWidgetMixin:
 
     def __init__(
             self, 
@@ -20,6 +20,8 @@ class TextWidget(view.TextView):
     def show_modeline(self, text):
         self.interaction_mode.show_modeline(text)
 
+class BasicTextWidget(TextWidgetMixin, basic_view.TextView):
+    pass
     
 
     
