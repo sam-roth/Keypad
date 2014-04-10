@@ -1,6 +1,6 @@
 
 from stem.core import AttributedString
-from stem.abstract.code import RelatedName, Diagnostic
+from stem.abstract.code import RelatedName, Diagnostic, AbstractCallTip
 from clang import cindex
 from .config import CXXConfig
 import textwrap
@@ -319,7 +319,55 @@ severity_map = {
     cindex.Diagnostic.Error: Diagnostic.Severity.error,
     cindex.Diagnostic.Fatal: Diagnostic.Severity.fatal
 }
+
+class CPPCallTip(AbstractCallTip):
+    def __init__(self, tip):
+        self.tip = tip
+    
+    def to_astring(self, n):
+        return self.tip
         
+
+class GetCallTipTask(AbstractCodeTask):
+    def __init__(self, text, *args, **kw):
+        super().__init__(*args, **kw)
+        self.text = text
+        
+    def process(self, engine):
+        assert isinstance(engine, Engine)
+        
+        engine.completions(self.filename, self.pos, self.unsaved_files)
+        
+        for compl in engine.last_completion_results.results:
+
+#             print(compl)
+
+            assert isinstance(compl, cindex.CodeCompletionResult)
+            if engine.typed_text(compl.string) == self.text:
+                syn = format_synopsis(' '.join(c.spelling for c in compl.string))
+                return CPPCallTip(AttributedString(syn))
+#             else:
+#                 print('***no match:', engine.typed_text(compl.string)) #, self.text)
+#         else:
+#             print('nothing found')
+#  
+#         try:
+#             tu = engine.unit(self.filename, self.unsaved_files)
+#         except cindex.TranslationUnitLoadError:
+#             return None
+#         
+#         y, x = self.pos
+#         curs = cindex.Cursor.from_location(tu, 
+#                                            tu.get_location(tobytes(self.filename), (y+1, x)))
+#         
+#         print(curs.referenced_cursor)
+#         print(curs.kind.name)
+#         print(curs.spelling)
+#         print(curs.lexical_parent.spelling if curs.lexical_parent else None)
+#         print(curs.semantic_parent.spelling if curs.semantic_parent else None)
+#         
+#         
+#         
 class GetDiagnosticsTask(AbstractCodeTask):
     def process(self, engine):
         assert isinstance(engine, Engine)

@@ -7,11 +7,17 @@ from stem.plugins.semantics.syntax import SyntaxHighlighter
 from stem.core.processmgr.client import AsyncServerProxy
 from stem.core.fuzzy import FuzzyMatcher, Filter
 from stem.core.conftree import ConfTree
+from stem.core.executors import SynchronousExecutor
 from stem.buffers import Cursor
 
 from .syntax import cpplexer
 from .worker import SemanticEngine
-from .modelworker import InitWorkerTask, CompletionTask, FindRelatedTask, GetDocsTask, GetDiagnosticsTask
+from .modelworker import (InitWorkerTask, 
+                          CompletionTask, 
+                          FindRelatedTask, 
+                          GetDocsTask, 
+                          GetDiagnosticsTask,
+                          GetCallTipTask)
 from .config import CXXConfig        
 class CXXCompletionResults(AbstractCompletionResults):
     def __init__(self, token_start, runner, results):
@@ -62,6 +68,7 @@ class CXXCompletionResults(AbstractCompletionResults):
 
 class CXXCodeModel(IndentRetainingCodeModel):
     completion_triggers = ['.', '::', '->']
+    call_tip_triggers = ['(', ')']
     def __init__(self, *args, **kw):
         super().__init__(*args, **kw)
         self.cxx_config = CXXConfig.from_config(self.conf)
@@ -170,6 +177,39 @@ class CXXCodeModel(IndentRetainingCodeModel):
                 [(str(self.path), self.buffer.text)]
             )
         )
+        
+    @property
+    def can_provide_call_tips(self):
+        return True
+        
+
+    def call_tip_async(self, pos):
+        c = Cursor(self.buffer).move(pos)
+        
+        depth = 1
+        
+        for ch in c.walk(-1):
+            if ch == '(':
+                depth -= 1
+            elif ch == ')':
+                depth += 1
+                
+            if depth == 0:
+                break
+                
+        else:
+            # Can't get call tip here. 
+            return SynchronousExecutor.submit(lambda: None)
+        
+        start = self._find_token_start(c.pos)
+        text = Cursor(self.buffer).move(start).text_to(c)
+
+        return self.prox.submit(GetCallTipTask(
+            text,
+            self.path,
+            start,
+            [(str(self.path), self.buffer.text)]
+        ))
     
     def dispose(self):
         '''
