@@ -195,7 +195,7 @@ class IndentRetainingCodeModel(AbstractCodeModel):
         c = Cursor(self.buffer).move(line, 0).up()
         
         for _ in c.walklines(-1):
-            m = c.searchline(r'^\s*')
+            m = c.searchline(r'^\s*\S')
             if m:
                 tv_settings = GeneralConfig.from_config(self.conf)
                 tstop = tv_settings.tab_stop
