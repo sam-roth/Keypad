@@ -551,9 +551,25 @@ def dumptags(buff: BufferController):
     writer.write(fmt)
 
 
+@interactive('setg')
+def setg_config(_: object, key, *val):
+    Config.root.update({key: ast.literal_eval(' '.join(val))}, safe=False)
+#     bufctl.config.set_property(key, ast.literal_eval(' '.join(val)))
+
+
 @interactive('set')
 def set_config(bufctl: BufferController, key, *val):
-    bufctl.config.set_property(key, ast.literal_eval(' '.join(val)))
+    bufctl.config.update({key: ast.literal_eval(' '.join(val))}, safe=False)
+#     bufctl.config.set_property(key, ast.literal_eval(' '.join(val)))
+
+@interactive('get')
+def get_config(bufctl: BufferController, namespace, key):
+    import pprint
+    fmt = pprint.pformat(bufctl.config.get(namespace, key))
+    
+    from .command_line_interaction import writer
+    
+    writer.write(fmt)
 
 @interactive('pdb')
 def runpdb(bufctl: BufferController):

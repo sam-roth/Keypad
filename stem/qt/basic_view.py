@@ -13,6 +13,7 @@ from .completion_view           import CompletionView
 from ..core                     import signal, attributed_string
 from ..core.key                 import SimpleKeySequence
 from ..                         import options
+
 import time
 
 
@@ -68,17 +69,21 @@ class BasicTextView(QAbstractScrollArea):
             self.controller = None        
             self.overlay_spans = {}
 
+            
             self._cursor_blink_on_timer = QTimer()
-            self._cursor_blink_on_timer.setInterval((1.0-options.CursorDutyCycle)/options.CursorBlinkRate_Hz * 1000)
+#             self._cursor_blink_on_timer.setInterval((1.0-options.CursorDutyCycle)/options.CursorBlinkRate_Hz * 1000)
+
             self._cursor_blink_on_timer.setSingleShot(True)
             self._cursor_blink_on_timer.timeout.connect(self._on_cursor_blink_on)
 
             self._cursor_blink_off_timer = QTimer()
-            self._cursor_blink_off_timer.setInterval(options.CursorDutyCycle/options.CursorBlinkRate_Hz * 1000)
+#             self._cursor_blink_off_timer.setInterval(options.CursorDutyCycle/options.CursorBlinkRate_Hz * 1000)
             self._cursor_blink_off_timer.setSingleShot(True)
             self._cursor_blink_off_timer.timeout.connect(self._on_cursor_blink_off)
 
-
+            self.__set_cursor_blink_rate(options.CursorBlinkRate_Hz, options.CursorDutyCycle)
+            
+            
             self._cursor_blink = False
             self._cursor_blink_on_timer.start()
 
@@ -89,6 +94,10 @@ class BasicTextView(QAbstractScrollArea):
             logging.exception('error initting TextView')
             raise
             
+    def __set_cursor_blink_rate(self, rate, duty_cycle):
+        self._cursor_blink_on_timer.setInterval((1.0-duty_cycle)/rate * 1000)
+        self._cursor_blink_off_timer.setInterval(duty_cycle/rate * 1000)
+        
             
     def run_modified_warning(self, modified):
         self.setFocus(Qt.OtherFocusReason)
@@ -120,7 +129,9 @@ class BasicTextView(QAbstractScrollArea):
         for line in self._lines:
             line.invalidate()
         self.full_redraw()
-    
+        settings = options.GeneralSettings.from_config(self.config)
+        self.__set_cursor_blink_rate(settings.cursor_blink_rate, settings.cursor_duty_cycle)
+        
     @property
     def config(self):
         return self._config
@@ -130,6 +141,9 @@ class BasicTextView(QAbstractScrollArea):
         self._config = val
         self.settings = TextViewSettings(options.DefaultColorScheme, val)
         self.settings.reloaded.connect(self._on_settings_reloaded)
+        self._on_settings_reloaded()
+        
+
 
     @property
     def cursor_type(self): 

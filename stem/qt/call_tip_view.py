@@ -1,24 +1,47 @@
 
-from .basic_view import BasicTextView
+from .basic_view import BasicTextView, TextViewSettings
 from ..abstract.code import AbstractCallTip
 from ..core import AttributedString
 from ..control.interactive import interactive
 from .text_rendering import text_size
+from ..options import CallTipSettings
+from ..core.nconfig import Config
 
 from PyQt4 import Qt
 
 class CallTipView(BasicTextView):
 
     def __init__(self, settings, parent=None):
+        '''
+        :type settings: TextViewSettings
+        '''
         super().__init__(parent)
-        
+
         self.setWindowFlags(Qt.Qt.ToolTip)
         
         self.setVerticalScrollBarPolicy(Qt.Qt.ScrollBarAlwaysOff)
         self.setHorizontalScrollBarPolicy(Qt.Qt.ScrollBarAlwaysOff)
         
+        config = settings.config
+        self.settings = settings
+        
+        self.ct_settings = CallTipSettings.from_config(settings.config)
+        self.ct_settings.value_changed += self.__reload_conf
+        self.__reload_conf()
+        
         self.__model = None
+        
+        
+    def __reload_conf(self, *args):
+#         s = self.ct_settings
+#         if s.view_opacity < 0.95:
+#             self.setAttribute(Qt.Qt.WA_TranslucentBackground, True)
+#         else:
+#             self.setAttribute(Qt.Qt.WA_TranslucentBackground, False)
             
+#             self.setWindowFlags(self.windowFlags() | Qt
+
+        self.setWindowOpacity(self.ct_settings.view_opacity)
         
     @property
     def model(self):

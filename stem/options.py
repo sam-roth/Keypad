@@ -70,6 +70,17 @@ class GeneralSettings(Settings):
     
     font_family = Field(str, TextViewFont[0])
     font_size   = Field(int, TextViewFont[1])
+    font_yoffset = Field(float, 0.0)
+    
+
+class CallTipSettings(Settings):
+    _ns_ = 'call_tip'
+    
+    auto = Field(bool, True) # TODO: implement
+    enable = Field(bool, True) # TODO: implement
+    
+    view_opacity = Field(float, 0.7)
+    
 
 
 GeneralConfig = GeneralSettings # deprecated alias

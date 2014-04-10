@@ -259,8 +259,22 @@ class Config(object):
             else:
                 settings = ns.from_config(self)
                 settings.update(v, safe)
+                
     def load_yaml_safely(self, source):
         return self.load_yaml(source, safe=True)
+        
+    def update(self, mapping, safe):
+        for k, v in mapping.items():
+            try:
+                ns = _config_namespaces[k]
+            except KeyError:
+                raise KeyError('Unknown config namespace: {!r}.'.format(k))
+            else:
+                settings = ns.from_config(self)
+                settings.update(v, safe)
+                
+    def get(self, namespace, key):
+        return getattr(_config_namespaces[namespace].from_config(self), key)
 
 #         try:
 #             print(items[0]._values_)
@@ -313,6 +327,9 @@ class Settings(metaclass=ConfigMeta):
     @Signal
     def value_changed(self, fieldname, value):
         pass
+        
+    def __on_chained_value_change(self, fieldname, value):
+        self.value_changed(fieldname, getattr(self, fieldname))
     
     @classmethod
     def from_config(cls, config):
@@ -331,6 +348,7 @@ class Settings(metaclass=ConfigMeta):
     def derive(self):
         res = type(self)()
         res._chain_ = self
+        self.value_changed += res.__on_chained_value_change
         return res
         
     def to_dict(self):
@@ -395,8 +413,15 @@ class Settings(metaclass=ConfigMeta):
             else:
                 warnings.warn(UserWarning('Too many dots in name {!r}.'.format(k)))
 
-
+    def __getstate__(self):
+        return self._values_, self._chain_
     
+    def __setstate__(self, value):
+        v, c = value
+        self._values_ = v
+        self._chain_ = c
+        if c is not None:
+            c.value_changed += self.__on_chained_value_change
 #     def clear(self, name):
 #         self._fields_[k].clear()
 

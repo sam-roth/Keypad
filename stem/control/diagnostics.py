@@ -74,9 +74,12 @@ class DiagnosticsController(object):
             for diag in result:
                 for filename, p1, p2 in diag.ranges:
                     if filename == str(self.code_model.path):
-                        sc = Cursor(self.buffer).move(p1)
-                        ec = Cursor(self.buffer).move(p2)
-                        spans.extend(self.__make_spans(Span(sc, ec), self.default_diag_attrs))
+                        try:
+                            sc = Cursor(self.buffer).move(p1)
+                            ec = Cursor(self.buffer).move(p2)
+                            spans.extend(self.__make_spans(Span(sc, ec), self.default_diag_attrs))
+                        except IndexError:
+                            pass
     
             self.__set_overlays(spans)
         except:

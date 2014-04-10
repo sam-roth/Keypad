@@ -30,16 +30,20 @@ class TextViewSettings(object):
                 'type Config'))
             settings = None
 
-        settings = GeneralConfig.from_config(settings or Config.root)
+        self.config = config = settings or Config.root
 
+        settings = GeneralConfig.from_config(config)
+        settings.value_changed += self.reload_settings
         #(settings or ConfTree()).TextView
         self.settings = settings   
         #settings.modified.connect(self._on_settings_changed)
         self.reload_settings()
         self.tab_glyph = '⟩'
+        self.font_yoffset = settings.font_yoffset
+
 
         
-    def reload_settings(self):
+    def reload_settings(self, *args):
         s = self.settings
         
         self.scheme = resolve_dotted_name(s.colorscheme)()
@@ -106,7 +110,7 @@ def paint_attr_text(painter, text, bounding_rect, cfg):
 
     # current coordinates
     xc = 0.0 + bounding_rect.left()
-    yc = fm.ascent() + bounding_rect.top() - 1
+    yc = fm.ascent() + bounding_rect.top()
     raw_col = 0
     
 
