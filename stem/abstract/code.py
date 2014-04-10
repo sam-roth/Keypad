@@ -41,6 +41,12 @@ class AbstractCompletionResults(metaclass=ABCMeta):
     def dispose(self):
         pass
 
+class AbstractCallTip(metaclass=ABCMeta):    
+    @abstractmethod
+    def to_astring(self, arg_index):
+        pass
+
+
 class RelatedNameType(IntEnum):
     decl = 1
     defn = 2
@@ -159,6 +165,12 @@ class AbstractCodeModel(metaclass=ABCMeta):
         Release system resources held by the model.
         '''
         
+    @property
+    def can_provide_call_tips(self):
+        return False
+    
+    def call_tip_async(self, pos):
+        raise NotImplementedError
     
     @property
     def can_provide_diagnostics(self):
@@ -187,9 +199,6 @@ class IndentRetainingCodeModel(AbstractCodeModel):
                 tv_settings = GeneralConfig.from_config(self.conf)
                 tstop = tv_settings.tab_stop
                 indent_text = tv_settings.indent_text
-                
-#                 tstop = self.conf.TextView.get('TabStop', 4, int)
-#                 indent_text = self.conf.TextView.get('IndentText', '    ', str)
                 
                 itext = m.group(0)
                 itext = itext.expandtabs(tstop)

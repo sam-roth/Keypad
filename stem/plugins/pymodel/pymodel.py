@@ -10,7 +10,8 @@ import jedi
 from stem.abstract.code import (AbstractCodeModel, 
                                 AbstractCompletionResults, 
                                 RelatedName,
-                                IndentRetainingCodeModel)
+                                IndentRetainingCodeModel,
+                                AbstractCallTip)
  
 from stem.buffers import Cursor
 from stem.plugins.pycomplete import syntax
@@ -91,6 +92,22 @@ class Complete(WorkerTask):
         
         return result
         
+class PythonCallTip(AbstractCallTip):
+    def __init__(self, text):
+        self.text = text
+        
+    def to_astring(self, index):
+        return AttributedString(self.text)
+    
+class GetCallTip(WorkerTask):
+    def process(self, script):
+        assert isinstance(script, jedi.Script)
+        
+        signature = next(iter(script.call_signatures()))
+        param_names = [p.name for p in signature.params]
+        
+        return PythonCallTip(signature.name + '(' + ', '.join(param_names) + ')')
+
 class GetDocs(object):
     def __init__(self, index):
         self.index = index
@@ -157,6 +174,16 @@ class PythonCodeModel(IndentRetainingCodeModel):
         self.runner = AsyncServerProxy(WorkerStart())
         self.runner.start()
         self.disposed = False
+
+
+    def call_tip_async(self, pos):
+        return self.runner.submit(
+            GetCallTip(
+                str(self.path) if self.path else None,
+                pos, 
+                self.buffer.text
+            )
+        )
 
     def highlight(self):
         self.highlighter.highlight_buffer(self.buffer)

@@ -2,6 +2,7 @@
 
 import unittest
 from .pymodel import PythonCodeModel, PythonCompletionResults, RelatedName
+from stem.abstract.code import AbstractCallTip
 from stem.core.conftree import ConfTree
 from stem.buffers import Buffer, Cursor, Span
 
@@ -94,4 +95,20 @@ class TestPythonCodeModel(unittest.TestCase):
         assert result.pos[0] == 0
         
 
-    
+    def test_call_tip(self):
+        
+        self.buffer.insert(
+            (0,0),
+            'def foo(bar, baz): pass\n'
+            'foo(' #)
+        )
+        
+        pos = self.buffer.end_pos
+        f = self.cmodel.call_tip_async(pos)
+        
+        res = f.result(timeout=5)
+        
+        assert isinstance(res, AbstractCallTip)
+        assert res.to_astring(0).text == 'foo(bar, baz)'
+        
+        print(res.to_astring(0))
