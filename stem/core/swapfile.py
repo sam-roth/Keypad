@@ -11,6 +11,10 @@ def write_atomically(path):
     
 
     path = pathlib.Path(path)
+    try:
+        mode = path.stat().st_mode
+    except OSError:
+        mode = None
     
     tmpfd, tmpfile_name = tempfile.mkstemp(
         dir=path.parent.as_posix(),
@@ -34,6 +38,9 @@ def write_atomically(path):
 
     # POSIX-compliant systems will perform this operation atomically.
     tmpfile_name.replace(path)
+    
+    if mode is not None:
+        path.chmod(mode)
 
     
 
