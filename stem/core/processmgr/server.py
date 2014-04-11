@@ -41,8 +41,17 @@ def serve(fd_r, fd_w):
                 
                 
             
-        
+import platform
+
 def main():
     import sys
-    serve(int(sys.argv[1]), int(sys.argv[2]))
+    fd_r = int(sys.argv[1])
+    fd_w = int(sys.argv[2])
+    
+    if platform.system() == 'Windows':
+        import msvcrt
+        fd_r = msvcrt.open_osfhandle(fd_r, 0)
+        fd_w = msvcrt.open_osfhandle(fd_w, 0)
+    
+    serve(fd_r, fd_w)
     

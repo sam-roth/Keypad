@@ -7,11 +7,28 @@ import concurrent.futures
 import threading
 import queue
 import logging
+import platform
 
 import os
 
 class RemoteError(RuntimeError): pass
 class UnexpectedWorkerTerminationError(RuntimeError): pass
+
+on_windows = platform.system() == 'Windows'
+
+def _make_inheritable(handle):
+    if on_windows:
+        import msvcrt
+        import _winapi
+        h = _winapi.DuplicateHandle(
+                _winapi.GetCurrentProcess(), msvcrt.get_osfhandle(handle),
+                _winapi.GetCurrentProcess(), 0, 1,
+                _winapi.DUPLICATE_SAME_ACCESS)
+        return h
+    else:
+        return handle
+        
+
 
 class ServerProxy(object):
     def start(self):
@@ -26,15 +43,24 @@ class ServerProxy(object):
     
         child_env = dict(os.environ)
         child_env['PYTHONPATH'] = os.pathsep.join(sys.path)
+
+        kw = {}
+        if platform.system() != 'Windows':
+            kw['pass_fds'] = rr, rw
+        else:
+            kw['close_fds'] = False
+
+        rh = _make_inheritable(rr)
+        wh = _make_inheritable(rw)
         
         self.proc = subprocess.Popen([
             sys.executable,
             '-m',
             smod,
-            str(rr),
-            str(rw)
-        ], pass_fds=(rr, rw), env=child_env)
-        
+            str(int(rh)),
+            str(int(wh))
+        ], env=child_env, **kw)
+
         os.close(rw)
         os.close(rr)
     
