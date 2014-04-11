@@ -11,7 +11,6 @@ from stem.core.executors import SynchronousExecutor
 from stem.buffers import Cursor
 
 from .syntax import cpplexer
-from .worker import SemanticEngine
 from .modelworker import (InitWorkerTask, 
                           CompletionTask, 
                           FindRelatedTask, 

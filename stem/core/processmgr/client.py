@@ -43,7 +43,6 @@ class ServerProxy(object):
     
         child_env = dict(os.environ)
         child_env['PYTHONPATH'] = os.pathsep.join(sys.path)
-
         kw = {}
         if platform.system() != 'Windows':
             kw['pass_fds'] = rr, rw

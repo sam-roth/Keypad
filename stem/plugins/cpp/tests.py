@@ -1,8 +1,8 @@
-
+import pathlib, sys
+thisfile = pathlib.Path(__file__).absolute()
+sys.path.insert(0, str(thisfile.parent.parent.parent.parent / 'third-party'))
 
 import unittest
-import pathlib
-# from .pymodel import PythonCodeModel, PythonCompletionResults, RelatedName
 
 from .cppmodel import CXXCodeModel, CXXCompletionResults
 from .config import CXXConfig
@@ -11,6 +11,7 @@ from stem.buffers import Buffer, Cursor, Span
 from stem.abstract.code import RelatedName, Diagnostic
 import pprint
 
+import sys
 
 
 cxx_config = CXXConfig.from_config(Config.root)
