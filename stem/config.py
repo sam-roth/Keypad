@@ -133,7 +133,7 @@ submenu(3, 'Semantics')
 
 menu(0, 'Semantics/Find Declaration', 'find_declaration', keybinding=Keys.shift.f3)
 menu(1, 'Semantics/Find Definition',  'find_definition', keybinding=Keys.f3)
-
+menu(2, 'Semantics/Show Diagnostic', 'show_diagnostics', keybinding=Keys.f2)
 
 
 import stem.plugins.server

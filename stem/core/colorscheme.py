@@ -9,6 +9,8 @@ class Colorscheme(object):
     fg = Color.from_hex('#000')
     bg = Color.from_hex('#FFF')
 
+    cur_line_bg = bg
+    
     selection_bg = fg
     selection_fg = bg
     

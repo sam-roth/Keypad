@@ -4,6 +4,7 @@ import pathlib
 import platform
 
 from .core import colorscheme
+from .core.nconfig import Settings, Field, Factory
 
 
 OnPosixSystem       = os.name == 'posix'
@@ -46,3 +47,41 @@ TextViewDoubleStrike            = False
 CursorBlinkRate_Hz  = 1
 CursorDutyCycle     = 0.8
 
+
+
+
+class GeneralSettings(Settings):
+    _ns_ = 'general'
+    
+    integer_metrics = Field(bool, TextViewIntegerMetrics)
+    double_strike = Field(bool, TextViewDoubleStrike)
+    antialias = Field(bool, True)
+    
+    cursor_blink_rate = Field(float, CursorBlinkRate_Hz)
+    cursor_duty_cycle = Field(float, CursorDutyCycle)
+    
+    tab_stop = Field(int, 4, safe=True)
+    indent_text = Field(str, '    ', safe=True)
+    expand_tabs = Field(bool, True, safe=True)
+    
+    driver_mod = Field(str, 'stem.qt.driver')
+    colorscheme = Field(Factory, 'stem.core.colorscheme.SolarizedDark')
+    user_config_home = Field(pathlib.Path, pathlib.Path(os.path.expanduser('~/.stem')))
+    
+    font_family = Field(str, TextViewFont[0])
+    font_size   = Field(int, TextViewFont[1])
+    font_yoffset = Field(float, 0.0)
+    
+    selection = Field(Factory, 'stem.buffers.selection.BacktabSelection')
+    
+class CallTipSettings(Settings):
+    _ns_ = 'call_tip'
+    
+    auto = Field(bool, True) # TODO: implement
+    enable = Field(bool, True) # TODO: implement
+    
+    view_opacity = Field(float, 0.7)
+    
+
+
+GeneralConfig = GeneralSettings # deprecated alias

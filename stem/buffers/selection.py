@@ -4,7 +4,7 @@ import contextlib
 import re
 
 from ..core import Signal
-
+from ..options import GeneralSettings
 
 _AdvanceWordRegex = re.compile(
     r'''
@@ -37,7 +37,7 @@ class Flag(object):
 
 
 class Selection(object):
-    def __init__(self, manip):
+    def __init__(self, manip, config):
         '''
         Create a new selection on the given buffer.
         '''
@@ -58,8 +58,11 @@ class Selection(object):
         self._anchor_cursor = None
         
         self.select = Flag()
-        self.indent = '    '
-
+        self.config = config
+    @property
+    def indent(self):
+        return GeneralSettings.from_config(self.config).indent_text
+    
     @property
     def pos(self):
         return self.insert_cursor.pos
@@ -249,3 +252,5 @@ class BacktabMixin(object):
             self.delete(-ts)
 
 
+class BacktabSelection(BacktabMixin, Selection):
+    pass

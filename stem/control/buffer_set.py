@@ -13,7 +13,7 @@ from ..abstract.application import app
 from ..core.notification_queue import in_main_thread, run_in_main_thread
 import os.path
 from .interactive import interactive, run
-from ..core.conftree import ConfTree
+from ..core.nconfig import Config
 
 import sys
 import logging
@@ -40,7 +40,7 @@ class BufferSetController(Responder):
         self._last_active_buffer_controller = None
         self._command_line_interpreter = CommandLineInterpreter()
         
-        self.config = ConfTree()
+        self.config = Config.root
         
         self.view = view
         app().next_responder = self.view
@@ -55,7 +55,7 @@ class BufferSetController(Responder):
             self.view.command_line_view, 
             Buffer(),
             provide_interaction_mode=False,
-            config=self.config.inherit()
+            config=self.config.derive()
         )
 
         cl_imode = self._command_line_controller.interaction_mode = \
@@ -148,7 +148,7 @@ class BufferSetController(Responder):
         if bcontr is None:
             from . import buffer_controller
             view = self.view.add_buffer_view()
-            bcontr = buffer_controller.BufferController(self, view, Buffer(), config=self.config.inherit())
+            bcontr = buffer_controller.BufferController(self, view, Buffer(), config=self.config.derive())
             bcontr.modified_was_changed.connect(self._after_buffer_modified_changed)
 
             if path is not None:

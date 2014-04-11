@@ -20,6 +20,11 @@ class HistoryExistentialError(ExistentialError):
     The requested information about the document's history does not exist.
     '''
 
+class NameNotFoundError(ExistentialError):
+    '''
+    No declaration, assignment, or definition of the given name was found.
+    '''
+
 class CantUndoError(HistoryExistentialError): pass
 class CantRedoError(HistoryExistentialError): pass
 class OldestHistoryItemError(HistoryExistentialError): pass

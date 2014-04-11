@@ -51,9 +51,10 @@ editor is the stem, then the plugins are leaves.
 
 ### Core Dependencies
 
-* [Python 3.3](http://www.python.org/)
+* [Python >= 3.3](http://www.python.org/)
 * [PyQt4](http://www.riverbankcomputing.com/software/pyqt/download)
-* [pathlib](https://pypi.python.org/pypi/pathlib/)
+* Either [pathlib](https://pypi.python.org/pypi/pathlib/) or Python 3.4
+* Either [enum34](https://pypi.python.org/pypi/enum34) or Python 3.4
 
 ### Dependencies of Included Plugins
 

@@ -5,6 +5,7 @@ import re
 import pathlib
 
 from .cua_interaction           import CUAInteractionMode
+from .diagnostics               import DiagnosticsController
 from ..                         import util
 from ..buffers                  import ModifiedCursor, Cursor, BufferManipulator, Buffer, Span, Region
 from ..buffers.selection        import Selection, BacktabMixin
@@ -15,7 +16,11 @@ from ..core.key                 import *
 from ..core.responder           import Responder
 from ..util.path                import search_upwards
 from ..core.notification_queue  import in_main_thread
-from ..core                     import timer
+from ..core                     import timer, filetype
+from ..core.nconfig             import Config
+from ..options                  import GeneralConfig
+
+from .completion import CompletionController
 import configparser
 import fnmatch
 import ast
@@ -33,7 +38,6 @@ class BufferController(Tagged, Responder):
         :type buff: stem.buffers.Buffer
         '''
         super().__init__()
-        
 
         self.last_canonical_cursor_pos = 0,0
         self._view              = view
@@ -43,27 +47,35 @@ class BufferController(Tagged, Responder):
         self.__file_mtime       = 0
 
         self.manipulator        = BufferManipulator(buff)
-        self.config             = config or conftree.ConfTree()
+        self.config             = config or Config.root
         self.view.config        = self.config
-        self._tag_config        = self.config.Tag
         
-        self.selection          = SelectionImpl(self.manipulator)        
+        gs = GeneralConfig.from_config(self.config)
         
-        self._tag_config.modified           += self.__on_tag_cfg_changed
+        self.selection          = gs.selection(self.manipulator, self.config)
+        self._code_model = None
+        
         self.view.scrolled                  += self._on_view_scrolled      
         self.manipulator.executed_change    += self.user_changed_buffer
+        self.manipulator.executed_change    += self.__on_user_changed_buffer
         buff.text_modified                  += self.buffer_was_changed 
         buff.text_modified                  += self._after_buffer_modification
         self.history.transaction_committed  += self._after_history_transaction_committed
         self.view.closing                   += self.closing
         self.selection.moved                += self.scroll_to_cursor
+        self.selection.moved                += self.selection_moved
         self.wrote_to_path                  += self.__update_file_mtime
         self.loaded_from_path               += self.__update_file_mtime
+        self.loaded_from_path               += self.__path_change
+        self.wrote_to_path                  += self.__path_change
         self.closing                        += self.__on_closing
         
+        self._diagnostics_controller = None
         self.buffer_set = buffer_set
         self._prev_region = Region()
         self._is_modified = False
+        self.__filetype = None
+        self.__set_filetype(filetype.Filetype.default())        
 
         view.controller = self
 
@@ -73,18 +85,104 @@ class BufferController(Tagged, Responder):
             self.interaction_mode = None
             
 
-        self.instance_tags_added.connect(self.__after_tags_added)
+#         self.instance_tags_added.connect(self.__after_tags_added)
         
         self.__file_change_timer = timer.Timer(5)
         self.__file_change_timer.timeout += self.__check_for_file_change
+        self.completion_controller = CompletionController(self)    
+    
+        self._last_path = None
+    @Signal
+    def selection_moved(self):
+        pass
         
+    def __set_filetype(self, ft):
+        if ft != self.__filetype:
+            self.__filetype = ft
+            self.add_tags(**ft.tags)
+            self.code_model = ft.make_code_model(self.buffer, self.config)
+            
+            
+            
+    def __path_change(self, path):
+        if path != self._last_path:
+            self._last_path = path
+        else:
+            return
+        
+        if path is None:
+            self.__set_filetype(filetype.Filetype.default())
+        else:
+            self.__set_filetype(filetype.Filetype.by_suffix(pathlib.Path(path).suffix))
+        
+        if self.code_model is not None:
+            self.code_model.path = self.path
+        
+        
+        config_path = next(search_upwards(path, '.stemdir.yaml'), None)
+        if config_path is not None:
+            with config_path.open('rb') as f:
+                self.config.load_yaml_safely(f)
+            logging.debug('loaded file config from %r, indent text is %r', config_path, 
+                GeneralConfig.from_config(self.config).indent_text)
+                
+        self.path_changed()
+    @property
+    def code_model(self):
+        return self._code_model
+        
+    @code_model.setter
+    def code_model(self, value):
+        if self._code_model is not None:
+            self.remove_next_responders(self.completion_controller)
+            dc = self._diagnostics_controller
+            if dc is not None:
+                dc.overlays_changed.disconnect(
+                    self.__on_diagnostic_overlay_change)
+                try:
+                    del self.view.overlay_spans['diagnostics']
+                except KeyError:
+                    pass
 
+            self._diagnostics_controller = None
+            self._code_model.dispose()
+            
+        self._code_model = value
+        
+        
+        if self._code_model is not None:
+            self._code_model.path = self.path
+            self.add_next_responders(self.completion_controller)
+            if self._code_model.can_provide_diagnostics:
+                dc = DiagnosticsController(self.config, self._code_model, self.buffer)
+                dc.overlays_changed.connect(self.__on_diagnostic_overlay_change)
+                self._diagnostics_controller = dc
+                
+    def __on_diagnostic_overlay_change(self):
+        self.view.overlay_spans['diagnostics'] = self._diagnostics_controller.overlays
+        
+    def __on_user_changed_buffer(self, chg):
+        if self.code_model is not None and chg.insert.endswith('\n'):
+            curs = self.selection.insert_cursor.clone().home()
+            m = curs.searchline('^\s*$')
+            if m:
+                curs.remove_to(curs.clone().end())
+                curs.insert(
+                    GeneralConfig.from_config(self.config).indent_text
+                    * self.code_model.indent_level(curs.y)
+                )
+
+                #curs.insert(self.config.TextView.get('IndentText', '    ', str) 
+                #    * self.code_model.indent_level(curs.y))
+        
     def __check_for_file_change(self):
         if not self.path:
             self.__file_change_timer.running = False
             return
-            
-        mtime = pathlib.Path(self.path).stat().st_mtime    
+        try:            
+            mtime = pathlib.Path(self.path).stat().st_mtime    
+        except IOError:
+            return
         
         if mtime > self.__file_mtime:
             logging.warning('file modified')
@@ -103,44 +201,21 @@ class BufferController(Tagged, Responder):
     def __update_file_mtime(self, *dummy):
         if self.path:
             self.__file_change_timer.running = True
-            self.__file_mtime = pathlib.Path(self.path).stat().st_mtime
+            try:
+                self.__file_mtime = pathlib.Path(self.path).stat().st_mtime
+            except IOError:
+                pass
         else:
             self.__file_change_timer.running = False
     
-    def __on_tag_cfg_changed(self, key, value):
-        if key == ('Tag', 'Add'):
-            self.add_tags(**value)
-        elif key == ('Tag', 'Remove'):
-            self.remove_tags(*value)
-        
-        
-    def __read_file_config(self, path):
-        if path is None: return
-        mdfile = next(search_upwards(path, '.stem-md.ini'), None)
-        if not mdfile: return
-        pathstr = str(path)        
-        config = configparser.ConfigParser()
-        config.optionxform = lambda x: x
-
-        config.read(str(mdfile))
-        
-        for section in config.values():
-            try:
-                globs = ast.literal_eval(section['glob']).split(',')
-            except KeyError:
-                continue
-            
-            if any(fnmatch.fnmatch(pathstr, glob) for glob in globs):
-                for k, v in section.items():
-                    if k and k[0].isupper():
-                        eval_v = ast.literal_eval(v)
-                        self.config.set_property(k, eval_v)
             
     
     def __on_closing(self):
         # remove all extensions from this object to ensure that its refcount goes to zero
         self.extensions.clear()
         self.remove_tags(list(self.tags))
+        if self.code_model is not None:
+            self.code_model.dispose()
         
 
     @property
@@ -174,15 +249,11 @@ class BufferController(Tagged, Responder):
 
     def _after_history_transaction_committed(self):
         self.refresh_view()
-
-    def __after_tags_added(self, tags):
-        if 'path' in tags:
-            self.path_changed()
-
-
-    @Signal
-    def path_changed(self):
-        pass
+# 
+#     def __after_tags_added(self, tags):
+#         if 'path' in tags:
+#             self.path_changed()
+# 
 
         
     @property
@@ -249,7 +320,6 @@ class BufferController(Tagged, Responder):
 
         self.canonical_cursor.move(0,0)
 
-        self.__read_file_config(path)
         self.loaded_from_path(path)
 
     def write_to_path(self, path):
@@ -262,7 +332,6 @@ class BufferController(Tagged, Responder):
         with write_atomically(path) as f:
             f.write(self.buffer.text.encode())
             
-        self.__read_file_config(path)
         self.wrote_to_path(path)
         self.is_modified = False
     
@@ -279,7 +348,10 @@ class BufferController(Tagged, Responder):
     def loaded_from_path(self, path):
         pass
 
-
+    @Signal
+    def path_changed(self):
+        pass
+    
     @Signal
     def user_changed_buffer(self, change):
         pass
@@ -307,8 +379,10 @@ class BufferController(Tagged, Responder):
     def refresh_view(self, full=False):
         self.view.lines = self.buffer.lines
 
-        
-        self.buffer_needs_highlight()
+        if self.code_model is not None:
+            self.code_model.highlight()
+        else:
+            self.buffer_needs_highlight()
 
         curs = self.canonical_cursor
         if curs is not None:
@@ -479,9 +553,25 @@ def dumptags(buff: BufferController):
     writer.write(fmt)
 
 
+@interactive('setg')
+def setg_config(_: object, key, *val):
+    Config.root.update({key: ast.literal_eval(' '.join(val))}, safe=False)
+#     bufctl.config.set_property(key, ast.literal_eval(' '.join(val)))
+
+
 @interactive('set')
 def set_config(bufctl: BufferController, key, *val):
-    bufctl.config.set_property(key, ast.literal_eval(' '.join(val)))
+    bufctl.config.update({key: ast.literal_eval(' '.join(val))}, safe=False)
+#     bufctl.config.set_property(key, ast.literal_eval(' '.join(val)))
+
+@interactive('get')
+def get_config(bufctl: BufferController, namespace, key):
+    import pprint
+    fmt = pprint.pformat(bufctl.config.get(namespace, key))
+    
+    from .command_line_interaction import writer
+    
+    writer.write(fmt)
 
 @interactive('pdb')
 def runpdb(bufctl: BufferController):
@@ -490,25 +580,89 @@ def runpdb(bufctl: BufferController):
     pyqtRemoveInputHook()
     pdb.set_trace()
 
-# import gc
-# import logging
-# import weakref
-# import pprint
-# 
-# last = None
-# @interactive('getrefs')
-# def getrefs(bctl: BufferController):
-#     global last
-#     gc.set_debug(gc.DEBUG_LEAK)
-#     if last is None:
-#         last = weakref.ref(bctl)
-#     else:
-#         gc.collect()
-#         gc.collect()
-#         
-#         l = last()
-#         if l is not None:    
-#             pprint.pprint(gc.get_referrers(last()))
-#         else:
-#             print('no refs remain')
-# 
+@interactive('dumpdecl')
+def dumpdecl(bc: BufferController):
+    cm = bc.code_model
+    res = cm.find_related_async(bc.selection.pos, cm.RelatedNameType.all)
+    print(res.result())
+
+from ..abstract.code import AbstractCodeModel, RelatedName
+
+@interactive('find_definition')
+def find_definition(bc: BufferController):
+    return goto_related(bc, RelatedName.Type.defn)
+    
+@interactive('find_declaration')
+def find_definition(bc: BufferController):
+    return goto_related(bc, RelatedName.Type.decl)
+    
+def goto_related(bc: BufferController, ty):
+    if bc.code_model is None:
+        return interactive.call_next
+    else:
+        cm = bc.code_model
+        assert isinstance(cm, AbstractCodeModel)
+        f = cm.find_related_async(bc.selection.pos, RelatedName.Type.all)
+        
+        @in_main_thread
+        def callback(future):
+            results = future.result()
+            fallback = None
+            for result in results:
+                if result.path is not None:
+                    fallback = result
+                    if result.type & ty:
+                        break
+            else:
+                if fallback is not None:
+                    result = fallback
+                elif results:
+                    result = results[0]
+                else:
+                    raise errors.NameNotFoundError('Could not find name.')
+            
+            assert isinstance(result, RelatedName)
+            y, x = result.pos
+            interactive.run('edit', str(result.path), y + 1)
+            bc.refresh_view(full=True)
+            
+        f.add_done_callback(callback)
+
+
+
+
+from stem.abstract.code import Diagnostic, AbstractCallTip
+
+
+class SimpleCallTip(AbstractCallTip):
+    def __init__(self, tip):
+        super().__init__()
+        self.tip = tip
+        
+    def to_astring(self, _=None):
+        return self.tip
+
+
+@interactive('show_diagnostics')
+def show_diagnostics(bc: BufferController):
+    assert isinstance(bc, BufferController)
+
+    
+    if bc._diagnostics_controller is None:
+        return interactive.call_next
+    
+    for diag in bc._diagnostics_controller.diagnostics:
+        assert isinstance(diag, Diagnostic)
+        for f, p1, p2 in diag.ranges:
+            if p1 is not None and p1[0] == bc.selection.pos[0]:
+                bc.view.call_tip_model = SimpleCallTip(AttributedString(diag.text))
+    
+#     bc._diagnostics_controller.update()
+    
+    
+#     diags = bc.code_model.diagnostics_async().result()
+    
+#     for diag in diags:
+#         print(diag)
+
+

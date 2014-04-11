@@ -49,11 +49,16 @@ class SyntaxHighlighter(object):
 
                 # Handle tokens that go past the end of the line
                 next_line_token_stack = []
+
                 for lexer, start in token_stack:
                     #attr_ranges.append((start, None, lexer.attrs))
                     line.set_attributes(start, None, **lexer.attrs)
+                    
+#                     if not lexer.atomic:
                     next_line_token_stack.append((lexer, 0))
-                
+                        
+#                 if next_line_token_stack:
+#                     logging.debug('line %d: next line token stack: %r', i, next_line_token_stack)                
                 
                 for start, end, attrs in reversed(attr_ranges):
                     line.set_attributes(start, end, **attrs)

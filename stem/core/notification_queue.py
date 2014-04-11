@@ -16,9 +16,9 @@ def in_main_thread(func):
     return result
 
 
-def process_events():
+def process_events(exc_handler=None):
     size = _notification_queue.qsize()
-
+    
     for _ in range(size):
         try:
             n = _notification_queue.get()
@@ -28,7 +28,10 @@ def process_events():
             try:
                 n()
             except Exception as exc:
-                logging.exception(exc)
+                if exc_handler is not None:
+                    exc_handler(exc)
+                else:
+                    logging.exception(exc)
 
 
 def register_post_handler(h):

@@ -4,7 +4,7 @@ import copy
 
 from PyQt4.Qt               import *
 
-from .text_rendering        import TextViewSettings, draw_attr_text
+from .text_rendering        import TextViewSettings, draw_attr_text, text_size
 from .qt_util               import KeyEvent, ABCWithQtMeta
 from ..core                 import AttributedString, Signal
 from ..core.key             import SimpleKeySequence, Keys, KeySequenceDict
@@ -91,8 +91,17 @@ class CompletionListItemDelegate(QItemDelegate):
                        option.rect,
                        display,
                        settings)
-
-
+    
+    def sizeHint(self, option, index):
+        settings = self.selected_settings if option.state & QStyle.State_Selected \
+                   else self.settings
+        display = index.model().data(index, Qt.DisplayRole)
+        if not isinstance(display, AttributedString):
+            display = AttributedString(display)
+        size = text_size(display, settings)
+        size.setWidth(size.width() + 5)
+        return size.toSize()
+        
 
 class CompletionListModel(QAbstractTableModel):
 
@@ -134,8 +143,11 @@ class CompletionListModel(QAbstractTableModel):
 
     def data(self, index, role=Qt.DisplayRole):
         if (not index.parent().isValid()) and \
-                role == Qt.DisplayRole and index.column() < self.columns:
-            return self.completions[index.row()][index.column()]
+                 index.column() < self.columns:
+            if role == Qt.DisplayRole:
+                return self.completions[index.row()][index.column()]
+            else:
+                return None
         else:
             return None
 
