@@ -14,7 +14,7 @@ from stem.abstract.code import (AbstractCodeModel,
                                 AbstractCallTip)
  
 from stem.buffers import Cursor
-from stem.plugins.pycomplete import syntax
+from . import syntax
 from stem.core.processmgr.client import AsyncServerProxy
 from stem.core import AttributedString
 from stem.util import dump_object

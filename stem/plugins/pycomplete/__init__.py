@@ -1,3 +1,0 @@
-
-
-from . import completer, syntax
