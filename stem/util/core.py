@@ -4,7 +4,7 @@ import collections
 import inspect
 import functools
 import warnings
-
+import time
 
 
 class ImmutableListView(collections.Sequence):
@@ -53,6 +53,16 @@ def default(x, y):
     else:
         return x
 
+def time_limited(iterable, *, s=0, ms=0):
+    '''
+    Return an iterator over the given iterable that stops
+    after the given time limit.
+    '''
+    end = time.time() + s + ms/1000.0
+    for element in iterable:
+        yield element
+        if time.time() >= end:
+            break
 
 
 def deprecated(func):

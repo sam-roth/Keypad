@@ -311,6 +311,11 @@ class Cursor(object):
     
     @property
     def line(self):
+        '''
+        The current line of the buffer
+
+        :rtype: stem.core.AttributedString
+        '''
         y, x = self.pos
         return self.buffer.lines[y]
 

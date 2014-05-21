@@ -4,6 +4,7 @@ from enum import IntEnum, Enum
         
 from stem.buffers.cursor import Cursor
 from stem.options import GeneralConfig
+from stem.util import time_limited
 
 class AbstractCompletionResults(metaclass=ABCMeta):
 
@@ -121,7 +122,7 @@ class AbstractCodeModel(metaclass=ABCMeta):
     completion_triggers = ['.']
     call_tip_triggers = []
     open_braces = '([{'
-    close_braces = '}])'
+    close_braces = ')]}'
     
     
     def __init__(self, buff, conf):
@@ -138,7 +139,7 @@ class AbstractCodeModel(metaclass=ABCMeta):
         Return the indentation level as a multiple of the tab stop for a given line.
         '''
     
-    def open_brace_pos(self, pos, exclude=('literal',)):
+    def open_brace_pos(self, pos, exclude=('literal',), time_limit_ms=50):
         '''
         Return the location of the closing brace for a given location in the text.
         '''
@@ -146,7 +147,7 @@ class AbstractCodeModel(metaclass=ABCMeta):
         c = Cursor(self.buffer).move(pos).advance(-1)
         
         level = 1
-        for ch in c.walk(-1):
+        for ch in time_limited(c.walk(-1), ms=time_limit_ms):
             if ch in self.open_braces and dict(c.rchar_attrs).get('lexcat') not in exclude:
                 level -= 1
             elif ch in self.close_braces and dict(c.rchar_attrs).get('lexcat') not in exclude:
@@ -157,12 +158,12 @@ class AbstractCodeModel(metaclass=ABCMeta):
         else:
             return None
         
-    def close_brace_pos(self, pos, exclude=('literal',)):
+    def close_brace_pos(self, pos, exclude=('literal',), time_limit_ms=50):
         
         c = Cursor(self.buffer).move(pos).advance(1)
         
         level = 1
-        for ch in c.walk(1):
+        for ch in time_limited(c.walk(1), ms=time_limit_ms):
             if ch in self.close_braces and dict(c.rchar_attrs).get('lexcat') not in exclude:
                 level -= 1
             elif ch in self.open_braces and dict(c.rchar_attrs).get('lexcat') not in exclude:
