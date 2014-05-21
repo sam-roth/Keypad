@@ -48,6 +48,7 @@ class Buffer(object):
 
     def __init__(self):
         self._lines = [AttributedString()]
+        self.code_model = None
 
 
     @Signal

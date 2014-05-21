@@ -114,7 +114,18 @@ class Cursor(object):
                 break
             self.down(stride)
 
+    def opening_brace(self):
+        if self.buffer.code_model is None:
+            raise RuntimeError("Can't find opening brace without code model.")
         
+        new_pos = self.buffer.code_model.open_brace_pos(self.pos)
+        
+        if new_pos is None:
+            raise RuntimeError("Already at outermost brace.")
+        
+        self.move(new_pos)
+            
+        return self
 
     @property
     def rchar(self):
@@ -122,6 +133,10 @@ class Cursor(object):
         The character to the right of the cursor.
         '''
         return self.buffer.span_text(self.pos, offset=1)
+        
+    @property
+    def rchar_attrs(self):
+        return self.line.attributes(self.x)
 
     @property
     def at_start(self):

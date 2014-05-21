@@ -1,6 +1,9 @@
 
 from abc import ABCMeta, abstractmethod
 from enum import IntEnum, Enum
+        
+from stem.buffers.cursor import Cursor
+from stem.options import GeneralConfig
 
 class AbstractCompletionResults(metaclass=ABCMeta):
 
@@ -97,6 +100,12 @@ class Diagnostic(object):
             self.text
         ))
 
+class Indent:
+    def __init__(self, level, align=None):
+        self.level = level
+        self.align = align
+    def __repr__(self):
+        return 'Indent{!r}'.format((self.level, self.align))
     
 class AbstractCodeModel(metaclass=ABCMeta):   
     '''
@@ -111,6 +120,9 @@ class AbstractCodeModel(metaclass=ABCMeta):
     RelatedNameType = RelatedNameType
     completion_triggers = ['.']
     call_tip_triggers = []
+    open_braces = '([{'
+    close_braces = '}])'
+    
     
     def __init__(self, buff, conf):
         '''
@@ -125,6 +137,62 @@ class AbstractCodeModel(metaclass=ABCMeta):
         '''
         Return the indentation level as a multiple of the tab stop for a given line.
         '''
+    
+    def open_brace_pos(self, pos):
+        '''
+        Return the location of the opening brace for a given location in the text.
+        '''
+        
+        c = Cursor(self.buffer).move(pos).advance(-1)
+        
+        lc = dict(c.rchar_attrs).get('lexcat')
+        level = 1
+        for ch in c.walk(-1):
+            if ch in self.open_braces and dict(c.rchar_attrs).get('lexcat') == lc:
+                level -= 1
+            elif ch in self.close_braces and dict(c.rchar_attrs).get('lexcat') == lc:
+                level += 1
+            
+            if level == 0:
+                return c.pos
+        else:
+            return None
+        
+    def alignment_column(self, pos):
+        c = Cursor(self.buffer).move(pos)
+        try:
+            c.opening_brace()
+            if c.rchar == '{':
+                return None # curly braces are for blocks (maybe)
+                # TODO: make this handle initializer lists correctly
+            else:
+                return c.x + 1
+        except RuntimeError:
+            return None
+            
+                
+    def indentation(self, pos):
+        c = Cursor(self.buffer).move(pos)
+        for _ in c.walklines(-1):
+            if c.searchline(r'^\s*$') is None:
+                c.home()
+                break
+            
+        # find the start of the statement
+        try:
+            while True:
+                p = c.pos
+                c.opening_brace()
+                if c.rchar == '{':
+                    c.pos = p
+                    break # the indent level is determined by curly braces in many languages
+        except RuntimeError: # got to the outermost level
+            pass
+        
+        level = self.indent_level(c.y+1)
+        col = self.alignment_column(pos)
+        
+        return Indent(level, col)
         
     @abstractmethod
     def completions_async(self, pos):
@@ -179,11 +247,9 @@ class AbstractCodeModel(metaclass=ABCMeta):
         
     def diagnostics_async(self):
         raise NotImplementedError
-        
-from stem.buffers.cursor import Cursor
-from stem.options import GeneralConfig
 
 class IndentRetainingCodeModel(AbstractCodeModel):
+    indent_after = r'[{:]\s*$'
     
     def highlight(self):
         pass
@@ -204,6 +270,8 @@ class IndentRetainingCodeModel(AbstractCodeModel):
                 itext = m.group(0)
                 itext = itext.expandtabs(tstop)
                 ilevel = len(itext) // len(indent_text.expandtabs(tstop))
+                if self.indent_after is not None and c.searchline(self.indent_after):
+                    ilevel += 1
                 return ilevel
         else:
             return 0

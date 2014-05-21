@@ -149,6 +149,7 @@ class BufferController(Tagged, Responder):
             self._code_model.dispose()
             
         self._code_model = value
+        self.buffer.code_model = value
         
         
         if self._code_model is not None:
@@ -166,7 +167,10 @@ class BufferController(Tagged, Responder):
         if self.code_model is not None and chg.insert.endswith('\n'):
             curs = self.selection.insert_cursor.clone().home()
             # the user opened a new line
-            indent_level = self.code_model.indent_level(curs.y)
+            indentation = self.code_model.indentation(curs.pos)
+            indent_level = indentation.level
+            
+#             indent_level = self.code_model.indent_level(curs.y)
             # strip existing indent
             m = curs.searchline(r'^\s*')
             if m:            
@@ -177,6 +181,13 @@ class BufferController(Tagged, Responder):
                 GeneralConfig.from_config(self.config).indent_text
                 * indent_level
             )
+            
+            if indentation.align is not None:
+                spaces_to_align = indentation.align - curs.x
+                if spaces_to_align > 0:
+                    curs.insert(' ' * spaces_to_align)
+            
+                
             
             # remove trailing spaces from the previous line
             if self.__last_autoindent_curs is not None:
@@ -445,6 +456,12 @@ class BufferController(Tagged, Responder):
             
         
 from ..abstract.application import app
+
+@interactive('open_brace')
+def open_brace(bctl: BufferController):
+    with bctl.selection.moving():
+        bctl.selection.insert_cursor.opening_brace()
+    bctl.refresh_view()
 
 @interactive('show_error')
 def show_error(buff: BufferController, error):
