@@ -4,3 +4,4 @@ venv
 *.swp
 .hgcheck
 doc/build/*
+.DS_Store

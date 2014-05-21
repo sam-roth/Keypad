@@ -210,6 +210,47 @@ def get_menu_item(path):
 
 
 class interactive(object):
+    """
+    Decorator for interactive commands. Use this to mark functions that should be invokable 
+    from the command line.
+    
+    The first argument to the decoratee is the first active :class:`Responder <stem.core.responder.Responder>`
+    that matches the parameter's annotation. If you don't care which responder gets injected into the first
+    argument, simply use ``object`` as the annotation. Subsequent arguments are the tokens provided on the command
+    line. You may annotate these with a string indicating the expected type for code completion purposes.
+    Currently, 'Interactive' and 'Path' are recognized.
+    
+    Example::
+            
+        @interactive('idecl')
+        def find_interactive_declaration(_: object, interactive_name: 'Interactive'):
+            '''
+            idecl <interactive_name>
+        
+            Show the file and line where the interactive command is located.
+        
+            Example
+            =======
+        
+            : idecl idecl
+            idecl(object, ...)
+              .../stem/control/behavior.py:24
+            '''
+        
+            from .command_line_interaction import writer
+            
+            for ty, handler in dispatcher.find_all(interactive_name):
+                code = handler.__code__
+                
+                
+                filename = code.co_filename
+                linenum = code.co_firstlineno
+                
+                tyname = ty.__name__
+        
+                writer.write('{interactive_name}({tyname}, ...)\\n  {filename}:{linenum}'.format(**locals()))
+                
+    """
     call_next = object()
     
     @classmethod
