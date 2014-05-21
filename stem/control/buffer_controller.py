@@ -421,7 +421,7 @@ class BufferController(Tagged, Responder):
 
         anchor = self.anchor_cursor
         
-        # draw selection
+        # update selection
         if anchor is not None:
             selected_region = Span(curs, anchor).region
         else:
@@ -437,6 +437,38 @@ class BufferController(Tagged, Responder):
             ])
         
         self.view.overlay_spans['selection'] = overlay_spans
+        self.view.overlay_spans['matched_brace'] = []
+        # update matched braces
+        if self.code_model is not None:
+            try:
+                lchar = curs.lchar
+                rchar = curs.rchar
+                open_cursor, close_cursor = None, None
+                if rchar in self.code_model.close_braces:
+                    close_cursor = curs.clone()
+                    open_cursor = curs.clone().opening_brace()
+                elif lchar in self.code_model.close_braces:
+                    close_cursor = curs.clone().left()
+                    open_cursor = close_cursor.clone().opening_brace()
+                elif rchar in self.code_model.open_braces:
+                    open_cursor = curs.clone()
+                    close_cursor = curs.clone().closing_brace()
+                elif lchar in self.code_model.open_braces:
+                    open_cursor = curs.clone().left()
+                    close_cursor = open_cursor.clone().closing_brace()
+                if open_cursor is not None:
+                    spans = []
+                    spans.append(Span(open_cursor.clone(), open_cursor.clone().right()))
+                    spans.append(Span(close_cursor.clone(), close_cursor.clone().right()))
+                    overlays = []
+                    for span in spans:
+                        overlays += [
+                            (span, 'sel_color', 'auto'),
+                            (span, 'sel_bgcolor', 'auto')
+                        ]
+                    self.view.overlay_spans['matched_brace'] = overlays
+            except RuntimeError:
+                pass
         
         if full:
             self.view.full_redraw()
@@ -461,6 +493,12 @@ from ..abstract.application import app
 def open_brace(bctl: BufferController):
     with bctl.selection.moving():
         bctl.selection.insert_cursor.opening_brace()
+    bctl.refresh_view()
+    
+@interactive('close_brace')
+def close_brace(bctl: BufferController):
+    with bctl.selection.moving():
+        bctl.selection.insert_cursor.closing_brace()
     bctl.refresh_view()
 
 @interactive('show_error')

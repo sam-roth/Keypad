@@ -91,8 +91,8 @@ class Cursor(object):
         If either end of the document is reached, the generator will raise StopIteration.
         '''
         while True:
-            pos = self.pos
-            yield self.rchar
+            if not self.at_end:
+                yield self.rchar
             if stride == 0 or stride > 0 and self.at_end or stride < 0 and self.at_start:
                 break
             self.advance(stride)
@@ -126,7 +126,29 @@ class Cursor(object):
         self.move(new_pos)
             
         return self
+        
+    def closing_brace(self):
+        if self.buffer.code_model is None:
+            raise RuntimeError("Can't find closing brace without code model.")
+        
+        new_pos = self.buffer.code_model.close_brace_pos(self.pos)
+        
+        if new_pos is None:
+            raise RuntimeError("Already at outermost brace.")
+        
+        self.move(new_pos)
+            
+        return self
+        
 
+    @property
+    def lchar(self):
+        '''
+        The character to the left of the cursor.
+        '''
+        
+        return self.clone().advance(-1).rchar
+        
     @property
     def rchar(self):
         '''
@@ -155,7 +177,7 @@ class Cursor(object):
     @property
     def at_end(self):
         '''
-        True iff the cursor is before the last character in the document.
+        True iff the cursor is before the last character in the document or past the end.
         '''
         return self.pos >= self.buffer.end_pos
 

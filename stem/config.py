@@ -114,7 +114,15 @@ menu(6,
      'set_cmdline', 'f ',
      keybinding=Keys.ctrl.f)
 
-menu(7, 'Edit/Move to Opening Brace', 'open_brace', keybinding=Keys.ctrl.parenleft.optional(Keys.shift))
+menu(7, 
+     'Edit/Move to Opening Brace',
+     'open_brace',
+     keybinding=Keys.ctrl.nine)
+
+menu(7.1,
+     'Edit/Move to Closing Brace',
+     'close_brace',
+     keybinding=Keys.ctrl.zero)
 
     
 submenu(2, 'Window')

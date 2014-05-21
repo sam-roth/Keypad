@@ -138,19 +138,18 @@ class AbstractCodeModel(metaclass=ABCMeta):
         Return the indentation level as a multiple of the tab stop for a given line.
         '''
     
-    def open_brace_pos(self, pos):
+    def open_brace_pos(self, pos, exclude=('literal',)):
         '''
-        Return the location of the opening brace for a given location in the text.
+        Return the location of the closing brace for a given location in the text.
         '''
         
         c = Cursor(self.buffer).move(pos).advance(-1)
         
-        lc = dict(c.rchar_attrs).get('lexcat')
         level = 1
         for ch in c.walk(-1):
-            if ch in self.open_braces and dict(c.rchar_attrs).get('lexcat') == lc:
+            if ch in self.open_braces and dict(c.rchar_attrs).get('lexcat') not in exclude:
                 level -= 1
-            elif ch in self.close_braces and dict(c.rchar_attrs).get('lexcat') == lc:
+            elif ch in self.close_braces and dict(c.rchar_attrs).get('lexcat') not in exclude:
                 level += 1
             
             if level == 0:
@@ -158,6 +157,23 @@ class AbstractCodeModel(metaclass=ABCMeta):
         else:
             return None
         
+    def close_brace_pos(self, pos, exclude=('literal',)):
+        
+        c = Cursor(self.buffer).move(pos).advance(1)
+        
+        level = 1
+        for ch in c.walk(1):
+            if ch in self.close_braces and dict(c.rchar_attrs).get('lexcat') not in exclude:
+                level -= 1
+            elif ch in self.open_braces and dict(c.rchar_attrs).get('lexcat') not in exclude:
+                level += 1
+            
+            if level == 0:
+                return c.pos
+        else:
+            return None
+        
+            
     def alignment_column(self, pos):
         c = Cursor(self.buffer).move(pos)
         try:

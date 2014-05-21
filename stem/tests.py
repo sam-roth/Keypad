@@ -225,6 +225,16 @@ class TestAtomicWrites(unittest.TestCase):
         self.check_file(self.filename, self.corpus2.encode())
 
 
+def test_walk():
+    buff = Buffer()
+    buff.insert((0,0), 'hello\nworld')
+    
+    curs = Cursor(buff).move(0,0)
+    chs = []
+    for ch in curs.walk(1):
+        chs.append(ch)
+        print(ch)
+    assert ''.join(chs) == 'hello\nworld'
 
 if __name__ == '__main__':
     unittest.main()
