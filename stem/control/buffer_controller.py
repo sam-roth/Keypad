@@ -550,11 +550,19 @@ def clipboard_paste(buff: BufferController):
 
 @interactive('undo')
 def undo(buff: BufferController):
-    buff.history.undo()
+    cs = buff.history.undo()
+    if cs:
+        buff.selection.move(cs[-1].pos)
+        buff.refresh_view()
+
 
 @interactive('redo')
 def redo(buff: BufferController):
-    buff.history.redo()
+    cs = buff.history.redo()
+    if cs:
+        buff.selection.move(cs[-1].pos)
+        buff.refresh_view()
+
 
 
 @interactive('write')

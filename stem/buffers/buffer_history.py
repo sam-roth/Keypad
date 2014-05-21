@@ -122,6 +122,8 @@ class BufferHistory(object):
         self._changesets_reversed.append(cs)
         self.transaction_committed()
 
+        return cs
+
     def redo(self):
         if not self._changesets_reversed:
             raise errors.CantRedoError("Can't redo.")
@@ -133,7 +135,8 @@ class BufferHistory(object):
         self._changesets_reversed.pop()
         self._changesets.append(cs)
         self.transaction_committed()
-
+        
+        return cs
     
     def clear(self):
         '''
