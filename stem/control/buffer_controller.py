@@ -89,6 +89,7 @@ class BufferController(Tagged, Responder):
         
         self.__file_change_timer = timer.Timer(5)
         self.__file_change_timer.timeout += self.__check_for_file_change
+        self.__last_autoindent_curs = None
         self.completion_controller = CompletionController(self)    
     
         self._last_path = None
@@ -164,16 +165,31 @@ class BufferController(Tagged, Responder):
     def __on_user_changed_buffer(self, chg):
         if self.code_model is not None and chg.insert.endswith('\n'):
             curs = self.selection.insert_cursor.clone().home()
-            m = curs.searchline('^\s*$')
-            if m:
-                curs.remove_to(curs.clone().end())
-                curs.insert(
-                    GeneralConfig.from_config(self.config).indent_text
-                    * self.code_model.indent_level(curs.y)
-                )
+            # the user opened a new line
+            indent_level = self.code_model.indent_level(curs.y)
+            # strip existing indent
+            m = curs.searchline(r'^\s*')
+            if m:            
+                curs.home().remove_to(curs.clone().right(m.end()))
+            # indent the new line
+            
+            curs.insert(
+                GeneralConfig.from_config(self.config).indent_text
+                * indent_level
+            )
+            
+            # remove trailing spaces from the previous line
+            if self.__last_autoindent_curs is not None:
+                lc = self.__last_autoindent_curs.clone()
+                m = lc.searchline(r'\s+$')
+                if m:
+                    lc.move(col=m.start()).remove_to(lc.clone().end())
+            
+            lc = self.__last_autoindent_curs = curs.clone()
+            lc.chirality = Cursor.Chirality.Left
+            
+                        
 
-                #curs.insert(self.config.TextView.get('IndentText', '    ', str) 
-                #    * self.code_model.indent_level(curs.y))
         
     def __check_for_file_change(self):
         if not self.path:
