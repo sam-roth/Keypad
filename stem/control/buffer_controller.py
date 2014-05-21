@@ -467,7 +467,7 @@ class BufferController(Tagged, Responder):
                             (span, 'sel_bgcolor', 'auto')
                         ]
                     self.view.overlay_spans['matched_brace'] = overlays
-            except RuntimeError:
+            except (RuntimeError, IndexError):
                 pass
         
         if full:
