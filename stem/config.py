@@ -1,8 +1,11 @@
+import os
 
-try:
-    import stemrc
-except ImportError:
-    pass
+if not os.environ.get('STEM_NO_RC'):
+
+    try:
+        import stemrc
+    except ImportError:
+        pass
 
 
 from .api import *
