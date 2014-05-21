@@ -49,7 +49,11 @@ Conversions.register(float, safe_float)
 
 class Factory(object):
     def __init__(self, dotted_name):
-        self.dotted_name = dotted_name
+        if isinstance(dotted_name, str):
+            self.dotted_name = dotted_name
+        else:
+            self.dotted_name = '<value>'
+            self._constructor = dotted_name
         
     @property
     def constructor(self):
