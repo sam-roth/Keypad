@@ -59,7 +59,7 @@ class Color(namedtuple('Color', 'red green blue alpha')):
 
     @property
     def hex(self):
-        return '#{:x}'.format(self.int)
+        return '#{:06x}'.format(self.int)
 
     @property
     def hsv(self):
