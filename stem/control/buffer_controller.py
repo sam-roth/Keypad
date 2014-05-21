@@ -489,6 +489,11 @@ class BufferController(Tagged, Responder):
         
 from ..abstract.application import app
 
+@interactive('line')
+def goto_line(bc: BufferController, line):
+    bc.selection.move(line=int(line))
+    bc.refresh_view()
+
 @interactive('open_brace')
 def open_brace(bctl: BufferController):
     with bctl.selection.moving():
