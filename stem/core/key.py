@@ -119,6 +119,7 @@ class KeySequenceDict(collections.abc.MutableMapping):
     Dictionary providing approximate matches for keys of type SimpleKeySequence.
 
     Simple Example:
+
     >>> k = KeySequenceDict(
     ...     (Keys.left.optional(Shift), 'left'),
     ...     (Keys.right, 'right')
@@ -139,15 +140,14 @@ class KeySequenceDict(collections.abc.MutableMapping):
         raise KeyError(key)
     KeyError: Shift+Right
 
-
     More thorough example:
+
     >>> d = KeySequenceDict(
     ...     (Keys.left.optional(Shift), 'left'),
     ...     (Keys.right.optional(Shift), 'right'),
     ...     (Keys.up, 'up'),
     ...     (Ctrl.alt.delete.optional(Shift.meta), 'restart'),
     ... )
-    >>>
     >>> lookups = [
     ...     Keys.left,
     ...     Shift.left,
@@ -161,7 +161,6 @@ class KeySequenceDict(collections.abc.MutableMapping):
     ...     Ctrl.delete,
     ...     Ctrl.alt.shift.meta.delete
     ... ]
-    >>>
     >>> for lookup in lookups:
     ...         print('{:>40} => {}'.format(lookup, d.get(lookup)))
                                         Left => left
@@ -252,6 +251,7 @@ class KeySequenceBuilder(object):
     front-ends (e.g. Curses).
 
     To create a SimpleKeySequence object, use an expression like one of these:
+
     >>> str(Keys.esc)
     'Esc'
     >>> str(Ctrl.esc)
