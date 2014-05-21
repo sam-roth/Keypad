@@ -5,6 +5,7 @@ import re
 
 from ..core import Signal
 from ..options import GeneralSettings
+from ..core.nconfig import Settings, Field
 
 _AdvanceWordRegex = re.compile(
     r'''
@@ -35,6 +36,14 @@ class Flag(object):
         finally:
             self.value = oldval
 
+class SelectionSettings(Settings):
+    _ns_ = 'selection'
+
+    #: Maximum number of previous cursor positions to retain.
+    max_history_entries = Field(int, 10)
+
+    #: The number of lines the cursor needs to move in order to add a new history entry.
+    history_fuzz_lines = Field(int, 10)
 
 class Selection(object):
     def __init__(self, manip, config):
@@ -56,9 +65,54 @@ class Selection(object):
         
         self._insert_cursor = Cursor(manip)
         self._anchor_cursor = None
-        
+        self._history = []
+        self._future = []
+
         self.select = Flag()
+        self.sel_settings = SelectionSettings.from_config(config)
         self.config = config
+
+
+    def add_history(self):
+        if len(self._history) >= self.sel_settings.max_history_entries:
+            del self._history[0]
+
+        add_entry = False
+        if not self._history:
+            add_entry = True
+        else:
+            y0, x0 = self._history[-1].pos
+            y, x = self.pos
+
+            if abs(y0 - y) >= self.sel_settings.history_fuzz_lines:
+                add_entry = True
+        
+        if add_entry:
+            self._future.clear()
+            self._history.append(self.insert_cursor.clone())
+
+    def to_previous_position(self):
+        if self._history:
+            first = True
+            while (self._history 
+                   and (first
+                        or abs(top.pos[0] - self.pos[0])
+                           < self.sel_settings.history_fuzz_lines)):
+                top = self._history.pop()
+                self._future.append(self.insert_cursor.clone())
+                first = False
+            self.move(top.pos)
+
+    def to_next_position(self):
+        if self._future:
+            top = self._future.pop()
+            self._history.append(self.insert_cursor.clone())
+            self.move(top.pos)
+
+    @property
+    def history(self):
+        return tuple(self._history)
+
     @property
     def indent(self):
         return GeneralSettings.from_config(self.config).indent_text
@@ -174,6 +228,8 @@ class Selection(object):
 
         if not value:
             self._anchor_cursor = None
+
+        self.add_history()
 
     @property
     def text(self): return self.get_text()

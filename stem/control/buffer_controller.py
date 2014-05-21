@@ -489,6 +489,17 @@ class BufferController(Tagged, Responder):
         
 from ..abstract.application import app
 
+
+@interactive('previous_cursor_position')
+def previous_cursor_position(bc: BufferController):
+    bc.selection.to_previous_position()
+    bc.refresh_view()
+
+@interactive('next_cursor_position')
+def next_cursor_position(bc: BufferController):
+    bc.selection.to_next_position()
+    bc.refresh_view()
+    
 @interactive('line')
 def goto_line(bc: BufferController, line):
     bc.selection.move(line=int(line))

@@ -124,6 +124,16 @@ menu(7.1,
      'close_brace',
      keybinding=Keys.ctrl.zero)
 
+menu(8,
+     'Edit/Move to Previous Position',
+     'previous_cursor_position',
+     keybinding=Keys.ctrl.bracketleft)
+
+menu(8,
+     'Edit/Move to Next Position',
+     'next_cursor_position',
+     keybinding=Keys.ctrl.bracketright)
+
     
 submenu(2, 'Window')
 
