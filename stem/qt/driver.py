@@ -10,11 +10,12 @@ from ..core import notification_queue, errors
 from ..control.buffer_set import BufferSetController
 from .buffer_set import BufferSetView
 
-from ..abstract.application import Application as AbstractApplication
+from ..abstract.application import Application as AbstractApplication, SaveResult
 
 from .qt_util import ABCWithQtMeta
 from ..control.interactive import interactive
 import logging
+from ..core.nconfig import Config
 
 class _ProcessPosted(QEvent):
     '''
@@ -39,11 +40,10 @@ class Application(AbstractApplication, QApplication, metaclass=ABCWithQtMeta):
             if mversion > QSysInfo.MV_10_8:
                 # Workaround for QTBUG-32789
                 QFont.insertSubstitution('.Lucida Grande UI', 'Lucida Grande')
-
         
-        logging.debug('init app')
+        QApplication.setApplicationName('Stem')
         super().__init__(args)
-        logging.debug('init done')
+
 
 
     @property
@@ -60,20 +60,13 @@ class Application(AbstractApplication, QApplication, metaclass=ABCWithQtMeta):
         self.clipboard().setText(value)
 
     def exec_(self):
-        
         self.setWheelScrollLines(10)
-
-        controller = BufferSetController(BufferSetView())
-        controller.view.show()
-        controller.view.raise_()
-
-        #mw = MainWindow()
-        #mw.show()
-        #mw.raise_()
-        
-        
-
         notification_queue.register_post_handler(self._on_post)
+
+        mw = self.new_window()
+        ed = self.new_editor()
+        mw.add_editor(ed)
+
 
         result = super().exec_()
         AsyncServerProxy.shutdown_all()        
@@ -90,14 +83,47 @@ class Application(AbstractApplication, QApplication, metaclass=ABCWithQtMeta):
         else:
             return super().event(evt)
 
-    
-
     def _on_post(self):
         self.postEvent(self, _ProcessPosted())
         
-        
     def timer(self, time_s, callback):
         QTimer.singleShot(int(time_s * 1000), callback)
+
+    def save_prompt(self, editor):
+        editor.setFocus()
+        mb = QMessageBox(editor)
+        mb.setWindowFlags(Qt.Sheet)
+        mb.setWindowModality(Qt.WindowModal)
+        mb.setText('This buffer has been modified. Do you want to save your changes?')
+        mb.addButton(mb.Cancel)
+        mb.addButton(mb.Discard)
+        mb.addButton(mb.Save)
+
+        result = mb.exec_()
+        if result == mb.Discard:
+            return SaveResult.discard
+        elif result == mb.Save:
+            return SaveResult.save
+        else:
+            return SaveResult.cancel
+
+    def get_save_path(self, editor):
+        save_path = QFileDialog.getSaveFileName(editor, 'Save')
+        if save_path:
+            return save_path
+        else:
+            return None
+
+    def new_window(self):
+        from .main_window import MainWindow
+        w = MainWindow()
+        w.show()
+        w.raise_()
+        return w
+
+    def new_editor(self):
+        from .editor import Editor
+        return Editor(Config.root)
 
 def _fatal_handler(*args, **kw):
     import os
@@ -123,7 +149,6 @@ def _message_handler(ty, msg):
     else:
         handler('%s', _decode_if_needed(msg))
 
-USE_IPYTHON = True
 
 
 
@@ -136,8 +161,6 @@ def main():
 
     logging.basicConfig(level=logging.DEBUG,
                         format=logfmt)
-    
-
         
     global config
     from .. import config
@@ -150,47 +173,9 @@ def main():
         QtFatalMsg:    _fatal_handler
     }
         
-    
     qInstallMsgHandler(_message_handler)    
-#   
-
- 
-    if USE_IPYTHON:
-        from ..control import BufferController
-        @interactive('embedipython')
-        def embed_ipython(bc: BufferController):
-            import IPython
-            IPython.embed()
-#         import threading
-#         def target():
-#             import IPython
-#             IPython.embed()
-#         thd = threading.Thread(target=target)
-#         thd.start()
-#         
     sys.exit(Application(sys.argv).exec_())
     
         
-#@interactive('reload')
-def reload_all(app: Application):
-    '''
-    WARNING: Don't use this. It will screw up typechecks.
-    '''
-    import imp
-    import stem
-    import IPython.lib.deepreload
-    import pkgutil
-    import importlib
-    for mldr, name, is_pkg in pkgutil.walk_packages(stem.__path__, 'stem.'):
-        try:
-            mod = importlib.import_module(name)
-            IPython.lib.deepreload.reload(mod)
-        except:
-            logging.exception('error reloading %r', name)
-
-
-    
-
-
 if __name__ == '__main__':
     main()

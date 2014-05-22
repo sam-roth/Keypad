@@ -64,11 +64,8 @@ class BufferController(Tagged, Responder):
         self.view.closing                   += self.closing
         self.selection.moved                += self.scroll_to_cursor
         self.selection.moved                += self.selection_moved
-        self.wrote_to_path                  += self.__update_file_mtime
-        self.loaded_from_path               += self.__update_file_mtime
         self.loaded_from_path               += self.__path_change
         self.wrote_to_path                  += self.__path_change
-        self.closing                        += self.__on_closing
         
         self._diagnostics_controller = None
         self.buffer_set = buffer_set
@@ -85,14 +82,16 @@ class BufferController(Tagged, Responder):
             self.interaction_mode = None
             
 
-#         self.instance_tags_added.connect(self.__after_tags_added)
         
-        self.__file_change_timer = timer.Timer(5)
-        self.__file_change_timer.timeout += self.__check_for_file_change
         self.__last_autoindent_curs = None
         self.completion_controller = CompletionController(self)    
     
         self._last_path = None
+
+    def dispose(self):
+        if self.code_model is not None:
+            self.code_model = None
+            
     @Signal
     def selection_moved(self):
         pass
@@ -201,50 +200,6 @@ class BufferController(Tagged, Responder):
             
                         
 
-        
-    def __check_for_file_change(self):
-        if not self.path:
-            self.__file_change_timer.running = False
-            return
-        try:            
-            mtime = pathlib.Path(self.path).stat().st_mtime    
-        except IOError:
-            return
-        
-        if mtime > self.__file_mtime:
-            logging.warning('file modified')
-            result = self.view.run_modified_warning(self.is_modified)
-            
-            if result == 'reload':
-                with self.history.rec_transaction():
-                    self.replace_from_path(self.path)
-            
-            
-        
-        self.__file_mtime = mtime
-        
-    
-    
-    def __update_file_mtime(self, *dummy):
-        if self.path:
-            self.__file_change_timer.running = True
-            try:
-                self.__file_mtime = pathlib.Path(self.path).stat().st_mtime
-            except IOError:
-                pass
-        else:
-            self.__file_change_timer.running = False
-    
-            
-    
-    def __on_closing(self):
-        # remove all extensions from this object to ensure that its refcount goes to zero
-        self.extensions.clear()
-        self.remove_tags(list(self.tags))
-        if self.code_model is not None:
-            self.code_model.dispose()
-        
-
     @property
     def canonical_cursor(self):
         return self.selection.insert_cursor
@@ -276,12 +231,6 @@ class BufferController(Tagged, Responder):
 
     def _after_history_transaction_committed(self):
         self.refresh_view()
-# 
-#     def __after_tags_added(self, tags):
-#         if 'path' in tags:
-#             self.path_changed()
-# 
-
         
     @property
     def is_modified(self):

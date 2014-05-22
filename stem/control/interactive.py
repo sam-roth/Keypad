@@ -2,22 +2,6 @@
 import inspect
 
 
-# from .buffer_controller import BufferController
-# 
-# 
-# # Just a little function to remind me what I'm doing:
-# 
-# @interactive('write')
-# def write_buffer(obj:   BufferController,
-#                  path:  str):
-#     
-#     from pathlib import Path
-#     obj.write_to_path(Path(path))
-# 
-# 
-# write_buffer.__annotations__
-
-
 from collections import defaultdict, namedtuple
 from ..core import responder, errors
 from ..abstract.application import app
@@ -79,7 +63,6 @@ class InteractiveDispatcher(object):
         tried = set()
 
         def rec_helper(resp):
-            
             for ty in type(resp).mro():
                 try:
                     handler = handlers[ty]
@@ -88,6 +71,8 @@ class InteractiveDispatcher(object):
                 else:
                     return ty, resp, handler
             else:
+                if resp is None:
+                    return None
                 for r in resp.next_responders:
                     result = rec_helper(r)
                     if result is not None:
