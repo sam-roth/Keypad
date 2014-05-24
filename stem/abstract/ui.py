@@ -1,6 +1,6 @@
 
 from ..control.interactive import interactive
-from .application import app, AbstractWindow, Application as AbstractApplication
+from .application import app, AbstractWindow, AbstractApplication
 from .editor import AbstractEditor
 import pathlib
 

@@ -10,7 +10,7 @@ from ..control import interactive
 import logging
 
 class CommandLineWidget(Responder, QWidget):
-    def __init__(self):
+    def __init__(self, config):
         super().__init__()
         self.setWindowFlags(Qt.Popup)
         layout = QVBoxLayout(self)
@@ -29,7 +29,7 @@ class CommandLineWidget(Responder, QWidget):
                                              view=self.__view,
                                              buff=Buffer(), 
                                              provide_interaction_mode=False,
-                                             config=Config.root)
+                                             config=config)
         
 
         self.__imode = imode = self.__controller.interaction_mode = \
@@ -79,10 +79,11 @@ class CommandLineWidget(Responder, QWidget):
         anim.start()
 
 class MainWindow(AbstractWindow, QMainWindow, metaclass=ABCWithQtMeta):
-    def __init__(self):
+    def __init__(self, config):
         super().__init__()
-        self.__cmdline = CommandLineWidget()
+        self.__cmdline = CommandLineWidget(config)
         self.__cmdline.cancelled.connect(self.deactivate_cmdline)
+        
 
         self.statusBar()
         self.setUnifiedTitleAndToolBarOnMac(True)

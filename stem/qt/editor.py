@@ -11,7 +11,7 @@ class Editor(AbstractEditor, Responder, QWidget, metaclass=ABCWithQtMeta):
 
     def __init__(self, config):
         self.__view = TextView()
-        self.__config = config
+        self.__config = config.derive()
 
         AbstractEditor.__init__(self, self.__view, self.__config)
         Responder.__init__(self)

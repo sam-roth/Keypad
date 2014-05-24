@@ -10,7 +10,7 @@ from ..core import notification_queue, errors
 from ..control.buffer_set import BufferSetController
 from .buffer_set import BufferSetView
 
-from ..abstract.application import Application as AbstractApplication, SaveResult
+from ..abstract.application import AbstractApplication, SaveResult
 
 from .qt_util import ABCWithQtMeta
 from ..control.interactive import interactive
@@ -116,7 +116,7 @@ class Application(AbstractApplication, QApplication, metaclass=ABCWithQtMeta):
 
     def new_window(self):
         from .main_window import MainWindow
-        w = MainWindow()
+        w = MainWindow(Config.root.derive())
         w.show()
         w.raise_()
         return w

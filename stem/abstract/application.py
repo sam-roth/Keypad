@@ -12,15 +12,15 @@ class SaveResult(enum.IntEnum):
     save = 2
 
 
-class Application(Responder, metaclass=abc.ABCMeta):
+class AbstractApplication(Responder, metaclass=abc.ABCMeta):
 
     def __init__(self, *args, **kw):
         super().__init__(*args, **kw)
         self._editors = weakref.WeakSet()
         try:
-            Application._instance
+            AbstractApplication._instance
         except AttributeError:
-            Application._instance = self
+            AbstractApplication._instance = self
 
     @staticmethod
     def instance():
@@ -30,7 +30,7 @@ class Application(Responder, metaclass=abc.ABCMeta):
         :rtype: Application
         '''
 
-        return Application._instance        
+        return AbstractApplication._instance        
 
     @property
     def clipboard_value(self):
@@ -128,7 +128,7 @@ class Application(Responder, metaclass=abc.ABCMeta):
         
 
 def app():
-    return Application.instance()
+    return AbstractApplication.instance()
 
 
 
