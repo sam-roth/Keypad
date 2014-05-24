@@ -19,7 +19,6 @@ class CompletionController(Responder):
         
         self.bufctl = bufctl
         bufctl.user_changed_buffer.connect(self.__on_user_changed_buffer)
-#         bufctl.selection_moved += self.__on_selection_moved
         bufctl.view.completion_view.done.connect(self.__accept_completion)
         bufctl.view.completion_view.row_changed.connect(self.__show_doc)
         
@@ -67,16 +66,22 @@ class CompletionController(Responder):
         
         try:
             completions = future.result()
-#             self.__view.call_tip_model = None
         except CancelledError:
             return
             
         assert isinstance(completions, AbstractCompletionResults)
-
+        
+        if self.__completions is not None:
+            self.__completions.dispose()
         self.__completions = completions
+
         self.__refilter_typed()
-        self.__view.show_completions()
-        self.__view.completion_view.raise_()
+        if not self.__completions.rows:
+            self.__completions.dispose()
+            self.__completions = None
+        else:
+            self.__view.show_completions()
+            self.__view.completion_view.raise_()
     
     def __show_doc(self, row):
         if self.__completions is None:
@@ -134,8 +139,11 @@ class CompletionController(Responder):
             
             if trigger is not None:
                 if self.__completions is not None:
-                    self.__accept_completion(self.bufctl.view.completion_view.current_row,
-                                             icurs.x - len(trigger))
+                    if self.__span.text != trigger:
+                        self.__accept_completion(self.bufctl.view.completion_view.current_row,
+                                                 icurs.x - len(trigger))
+                    else:
+                        self.__finish()
                 self.complete()
                 
             else:
@@ -152,12 +160,6 @@ class CompletionController(Responder):
             and chg.remove in self.bufctl.code_model.call_tip_triggers:
                 self.show_call_tip()
         self.__refilter_typed()
-#     
-#     def __on_selection_moved(self):                        
-#         ic = self.bufctl.selection.insert_cursor
-#         text_to_curs = ic.line.text[:ic.x]
-#         
-# 
     
     def __refilter_typed(self):
         span = self.__span
