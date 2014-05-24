@@ -1,30 +1,55 @@
 
-from stem.abstract.application import AbstractWindow, app
+from stem.abstract.application import AbstractWindow, app, AbstractApplication
 from stem.abstract import ui
 
 from stem.core.responder import Responder
-from stem.core.nconfig import Config
+from stem.core.nconfig import Config, Settings, Field
 from .qt_util import *
 from ..core.notification_queue import in_main_thread
 from ..control import interactive
 import logging
 
+class CommandLineViewSettings(Settings):
+    _ns_ = 'cmdline.view'
+
+    #: view opacity (0-1)
+    opacity = Field(float, 0.9)
+
+    #: popup animation duration (ms)
+    animation_duration_ms = Field(int, 100)
+
+    #: view height (px)
+    view_height = Field(int, 40)
+
+
+def change_listener():
+    print(list(app().next_responders))
+
+@interactive.interactive('monitor')
+def monitor(app: AbstractApplication):
+    app.responder_chain_changed.connect(change_listener)
+
 class CommandLineWidget(Responder, QWidget):
-    def __init__(self, config):
+    def __init__(self, config, prev_responder):
         super().__init__()
         self.setWindowFlags(Qt.Popup)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
+        self.prev_responder = prev_responder
+
+        self.__settings = CommandLineViewSettings.from_config(config)
 
         from .view import TextView
         from ..control import BufferController
         from ..control.command_line_interaction import CommandLineInteractionMode
         from ..control.command_line_interpreter import CommandLineInterpreter
         from ..control.cmdline_completer import CmdlineCompleter
+        from ..control.cmdline_history import HistoryWatcher
 
         from ..buffers import Buffer
 
         self.__view = TextView(self)
+
         self.__controller = BufferController(buffer_set=None, 
                                              view=self.__view,
                                              buff=Buffer(), 
@@ -32,56 +57,66 @@ class CommandLineWidget(Responder, QWidget):
                                              config=config)
         
 
-        self.__imode = imode = self.__controller.interaction_mode = \
-            CommandLineInteractionMode(self.__controller)
-
-        self.__completer = CmdlineCompleter(self.__controller)
-
-        self.add_next_responders(self.__completer, self.__controller)
         
+        self.__imode = CommandLineInteractionMode(self.__controller)
+        self.__controller.interaction_mode = self.__imode
+        self.__completer = CmdlineCompleter(self.__controller)
         self.__interpreter = CommandLineInterpreter()
 
+        self.add_next_responders(self.__completer, self.__controller)
+        self.__completer.add_next_responders(self.prev_responder)
+        
 
-        self.cancelled = imode.cancelled
-        self.accepted = imode.accepted
+        # forward cancelled/accepted signals
+        self.cancelled = self.__imode.cancelled
+        self.accepted = self.__imode.accepted
 
-        imode.accepted.connect(self.__run_command)
-
+        self.__imode.accepted.connect(self.__run_command)
+        
+        # disable modeline for this view
         self.__view.modelines = []
 
         layout.addWidget(self.__view)
         self.setFocusProxy(self.__view)
-        
-        self.setMaximumHeight(40)
-    
+
+        self.__settings.value_changed.connect(self.__on_settings_changed)
+        self.__on_settings_changed()
+
+
+
+    def __on_settings_changed(self, fieldname=None, value=None):
+        self.setMaximumHeight(self.__settings.view_height)
+        self.setMinimumHeight(self.__settings.view_height)
+
+
     def __run_command(self):
+        self.hide()
+        app().next_responder = self.prev_responder
         try:
             self.__interpreter.exec(app(), self.__imode.current_cmdline)
         except RuntimeError as exc:
-            self.hide()
             interactive.run('show_error', exc)
-        else:
-            self.hide()
-
-
 
     def set_cmdline(self, text):
         self.__imode.current_cmdline = text
 
     def showEvent(self, event):
         event.accept()
-        
+        app().next_responder = self
         self.anim = anim = QPropertyAnimation(self, 'windowOpacity')
-        anim.setDuration(200)
+        anim.setDuration(self.__settings.animation_duration_ms)
         anim.setStartValue(0.0)
-        anim.setEndValue(0.9)
+        anim.setEndValue(self.__settings.opacity)
         anim.setEasingCurve(QEasingCurve.InOutQuart)
         anim.start()
+
+    def hideEvent(self, event):
+        event.accept()
 
 class MainWindow(AbstractWindow, QMainWindow, metaclass=ABCWithQtMeta):
     def __init__(self, config):
         super().__init__()
-        self.__cmdline = CommandLineWidget(config)
+        self.__cmdline = CommandLineWidget(config, self)
         self.__cmdline.cancelled.connect(self.deactivate_cmdline)
         
 
@@ -137,18 +172,8 @@ class MainWindow(AbstractWindow, QMainWindow, metaclass=ABCWithQtMeta):
         self.__cmdline.move(r.topLeft())
         self.__cmdline.setFixedWidth(self.width())
 
-        nr = self.next_responder
-        self.clear_next_responders()
-        asw = self.__mdi.activeSubWindow()
-        if asw is not None:
-            self.add_next_responders(asw.widget())
-        self.add_next_responders(self.__cmdline)
-
     def deactivate_cmdline(self):
         self.__cmdline.hide()
-        asw = self.__mdi.activeSubWindow()
-        if asw is not None:
-            self.next_responder = asw.widget()
 
     def set_cmdline(self, text):
         self.activate_cmdline()
@@ -233,9 +258,4 @@ def activate_cmdline(win: MainWindow):
     @in_main_thread
     def update():
         win.activate_cmdline()
-        app().next_responder = win
-#         app().next_responder = win.cmdline
-#         win.next_responder = win.cmdline
-#         win.cmdline.show()
     update()
-#     win.cmdline.raise_()

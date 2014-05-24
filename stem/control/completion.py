@@ -76,10 +76,7 @@ class CompletionController(Responder):
         self.__completions = completions
 
         self.__refilter_typed()
-        if not self.__completions.rows:
-            self.__completions.dispose()
-            self.__completions = None
-        else:
+        if self.__completions is not None:
             self.__view.show_completions()
             self.__view.completion_view.raise_()
     
@@ -102,7 +99,11 @@ class CompletionController(Responder):
             
     def __refilter(self, pattern=''):
         self.__completions.filter(pattern)
-        self.__view.completions = self.__completions.rows
+        if self.__completions.rows:
+            self.__view.completions = self.__completions.rows
+        else:
+            self.__finish()
+
     
     def __finish(self):
         if self.__completions is not None:
