@@ -70,13 +70,13 @@ class BasicTextView(QAbstractScrollArea):
             self.overlay_spans = {}
 
             
-            self._cursor_blink_on_timer = QTimer()
+            self._cursor_blink_on_timer = QTimer(self)
 #             self._cursor_blink_on_timer.setInterval((1.0-options.CursorDutyCycle)/options.CursorBlinkRate_Hz * 1000)
 
             self._cursor_blink_on_timer.setSingleShot(True)
             self._cursor_blink_on_timer.timeout.connect(self._on_cursor_blink_on)
 
-            self._cursor_blink_off_timer = QTimer()
+            self._cursor_blink_off_timer = QTimer(self)
 #             self._cursor_blink_off_timer.setInterval(options.CursorDutyCycle/options.CursorBlinkRate_Hz * 1000)
             self._cursor_blink_off_timer.setSingleShot(True)
             self._cursor_blink_off_timer.timeout.connect(self._on_cursor_blink_off)
@@ -124,14 +124,14 @@ class BasicTextView(QAbstractScrollArea):
             return 'reload'
         else:
             return 'cancel'
-            
+
     def _on_settings_reloaded(self):
         for line in self._lines:
             line.invalidate()
         self.full_redraw()
         settings = options.GeneralSettings.from_config(self.config)
         self.__set_cursor_blink_rate(settings.cursor_blink_rate, settings.cursor_duty_cycle)
-        
+    
     @property
     def config(self):
         return self._config
@@ -363,6 +363,7 @@ class BasicTextView(QAbstractScrollArea):
     def resizeEvent(self, event):
         super().resizeEvent(event)
         self.update_plane_size()
+
 
     def _viewport_paint(self, event):
         painter = QPainter(self.viewport())

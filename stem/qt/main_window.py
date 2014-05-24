@@ -12,15 +12,12 @@ import logging
 class CommandLineViewSettings(Settings):
     _ns_ = 'cmdline.view'
 
-    #: view opacity (0-1)
-    opacity = Field(float, 0.9)
-
-    #: popup animation duration (ms)
-    animation_duration_ms = Field(int, 100)
-
-    #: view height (px)
-    view_height = Field(int, 70)
-
+    opacity = Field(float, 0.9, 
+                    docs='view opacity (0-1)')
+    animation_duration_ms = Field(int, 100, 
+                                  docs='popup animation duration (ms)')
+    view_height = Field(int, 70, 
+                        docs='view height (px)')
 
 def change_listener():
     print(list(app().next_responders))
@@ -221,7 +218,7 @@ class MainWindow(AbstractWindow, QMainWindow, metaclass=ABCWithQtMeta):
 
     def __on_sub_window_activated(self, win):
         self.__update_window_path()
-
+        asw = self.__mdi.activeSubWindow()
 
     def rebuild_menus(self):
         logging.debug('rebuilding menus')
