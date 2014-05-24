@@ -13,6 +13,7 @@ Submodules
    stem.buffers.cursor
    stem.buffers.selection
    stem.buffers.span
+   stem.buffers.testutil
 
 Module contents
 ---------------

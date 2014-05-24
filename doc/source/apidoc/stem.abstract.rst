@@ -9,6 +9,8 @@ Submodules
    stem.abstract.application
    stem.abstract.code
    stem.abstract.completion
+   stem.abstract.editor
+   stem.abstract.ui
 
 Module contents
 ---------------

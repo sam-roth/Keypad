@@ -1,7 +1,7 @@
-stem.plugins.parmatch module
+stem.buffers.testutil module
 ============================
 
-.. automodule:: stem.plugins.parmatch
+.. automodule:: stem.buffers.testutil
     :members:
     :undoc-members:
     :show-inheritance:
