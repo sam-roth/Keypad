@@ -123,7 +123,7 @@ class AbstractCodeModel(metaclass=ABCMeta):
     call_tip_triggers = []
     open_braces = '([{'
     close_braces = ')]}'
-    
+    reindent_triggers = '}'
     
     def __init__(self, buff, conf):
         '''
@@ -205,8 +205,8 @@ class AbstractCodeModel(metaclass=ABCMeta):
                     break # the indent level is determined by curly braces in many languages
         except RuntimeError: # got to the outermost level
             pass
-        
-        level = self.indent_level(c.y+1)
+
+        level = self.indent_level(c.y)
         col = self.alignment_column(pos)
         
         return Indent(level, col)
@@ -267,7 +267,8 @@ class AbstractCodeModel(metaclass=ABCMeta):
 
 class IndentRetainingCodeModel(AbstractCodeModel):
     indent_after = r'[{:]\s*$'
-    
+    dedent_before = r'}\s*$'
+
     def highlight(self):
         pass
                 
@@ -275,7 +276,7 @@ class IndentRetainingCodeModel(AbstractCodeModel):
         raise NotImplementedError
     
     def indent_level(self, line):
-        c = Cursor(self.buffer).move(line, 0).up()
+        c = Cursor(self.buffer).move(line, 0)
         
         for _ in c.walklines(-1):
             m = c.searchline(r'^\s*\S')
@@ -289,6 +290,8 @@ class IndentRetainingCodeModel(AbstractCodeModel):
                 ilevel = len(itext) // len(indent_text.expandtabs(tstop))
                 if self.indent_after is not None and c.searchline(self.indent_after):
                     ilevel += 1
+                elif self.dedent_before is not None and c.searchline(self.dedent_before):
+                    ilevel -= 1
                 return ilevel
         else:
             return 0

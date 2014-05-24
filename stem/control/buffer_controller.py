@@ -163,7 +163,9 @@ class BufferController(Tagged, Responder):
         self.view.overlay_spans['diagnostics'] = self._diagnostics_controller.overlays
         
     def __on_user_changed_buffer(self, chg):
-        if self.code_model is not None and chg.insert.endswith('\n'):
+        if self.code_model is None:
+            return
+        if chg.insert.endswith(('\n', ) + tuple(self.code_model.reindent_triggers)):
             curs = self.selection.insert_cursor.clone().home()
             # the user opened a new line
             indentation = self.code_model.indentation(curs.pos)
@@ -198,8 +200,6 @@ class BufferController(Tagged, Responder):
             lc = self.__last_autoindent_curs = curs.clone()
             lc.chirality = Cursor.Chirality.Left
             
-                        
-
     @property
     def canonical_cursor(self):
         return self.selection.insert_cursor
