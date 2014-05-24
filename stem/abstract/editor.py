@@ -22,6 +22,12 @@ class AbstractEditor(metaclass=abc.ABCMeta):
     def __modified_changed(self, value):
         self.is_modified_changed()
 
+    @abc.abstractmethod
+    def activate(self):
+        '''
+        Bring this editor to the front and give it focus.
+        '''
+
     @property
     def buffer_controller(self):
         return self.__buffer_controller

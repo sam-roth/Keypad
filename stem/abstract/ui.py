@@ -12,14 +12,18 @@ def open_new_editor(win: AbstractWindow):
 
 @interactive('e', 'edit')
 def edit(win: AbstractWindow, path: 'Path', line=None, col=None):
-    ed = app().new_editor()
-    ed.load(pathlib.Path(path))
-    if line is not None:
-        ed.buffer_controller.selection.move(line=line)
-    if col is not None:
-        ed.buffer_controller.selection.move(col=col)
-    ed.buffer_controller.refresh_view()
-    win.add_editor(ed)
+    ed = app().find_editor(path)
+    if ed is not None:
+        ed.activate()
+    else:
+        ed = app().new_editor()
+        ed.load(pathlib.Path(path))
+        if line is not None:
+            ed.buffer_controller.selection.move(line=line)
+        if col is not None:
+            ed.buffer_controller.selection.move(col=col)
+        ed.buffer_controller.refresh_view()
+        win.add_editor(ed)
 
 @interactive('gq', 'gquit', 'gui_quit')
 def gui_quit(ed: AbstractEditor):

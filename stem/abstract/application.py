@@ -65,12 +65,17 @@ class AbstractApplication(Responder, metaclass=abc.ABCMeta):
         '''
 
     @abc.abstractmethod
-    def new_editor(self):
+    def _new_editor(self):
         '''
         Create and return a new editor.
 
         :rtype: stem.abstract.editor.AbstractEditor
         '''
+
+    def new_editor(self):
+        e = self._new_editor()
+        self._editors.add(e)
+        return e
 
     @abc.abstractmethod
     def save_prompt(self, editor):

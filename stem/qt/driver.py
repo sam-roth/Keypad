@@ -17,6 +17,7 @@ from ..control.interactive import interactive
 import logging
 from ..core.nconfig import Config
 
+
 class _ProcessPosted(QEvent):
     '''
     Distributes `notification_center` messages. Do not post this manually.
@@ -121,7 +122,7 @@ class Application(AbstractApplication, QApplication, metaclass=ABCWithQtMeta):
         w.raise_()
         return w
 
-    def new_editor(self):
+    def _new_editor(self):
         from .editor import Editor
         return Editor(Config.root)
 
