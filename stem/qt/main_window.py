@@ -19,7 +19,7 @@ class CommandLineViewSettings(Settings):
     animation_duration_ms = Field(int, 100)
 
     #: view height (px)
-    view_height = Field(int, 40)
+    view_height = Field(int, 70)
 
 
 def change_listener():
@@ -65,7 +65,7 @@ class CommandLineWidget(Responder, QWidget):
 
         self.add_next_responders(self.__completer, self.__controller)
         self.__completer.add_next_responders(self.prev_responder)
-        
+
 
         # forward cancelled/accepted signals
         self.cancelled = self.__imode.cancelled
@@ -200,14 +200,28 @@ class MainWindow(AbstractWindow, QMainWindow, metaclass=ABCWithQtMeta):
         app().next_responder = self
 
     def __child_modified_changed(self, sender):
-        if sender is self.__mdi.activeSubWindow().widget():
-            self.setWindowModified(sender.is_modified)
+        self.__update_window_path()
+
+    def __update_window_path(self):
+        asw = self.__mdi.activeSubWindow()
+        if asw is None:
+            return
+
+        editor = asw.widget()
+        self.next_responder = editor
+        self.setWindowModified(editor.is_modified)
+        if editor.path is not None:
+            self.setWindowFilePath(str(editor.path.absolute()))
+            self.setWindowTitle(editor.path.name + ' [*]')
+            asw.setWindowTitle(editor.path.name)
+        else:
+            self.setWindowFilePath(None)
+            self.setWindowTitle('Untitled [*]')
+            asw.setWindowTitle('Untitled')
 
     def __on_sub_window_activated(self, win):
-        if win is not None:
-            editor = win.widget()
-            self.next_responder = editor
-            self.setWindowModified(editor.is_modified)
+        self.__update_window_path()
+
 
     def rebuild_menus(self):
         logging.debug('rebuilding menus')

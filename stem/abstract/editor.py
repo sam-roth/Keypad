@@ -60,6 +60,10 @@ class AbstractEditor(metaclass=abc.ABCMeta):
 
     @path.setter
     def path(self, value):
+        if value is not None:
+            import pathlib
+            value = pathlib.Path(value)
+            
         self.__buffer_controller.add_tags(path=value)
 
 
