@@ -20,19 +20,25 @@ class CommandLineWidget(Responder, QWidget):
         from ..control import BufferController
         from ..control.command_line_interaction import CommandLineInteractionMode
         from ..control.command_line_interpreter import CommandLineInterpreter
-
-        from ..plugins.cmdline_completer import CmdlineCompleter
+        from ..control.cmdline_completer import CmdlineCompleter
 
         from ..buffers import Buffer
 
         self.__view = TextView(self)
-        self.__controller = BufferController(None, self.__view,
-                                             Buffer(), False,
-                                             Config.root)
+        self.__controller = BufferController(buffer_set=None, 
+                                             view=self.__view,
+                                             buff=Buffer(), 
+                                             provide_interaction_mode=False,
+                                             config=Config.root)
         
-        self.__imode = imode = self.__controller.interaction_mode = CommandLineInteractionMode(self.__controller)
+
+        self.__imode = imode = self.__controller.interaction_mode = \
+            CommandLineInteractionMode(self.__controller)
+
         self.__completer = CmdlineCompleter(self.__controller)
+
         self.add_next_responders(self.__completer, self.__controller)
+        
         self.__interpreter = CommandLineInterpreter()
 
 
