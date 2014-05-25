@@ -126,12 +126,16 @@ class BasicTextView(QAbstractScrollArea):
             return 'cancel'
 
     def _on_settings_reloaded(self):
-        for line in self._lines:
-            line.invalidate()
-        self.full_redraw()
         settings = options.GeneralSettings.from_config(self.config)
         self.__set_cursor_blink_rate(settings.cursor_blink_rate, settings.cursor_duty_cycle)
-    
+
+        for line in self._lines:
+            line.invalidate()
+        for line in self.modelines:
+            line.invalidate()
+
+        self.update_plane_size()
+        self.full_redraw()    
     @property
     def config(self):
         return self._config

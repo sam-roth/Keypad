@@ -152,8 +152,11 @@ menu(2,
      -1,
      keybinding=Keys.ctrl.braceleft)
 
+submenu(3, 'View')
+menu(0, 'View/Increase Font Size', 'adjust_font_size', 1, keybinding=Keys.ctrl.plus)
+menu(1, 'View/Decrease Font Size', 'adjust_font_size', -1, keybinding=Keys.ctrl.minus)
 
-submenu(3, 'Semantics')
+submenu(4, 'Semantics')
 
 menu(0, 'Semantics/Find Declaration', 'find_declaration', keybinding=Keys.shift.f3)
 menu(1, 'Semantics/Find Definition',  'find_definition', keybinding=Keys.f3)

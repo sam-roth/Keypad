@@ -5,6 +5,30 @@ from .editor import AbstractEditor
 import pathlib
 import os.path
 
+@interactive('adjust_font_size')
+def adjust_font_size(_: object, increment):
+    increment = int(increment)
+
+    from ..core.nconfig import Config
+    from ..options import GeneralSettings
+
+    settings = GeneralSettings.from_config(Config.root)
+    settings.font_size += increment
+
+@interactive('font_size')
+def font_size(_: object, value=None):
+
+    from ..core.nconfig import Config
+    from ..options import GeneralSettings
+    from ..control.command_line_interaction import writer
+
+    settings = GeneralSettings.from_config(Config.root)
+    if value is not None:
+        settings.font_size = int(value)
+    else:
+        writer.write('font size: ' + str(settings.font_size))
+
+
 @interactive('new')
 def open_new_editor(win: AbstractWindow):
     ed = app().new_editor()
