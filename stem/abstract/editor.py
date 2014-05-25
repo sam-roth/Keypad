@@ -18,7 +18,8 @@ class AbstractEditor(metaclass=abc.ABCMeta):
                                                     config)
 
         self.buffer_controller.modified_was_changed.connect(self.__modified_changed)
-
+        self.buffer_controller.path_changed.connect(self.path_changed)
+        
     @Signal
     def editor_activated(self):
         pass
@@ -53,6 +54,11 @@ class AbstractEditor(metaclass=abc.ABCMeta):
 
     @Signal
     def is_modified_changed(self):
+        pass
+
+
+    @Signal
+    def path_changed(self):
         pass
 
     @property

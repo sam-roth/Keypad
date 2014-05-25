@@ -2,7 +2,7 @@
 
 import abc
 from ..core.responder import Responder
-from ..core.signal import Signal
+from ..core.signal import Signal, ClassSignal
 import weakref
 
 import enum
@@ -22,6 +22,12 @@ class AbstractApplication(Responder, metaclass=abc.ABCMeta):
             AbstractApplication._instance
         except AttributeError:
             AbstractApplication._instance = self
+
+        AbstractApplication.application_created(self)
+
+    @ClassSignal
+    def application_created(cls, self):
+        pass
 
     @Signal
     def window_created(self, window):
@@ -50,7 +56,7 @@ class AbstractApplication(Responder, metaclass=abc.ABCMeta):
         '''
         Get the shared Application instance.
 
-        :rtype: Application
+        :rtype: AbstractApplication
         '''
 
         return AbstractApplication._instance        
