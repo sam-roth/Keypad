@@ -82,11 +82,10 @@ class CommandLineWidget(Responder, QWidget):
         layout.addWidget(self.__view)
         self.setFocusProxy(self.__view)
 
-#         geom = self.geometry()
-#         geom.setHeight(self.__settings.view_height)
-#         self.setGeometry(geom)
-
         self.__view.installEventFilter(self)
+
+        # prevent flickering when first showing view
+        self.setWindowOpacity(0)
 
     def __on_text_written(self):
         if not self.isVisible():
@@ -118,8 +117,6 @@ class CommandLineWidget(Responder, QWidget):
 
         ay = -7
         ax = 0
-#         ay = self.frameGeometry().topLeft().x() - self.geometry().topLeft().x()
-#         ax = self.frameGeometry().topLeft().y() - self.geometry().topLeft().y()
         bleft.setX(bleft.x() + ax)
         bleft.setY(bleft.y() + ay)
 
@@ -147,8 +144,10 @@ class CommandLineWidget(Responder, QWidget):
         anim.setEndValue(self.__settings.opacity)
         anim.setEasingCurve(QEasingCurve.InOutQuart)
         anim.start()
+
     def hideEvent(self, event):
         event.accept()
+        self.setWindowOpacity(0)
 
 class MainWindow(AbstractWindow, QMainWindow, metaclass=ABCWithQtMeta):
     def __init__(self, config):
@@ -200,14 +199,8 @@ class MainWindow(AbstractWindow, QMainWindow, metaclass=ABCWithQtMeta):
         self.__mdi.activatePreviousSubWindow()
 
     def activate_cmdline(self):
-
         self.__cmdline.show()
         self.__cmdline.setFocus()
-
-#         r = self.__cmdline.rect()
-#         r.moveBottomLeft(self.statusBar().mapToGlobal(self.statusBar().rect().topLeft()))
-#         self.__cmdline.move(r.topLeft())
-#         self.__cmdline.setFixedWidth(self.width())
 
     def deactivate_cmdline(self):
         self.__cmdline.hide()
