@@ -190,8 +190,6 @@ class MainWindow(AbstractWindow, QMainWindow, metaclass=ABCWithQtMeta):
         else:
             event.accept()
 
-
-
     def next_tab(self):
         self.__mdi.activateNextSubWindow()
 
@@ -226,8 +224,11 @@ class MainWindow(AbstractWindow, QMainWindow, metaclass=ABCWithQtMeta):
         editor.window_should_kill_editor.connect(self.__kill_editor)
         editor.is_modified_changed.connect(self.__child_modified_changed, add_sender=True)
         
-    def focusInEvent(self, event):
-        app().next_responder = self
+    def event(self, evt):
+        if evt.type() == QEvent.WindowActivate:
+            app().next_responder = self
+        return super().event(evt)
+
 
     def __child_modified_changed(self, sender):
         self.__update_window_path()
@@ -292,7 +293,6 @@ class MainWindow(AbstractWindow, QMainWindow, metaclass=ABCWithQtMeta):
 @interactive.interactive('set_cmdline')
 def set_cmdline(win: MainWindow, *text):
     win.set_cmdline(' '.join(text))
-
 
 @interactive.interactive('show_error')
 def show_error(win: MainWindow, msg):

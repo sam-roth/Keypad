@@ -9,6 +9,7 @@ from .abstract.application import app
 from .core.plugin import Plugin, register_plugin, command
 from .core.filetype import Filetype
 from .buffers import Span, Region, Buffer, Cursor
+from .core.notification_queue import run_in_main_thread, in_main_thread
 
 def bind(key, interactive_command_name):
     keybinding.controller.add_binding(key, interactive_command_name)
@@ -32,6 +33,8 @@ def load_plugins(path, prefix):
 
 
 __all__ = '''
+    in_main_thread
+    run_in_main_thread
     app
     bind
     command

@@ -163,5 +163,5 @@ menu(1, 'Semantics/Find Definition',  'find_definition', keybinding=Keys.f3)
 menu(2, 'Semantics/Show Diagnostic', 'show_diagnostics', keybinding=Keys.f2)
 
 
-import stem.plugins.server
-stem.plugins.server.start_server()
+# import stem.plugins.server
+# stem.plugins.server.start_server()
