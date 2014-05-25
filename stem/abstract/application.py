@@ -3,7 +3,7 @@
 import abc
 from ..core.responder import Responder
 from ..core.signal import Signal, ClassSignal
-from ..core.plugin import Plugin
+from ..core.plugin import Plugin, attach_plugin
 import weakref
 import logging
 import enum
@@ -35,8 +35,8 @@ class AbstractApplication(Responder, metaclass=abc.ABCMeta):
         self.plugins = [P(self) for P in Plugin.plugins()]
 
         for p in self.plugins:
-            logging.debug('attaching plugin %r', p)
-            p.attach()
+            logging.debug('attaching plugin: %r', p)
+            attach_plugin(p)
 
     @ClassSignal
     def application_created(cls, self):

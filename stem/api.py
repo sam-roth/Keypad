@@ -2,12 +2,13 @@
 
 from .control import keybinding, BufferController
 from .control.interactive import interactive, menu, submenu
-from .core import Keys
+from .core import Keys, errors
 from .core.tag import autoextend, autoconnect
 from .core.nconfig import Config, Settings
 from .abstract.application import app
-from .core.plugin import Plugin, register_plugin
+from .core.plugin import Plugin, register_plugin, command
 from .core.filetype import Filetype
+from .buffers import Span, Region, Buffer, Cursor
 
 def bind(key, interactive_command_name):
     keybinding.controller.add_binding(key, interactive_command_name)
@@ -33,6 +34,8 @@ def load_plugins(path, prefix):
 __all__ = '''
     app
     bind
+    command
+    errors
     unbind
     interactive
     menu
@@ -44,6 +47,12 @@ __all__ = '''
     Plugin
     register_plugin
     Filetype
+    Config
+    Settings
+    Span
+    Region
+    Buffer
+    Cursor
 '''.split()
 
 

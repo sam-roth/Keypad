@@ -38,15 +38,28 @@ class InteractiveDispatcher(object):
         self._registry = defaultdict(dict)
 
     def register(self, name, impl):
-        argspec = inspect.getfullargspec(impl)
-
-        annots = [argspec.annotations.get(arg) for arg in argspec.args]
+        sig = inspect.signature(impl)
+        
+        annots = [p.annotation
+                  for p in sig.parameters.values()]
+        
 
         assert len(annots) >= 1, 'must annotate at least target object type'
 
-
         self._registry[name][annots[0]] = impl
-        #self._registry[name].append((annots[0], impl))
+
+    def unregister(self, name, impl):
+        sig = inspect.signature(impl)
+        
+        annots = [p.annotation
+                  for p in sig.parameters.values()]
+
+        assert len(annots) >= 1, 'must annotate at least target object type'
+
+        try:
+            del self._registry[name][annots[0]]
+        except KeyError:
+            pass
 
     def keys(self):
         return self._registry.keys()
@@ -192,7 +205,6 @@ def submenu(priority, path):
 
 def get_menu_item(path):
     return _get_item_by_path(root_menu, path.split('/'))
-
 
 class interactive(object):
     """
