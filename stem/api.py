@@ -1,7 +1,6 @@
 
 
 from .control import keybinding, BufferController
-from .control.buffer_set import BufferSetController
 from .control.interactive import interactive, menu, submenu
 from .core import Keys
 from .core.tag import autoextend, autoconnect
@@ -42,6 +41,9 @@ __all__ = '''
     autoextend
     autoconnect
     load_plugins
+    Plugin
+    register_plugin
+    Filetype
 '''.split()
 
 

@@ -1,7 +1,7 @@
 
 
 from PyQt4.Qt import *
-from stem.api import interactive, BufferSetController
+from stem.api import interactive
 from stem.abstract.application import app
 from stem.core import Signal
 from stem.core.responder import Responder

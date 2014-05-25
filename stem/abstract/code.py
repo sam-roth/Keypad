@@ -124,6 +124,7 @@ class AbstractCodeModel(metaclass=ABCMeta):
     open_braces = '([{'
     close_braces = ')]}'
     reindent_triggers = '}'
+    line_comment = '#'
     
     def __init__(self, buff, conf):
         '''

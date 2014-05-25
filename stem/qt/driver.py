@@ -7,8 +7,6 @@ from ..control import behavior # module contains autoconnects
 import pathlib
 
 from ..core import notification_queue, errors
-from ..control.buffer_set import BufferSetController
-from .buffer_set import BufferSetView
 
 from ..abstract.application import (AbstractApplication, 
                                     SaveResult,
