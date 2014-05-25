@@ -45,7 +45,30 @@ class Application(AbstractApplication, QApplication, metaclass=ABCWithQtMeta):
         QApplication.setApplicationName('Stem')
         super().__init__(args)
 
+    def _message_box(self, parent, 
+                     text, choices,
+                     accept=0, reject=-1):
+    
+        assert choices, 'must provide at least one choice'
 
+        mbox = QMessageBox(parent)
+        mbox.setText(text)
+
+
+        buttons = [mbox.addButton(c, QMessageBox.ActionRole) for c in choices]
+
+
+        mbox.setWindowFlags(Qt.Sheet)
+        mbox.setWindowModality(Qt.WindowModal)
+
+        if accept is not None:
+            mbox.setDefaultButton(buttons[accept])
+        if reject is not None:
+            mbox.setEscapeButton(buttons[reject])
+
+        mbox.exec_()
+
+        return choices[buttons.index(mbox.clickedButton())]
 
     @property
     def clipboard_value(self):

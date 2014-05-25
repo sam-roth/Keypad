@@ -30,6 +30,20 @@ class AbstractApplication(Responder, metaclass=abc.ABCMeta):
     @Signal
     def editor_created(self, editor):
         pass
+    def message_box(self, parent, 
+                     text, choices,
+                     accept=0, reject=-1):
+    
+        return self._message_box(parent,
+                                 text,
+                                 choices,
+                                 accept=accept,
+                                 reject=reject)
+    @abc.abstractmethod
+    def _message_box(self, parent, 
+                     text, choices,
+                     accept=0, reject=-1):
+        pass
 
     @staticmethod
     def instance():

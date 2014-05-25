@@ -40,7 +40,11 @@ def edit(win: AbstractWindow, path: 'Path', line=None, col=None):
     col = int(col) if col is not None else None
     
     path = pathlib.Path(os.path.expanduser(str(path)))
-    ed = app().find_editor(path)
+    try:
+        ed = app().find_editor(path)
+    except FileNotFoundError:
+        ed = None
+        
     if ed is not None:
         ed.activate()
     else:
@@ -85,5 +89,3 @@ def next_tab(win: AbstractWindow, n=1):
     else:
         for _ in range(-n):
             win.prev_tab()
-
-

@@ -19,6 +19,11 @@ class AbstractEditor(metaclass=abc.ABCMeta):
 
         self.buffer_controller.modified_was_changed.connect(self.__modified_changed)
 
+    @Signal
+    def editor_activated(self):
+        pass
+
+        
     def __modified_changed(self, value):
         self.is_modified_changed()
 
