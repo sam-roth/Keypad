@@ -96,9 +96,11 @@ class Application(AbstractApplication, QApplication, metaclass=ABCWithQtMeta):
         mb.setWindowFlags(Qt.Sheet)
         mb.setWindowModality(Qt.WindowModal)
         mb.setText('This buffer has been modified. Do you want to save your changes?')
-        mb.addButton(mb.Cancel)
-        mb.addButton(mb.Discard)
-        mb.addButton(mb.Save)
+        mb.setStandardButtons(mb.Save | mb.Discard | mb.Cancel)
+
+        mb.setDefaultButton(mb.Save)
+        mb.setEscapeButton(mb.Cancel)
+
 
         result = mb.exec_()
         if result == mb.Discard:
