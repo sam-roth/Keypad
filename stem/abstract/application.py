@@ -2,6 +2,7 @@
 
 import abc
 from ..core.responder import Responder
+from ..core.signal import Signal
 import weakref
 
 import enum
@@ -21,6 +22,14 @@ class AbstractApplication(Responder, metaclass=abc.ABCMeta):
             AbstractApplication._instance
         except AttributeError:
             AbstractApplication._instance = self
+
+    @Signal
+    def window_created(self, window):
+        pass
+
+    @Signal
+    def editor_created(self, editor):
+        pass
 
     @staticmethod
     def instance():
@@ -56,10 +65,20 @@ class AbstractApplication(Responder, metaclass=abc.ABCMeta):
     def timer(self, time_s, callback):
         pass
 
-    @abc.abstractmethod
     def new_window(self):
         '''
         Create and return a new window.
+
+        :rtype: AbstractWindow
+        '''
+        w = self._new_window()
+        self.window_created(w)
+        return w
+
+    @abc.abstractmethod
+    def _new_window(self):
+        '''
+        Implementation for new_window.
 
         :rtype: AbstractWindow
         '''
@@ -67,14 +86,20 @@ class AbstractApplication(Responder, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def _new_editor(self):
         '''
-        Create and return a new editor.
-
+        Implementation for new_editor.
+        
         :rtype: stem.abstract.editor.AbstractEditor
         '''
 
     def new_editor(self):
+        '''
+        Create and return a new editor.
+
+        :rtype: stem.abstract.editor.AbstractEditor
+        '''
         e = self._new_editor()
         self._editors.add(e)
+        self.editor_created(e)
         return e
 
     @abc.abstractmethod

@@ -115,7 +115,7 @@ class Application(AbstractApplication, QApplication, metaclass=ABCWithQtMeta):
         else:
             return None
 
-    def new_window(self):
+    def _new_window(self):
         from .main_window import MainWindow
         w = MainWindow(Config.root.derive())
         w.show()
@@ -124,7 +124,7 @@ class Application(AbstractApplication, QApplication, metaclass=ABCWithQtMeta):
 
     def _new_editor(self):
         from .editor import Editor
-        return Editor(Config.root)
+        return Editor(Config.root.derive())
 
 def _fatal_handler(*args, **kw):
     import os
@@ -162,7 +162,9 @@ def main():
 
     logging.basicConfig(level=logging.DEBUG,
                         format=logfmt)
-        
+
+    application = Application(sys.argv)
+
     global config
     from .. import config
     
@@ -173,9 +175,9 @@ def main():
         QtCriticalMsg: logging.critical,
         QtFatalMsg:    _fatal_handler
     }
-        
+
     qInstallMsgHandler(_message_handler)    
-    sys.exit(Application(sys.argv).exec_())
+    sys.exit(application.exec_())
     
         
 if __name__ == '__main__':
