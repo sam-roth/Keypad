@@ -2,8 +2,10 @@
 File change monitor
 '''
 
-
-from stem.abstract.application import app, AbstractApplication
+from stem.api import Plugin, register_plugin
+from stem.abstract.application import (app, 
+                                       AbstractApplication,
+                                       MessageBoxKind)
 from weakref import WeakKeyDictionary
 
 import time
@@ -27,13 +29,15 @@ def editor_activated(editor):
             if nmt > mt:
                 editor.activate()
                 res = app().message_box(editor, 
-                                        'Warning: file contents have changed on disk.',
-                                        ['Reload', 'Dismiss'])
+                                        'File contents have changed on disk.',
+                                        ['Reload', 'Dismiss'],
+                                        kind=MessageBoxKind.warning)
                 if res == 'Reload':
                     if editor.is_modified:
                         res = app().message_box(editor,
                                                 'Reloading will erase your unsaved changes.',
-                                                ['Cancel', 'Discard and Reload'])
+                                                ['Cancel', 'Discard and Reload'],
+                                                kind=MessageBoxKind.warning)
                         if res != 'Cancel':
                             editor.load(editor.path)
                     else:
@@ -49,10 +53,17 @@ def editor_created(editor):
     editor.editor_activated.connect(editor_activated,
                                     add_sender=True)
 
-
-def app_created(_):
-    app().editor_created.connect(editor_created)
+    editor.saved.connect(editor_modified_changed, add_sender=True)
 
 
-AbstractApplication.application_created.connect(app_created)
+@register_plugin
+class FileChangePlugin(Plugin):
+    name = 'File Change Monitor'
+    author = 'Sam Roth <sam.roth1@gmail.com>'
+
+    def attach(self):
+        self.app.editor_created.connect(editor_created)
+
+    def detach(self):
+        self.app.editor_created.disconnect(editor_created)
 

@@ -56,6 +56,9 @@ class AbstractEditor(metaclass=abc.ABCMeta):
     def is_modified_changed(self):
         pass
 
+    @Signal
+    def saved(self):
+        pass
 
     @Signal
     def path_changed(self):
@@ -83,6 +86,7 @@ class AbstractEditor(metaclass=abc.ABCMeta):
         Save the file to the path given.
         '''
         self.__buffer_controller.write_to_path(path)
+        self.saved()
 
     def load(self, path):
         '''

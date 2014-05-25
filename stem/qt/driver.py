@@ -10,7 +10,9 @@ from ..core import notification_queue, errors
 from ..control.buffer_set import BufferSetController
 from .buffer_set import BufferSetView
 
-from ..abstract.application import AbstractApplication, SaveResult
+from ..abstract.application import (AbstractApplication, 
+                                    SaveResult,
+                                    MessageBoxKind)
 
 from .qt_util import ABCWithQtMeta
 from ..control.interactive import interactive
@@ -30,6 +32,14 @@ class _ProcessPosted(QEvent):
         super().__init__(_ProcessPosted.ProcessPostedType)
 from ..core.processmgr.client import AsyncServerProxy
 
+
+_message_box_kinds = {
+    None: QMessageBox.NoIcon,
+    MessageBoxKind.question: QMessageBox.Question,
+    MessageBoxKind.warning: QMessageBox.Warning,
+    MessageBoxKind.error: QMessageBox.Critical
+}
+
 class Application(AbstractApplication, QApplication, metaclass=ABCWithQtMeta):
 
     def __init__(self, args):
@@ -47,7 +57,8 @@ class Application(AbstractApplication, QApplication, metaclass=ABCWithQtMeta):
 
     def _message_box(self, parent, 
                      text, choices,
-                     accept=0, reject=-1):
+                     accept=0, reject=-1,
+                     kind=None):
     
         assert choices, 'must provide at least one choice'
 
@@ -55,9 +66,10 @@ class Application(AbstractApplication, QApplication, metaclass=ABCWithQtMeta):
         mbox.setText(text)
 
 
-        buttons = [mbox.addButton(c, QMessageBox.ActionRole) for c in choices]
+        buttons = [mbox.addButton(c, QMessageBox.ActionRole) 
+                   for c in choices]
 
-
+        mbox.setIcon(_message_box_kinds[kind])
         mbox.setWindowFlags(Qt.Sheet)
         mbox.setWindowModality(Qt.WindowModal)
 

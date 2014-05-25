@@ -3,14 +3,20 @@
 import abc
 from ..core.responder import Responder
 from ..core.signal import Signal, ClassSignal
+from ..core.plugin import Plugin
 import weakref
-
+import logging
 import enum
 
 class SaveResult(enum.IntEnum):
     cancel = 0
     discard = 1
     save = 2
+
+class MessageBoxKind(enum.IntEnum):
+    question = 1
+    warning = 2
+    error = 3
 
 
 class AbstractApplication(Responder, metaclass=abc.ABCMeta):
@@ -25,6 +31,13 @@ class AbstractApplication(Responder, metaclass=abc.ABCMeta):
 
         AbstractApplication.application_created(self)
 
+
+        self.plugins = [P(self) for P in Plugin.plugins()]
+
+        for p in self.plugins:
+            logging.debug('attaching plugin %r', p)
+            p.attach()
+
     @ClassSignal
     def application_created(cls, self):
         pass
@@ -36,19 +49,21 @@ class AbstractApplication(Responder, metaclass=abc.ABCMeta):
     @Signal
     def editor_created(self, editor):
         pass
+
     def message_box(self, parent, 
                      text, choices,
-                     accept=0, reject=-1):
+                     accept=0, reject=-1, kind=None):
     
         return self._message_box(parent,
                                  text,
                                  choices,
                                  accept=accept,
-                                 reject=reject)
+                                 reject=reject,
+                                 kind=kind)
     @abc.abstractmethod
     def _message_box(self, parent, 
                      text, choices,
-                     accept=0, reject=-1):
+                     accept=0, reject=-1, kind=None):
         pass
 
     @staticmethod
