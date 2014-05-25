@@ -86,7 +86,8 @@ class CommandLineWidget(Responder, QWidget):
 
         # prevent flickering when first showing view
         self.setWindowOpacity(0)
-
+        self.__view.disable_partial_update = True
+        
     def __on_text_written(self):
         if not self.isVisible():
             self.show()
@@ -144,6 +145,7 @@ class CommandLineWidget(Responder, QWidget):
         anim.setEndValue(self.__settings.opacity)
         anim.setEasingCurve(QEasingCurve.InOutQuart)
         anim.start()
+        self.__controller.refresh_view(full=True)
 
     def hideEvent(self, event):
         event.accept()
