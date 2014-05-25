@@ -1,6 +1,12 @@
-from stem.api import interactive, BufferController
-from stem.control.interactive import run as run_interactive
-from stem.buffers import Cursor, Span
+from stem.api import (BufferController,
+                      Plugin,
+                      command,
+                      register_plugin,
+                      Cursor,
+                      Span,
+                      Region,
+                      errors)
+                      
 import re
 
 def is_commented(span, comment_char):
@@ -26,23 +32,36 @@ def uncomment(span, comment_char):
             end = Cursor(span.buffer).move(r.y, match.end())
             start.remove_to(end)
 
+@register_plugin
+class CommentTogglePlugin(Plugin):
+    name = 'Comment Toggle'
+    author = 'Sam Roth <sam.roth1@gmail.com>'
 
-@interactive('comment_toggle')
-def comment_toggle(bctl: BufferController):
-    comment_char = bctl.code_model.line_comment
-    try:
-        if bctl.anchor_cursor is not None:
-            sel = Span(bctl.canonical_cursor, bctl.anchor_cursor)
-        else:
-            sel = Span(bctl.canonical_cursor.clone().home(),
-                       bctl.canonical_cursor.clone().end())
-        with bctl.history.transaction():
-            if is_commented(sel, comment_char):
-                uncomment(sel, comment_char)
+    def attach(self):
+        pass
+
+    def detach(self):
+        pass
+
+    @command('comment_toggle')
+    def comment_toggle(self, bctl: BufferController):
+        if bctl.code_model is None:
+            raise errors.NoCodeModelError('A code model is required to comment lines.')
+            
+        comment_char = bctl.code_model.line_comment
+        try:
+            if bctl.anchor_cursor is not None:
+                sel = Span(bctl.canonical_cursor, bctl.anchor_cursor)
             else:
-                comment(sel, comment_char)
-
-        bctl.refresh_view(full=True)
-    except:
-        import logging
-        logging.exception('comment toggle')
+                sel = Span(bctl.canonical_cursor.clone().home(),
+                           bctl.canonical_cursor.clone().end())
+            with bctl.history.transaction():
+                if is_commented(sel, comment_char):
+                    uncomment(sel, comment_char)
+                else:
+                    comment(sel, comment_char)
+    
+            bctl.refresh_view(full=True)
+        except:
+            import logging
+            logging.exception('comment toggle')
