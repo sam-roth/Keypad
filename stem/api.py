@@ -8,6 +8,7 @@ from .core.tag import autoextend, autoconnect
 from .core.nconfig import Config, Settings
 from .abstract.application import app
 from .core.plugin import Plugin, register_plugin
+from .core.filetype import Filetype
 
 def bind(key, interactive_command_name):
     keybinding.controller.add_binding(key, interactive_command_name)

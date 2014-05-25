@@ -1,9 +1,21 @@
 
-from stem.core import filetype
+from stem.api import Plugin, register_plugin, Filetype
 
 def make_python_code_model(*args):
     from .pymodel import PythonCodeModel
     return PythonCodeModel(*args)
 
-filetype.Filetype('python', suffixes=('.py',), tags={'parmatch': True}, code_model=make_python_code_model)
+
+@register_plugin
+class PythonCodeModelPlugin(Plugin):
+    name = 'Python code model'
+    author = 'Sam Roth <sam.roth1@gmail.com>'
+
+    def attach(self):
+        Filetype('python', 
+                 suffixes=('.py',),
+                 code_model=make_python_code_model)
+
+    def detach(self):
+        pass
 
