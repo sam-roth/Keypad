@@ -49,5 +49,5 @@ class Editor(AbstractEditor, Responder, QWidget, metaclass=ABCWithQtMeta):
 
     def activate(self):
         self.raise_()
-        self.setFocus()
+        self.__view.setFocus()
 

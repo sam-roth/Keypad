@@ -53,6 +53,14 @@ class CommandLineInteractionMode(CUAInteractionMode):
             run('complete')
 
 
+
+    @Signal
+    def text_written(self):
+        '''
+        Text was written to the buffer.
+        '''
+        pass
+
     @property
     def cmdline_col(self):
         return len(self.__prompt)
@@ -77,6 +85,7 @@ class CommandLineInteractionMode(CUAInteractionMode):
     def __on_write_text(self, text):
         Cursor(self.controller.buffer).last_line().end().insert('\n' + str(text))
         self.__next_line()
+        self.text_written()
 
     def update_cmdline(self):
         self.__history_pos = 0

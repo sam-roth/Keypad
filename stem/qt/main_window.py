@@ -19,6 +19,10 @@ class CommandLineViewSettings(Settings):
     view_height = Field(int, 70, 
                         docs='view height (px)')
 
+    max_view_height = Field(int, 300,
+                            docs='height of view when expanded (px)')
+
+
 def change_listener():
     print(list(app().next_responders))
 
@@ -27,8 +31,9 @@ def monitor(app: AbstractApplication):
     app.responder_chain_changed.connect(change_listener)
 
 class CommandLineWidget(Responder, QWidget):
-    def __init__(self, config, prev_responder):
+    def __init__(self, parent, config, prev_responder):
         super().__init__()
+        self.__parent = parent
         self.setWindowFlags(Qt.Popup)
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -69,6 +74,7 @@ class CommandLineWidget(Responder, QWidget):
         self.accepted = self.__imode.accepted
 
         self.__imode.accepted.connect(self.__run_command)
+        self.__imode.text_written.connect(self.__on_text_written)
         
         # disable modeline for this view
         self.__view.modelines = []
@@ -76,15 +82,16 @@ class CommandLineWidget(Responder, QWidget):
         layout.addWidget(self.__view)
         self.setFocusProxy(self.__view)
 
-        self.__settings.value_changed.connect(self.__on_settings_changed)
-        self.__on_settings_changed()
+#         geom = self.geometry()
+#         geom.setHeight(self.__settings.view_height)
+#         self.setGeometry(geom)
 
+        self.__view.installEventFilter(self)
 
-
-    def __on_settings_changed(self, fieldname=None, value=None):
-        self.setMaximumHeight(self.__settings.view_height)
-        self.setMinimumHeight(self.__settings.view_height)
-
+    def __on_text_written(self):
+        if not self.isVisible():
+            self.show()
+        self.expand()
 
     def __run_command(self):
         self.hide()
@@ -97,7 +104,41 @@ class CommandLineWidget(Responder, QWidget):
     def set_cmdline(self, text):
         self.__imode.current_cmdline = text
 
+    def eventFilter(self, obj, ev):
+        if ev.type() == QEvent.MouseButtonRelease:
+            self.expand()
+
+        return super().eventFilter(obj, ev)
+
+    def __calculate_bottom_left(self):
+        bleft = self.__parent.statusBar().mapToGlobal(self.__parent
+                                                          .statusBar()
+                                                          .rect()
+                                                          .topLeft())
+
+        ay = -7
+        ax = 0
+#         ay = self.frameGeometry().topLeft().x() - self.geometry().topLeft().x()
+#         ax = self.frameGeometry().topLeft().y() - self.geometry().topLeft().y()
+        bleft.setX(bleft.x() + ax)
+        bleft.setY(bleft.y() + ay)
+
+        return bleft
+
+    def expand(self):
+        geom = self.geometry()
+        geom.setWidth(self.__parent.width())
+        geom.setHeight(self.__settings.max_view_height)
+        geom.moveBottomLeft(self.__calculate_bottom_left())
+        self.setGeometry(geom)
+
     def showEvent(self, event):
+        geom = self.geometry()
+        geom.setWidth(self.__parent.width())
+        geom.setHeight(self.__settings.view_height)
+        geom.moveBottomLeft(self.__calculate_bottom_left())
+        self.setGeometry(geom)        
+
         event.accept()
         app().next_responder = self
         self.anim = anim = QPropertyAnimation(self, 'windowOpacity')
@@ -106,14 +147,13 @@ class CommandLineWidget(Responder, QWidget):
         anim.setEndValue(self.__settings.opacity)
         anim.setEasingCurve(QEasingCurve.InOutQuart)
         anim.start()
-
     def hideEvent(self, event):
         event.accept()
 
 class MainWindow(AbstractWindow, QMainWindow, metaclass=ABCWithQtMeta):
     def __init__(self, config):
         super().__init__()
-        self.__cmdline = CommandLineWidget(config, self)
+        self.__cmdline = CommandLineWidget(self, config, self)
         self.__cmdline.cancelled.connect(self.deactivate_cmdline)
         
 
@@ -164,10 +204,10 @@ class MainWindow(AbstractWindow, QMainWindow, metaclass=ABCWithQtMeta):
         self.__cmdline.show()
         self.__cmdline.setFocus()
 
-        r = self.__cmdline.rect()
-        r.moveBottomLeft(self.statusBar().mapToGlobal(self.statusBar().rect().topLeft()))
-        self.__cmdline.move(r.topLeft())
-        self.__cmdline.setFixedWidth(self.width())
+#         r = self.__cmdline.rect()
+#         r.moveBottomLeft(self.statusBar().mapToGlobal(self.statusBar().rect().topLeft()))
+#         self.__cmdline.move(r.topLeft())
+#         self.__cmdline.setFixedWidth(self.width())
 
     def deactivate_cmdline(self):
         self.__cmdline.hide()
@@ -252,6 +292,9 @@ class MainWindow(AbstractWindow, QMainWindow, metaclass=ABCWithQtMeta):
         except Exception as exc:
             interactive.dispatcher.dispatch(self, 'show_error', exc)
 
+
+    def close(self):
+        QMainWindow.close(self)
 
 @interactive.interactive('set_cmdline')
 def set_cmdline(win: MainWindow, *text):

@@ -145,4 +145,8 @@ class AbstractWindow(Responder, metaclass=abc.ABCMeta):
         '''
         Add an editor to this window.
         '''
-
+    @abc.abstractmethod
+    def close(self):
+        '''
+        Close the window, prompting the user to save changes.
+        '''
