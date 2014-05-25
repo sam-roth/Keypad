@@ -8,7 +8,9 @@ from stem.core.responder import Responder
 from stem.control.interactive import run as run_interactive
 
 
-from stem.qt.buffer_set import BufferSetView
+# from stem.qt.buffer_set import BufferSetView
+from stem.qt.main_window import MainWindow
+
 import pathlib
 import os.path
 
@@ -77,15 +79,15 @@ def find_bsc(root):
             return None
 
 @interactive('qftree')
-def qftree(bufset_view: BufferSetView):
+def qftree(bufset_view: MainWindow):
     
     ft = FileTree()
     ftc = FileTreeController(ft)
     ft.controller = ftc
         
-    bsc = find_bsc(app())
-    bsc.add_next_responders(ftc)
-            
+#     bsc = find_bsc(app())
+#     bsc.add_next_responders(ftc)
+    
 
     dw = QDockWidget()
     dw.setWidget(ft)
