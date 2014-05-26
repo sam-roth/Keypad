@@ -1,6 +1,6 @@
 
 from .color import Color
-from ..util import clamp
+from ..util import clamp, deprecated
 import random
 import logging
 
@@ -28,6 +28,7 @@ class Colorscheme(object):
 
         return self.lexical_categories[lexcat]
 
+    @deprecated
     def emphasize(self, color, steps):
         
         color = Color.from_hex(color)
@@ -36,6 +37,46 @@ class Colorscheme(object):
         v = (v + 16 * steps) % 256
         
         return Color.from_hsv(h, s, v, color.alpha)
+
+    def emphasize_pair(self, fg, bg, steps):
+        
+        steps *= 16
+
+        bh, bs, bv = Color(bg).hsv
+        fh, fs, fv = Color(fg).hsv
+
+        # We'll need to choose a strategy for this based on the value
+        # of the colors.
+
+        max_v = max(bv, fv)
+        min_v = min(bv, fv)
+
+        if max_v + steps <= 255:
+            # increase the value of both colors
+            bv += steps
+            fv += steps
+        elif min_v - steps >= 0:
+            # decrease the value of both colors
+            bv -= steps
+            fv -= steps
+
+        elif min_v - steps/2 >= 0 and max_v + steps/2 <= 255:
+            # increase the value of one color and decrease
+            # the value of the other
+            min_v -= steps/2
+            max_v += steps/2
+            if bv < fv:
+                bv = min_v
+                fv = max_v
+            else:
+                bv = max_v
+                fv = min_v
+        
+        else:
+            # admit defeat
+            pass
+
+        return Color.from_hsv(fh, fs, fv), Color.from_hsv(bh, bs, bv)
 
     @property
     def cursor_color(self):
@@ -95,4 +136,5 @@ class SolarizedDark(AbstractSolarized):
             comment=dict(color=self._base01),
             search=dict(bgcolor=self._yellow, color=self.selection_fg),
         )
+
 

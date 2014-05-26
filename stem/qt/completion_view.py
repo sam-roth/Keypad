@@ -71,8 +71,11 @@ class CompletionListItemDelegate(QItemDelegate):
         sset = self.selected_settings = copy.copy(settings)
         sch = nset.scheme
         
-        sset.bgcolor = sch.emphasize(nset.q_bgcolor.name(), 1)
-        sset.fgcolor = sch.emphasize(nset.fgcolor, 1)
+
+        sset.bgcolor = nset.scheme.cur_line_bg
+        sset.fgcolor = nset.fgcolor
+#         sset.bgcolor = sch.emphasize(nset.q_bgcolor.name(), 1)
+#         sset.fgcolor = sch.emphasize(nset.fgcolor, 1)
 
         for s in (self.settings, self.selected_settings):
             s.q_font = QFont(s.q_font)
@@ -261,7 +264,7 @@ class CompletionView(QWidget, AbstractCompletionView, metaclass=ABCWithQtMeta):
 
         stylesheet = completion_view_stylesheet.format(
             settings=settings,
-            selbg=scheme.emphasize(scheme.bg, 1),
+            selbg=scheme.cur_line_bg,
             border_radius='10px' if options.CompletionViewOpacity != 1 else '0px'
         )
         self.setStyleSheet(stylesheet)

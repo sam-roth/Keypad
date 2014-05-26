@@ -70,7 +70,7 @@ def deprecated(func):
     @functools.wraps(func)
     def result(*args, **kw):
         if not already_warned[0]:
-            warnings.warn(DeprecationWarning(func), stacklevel=3)
+            warnings.warn(DeprecationWarning(func), stacklevel=2)
             already_warned[0] = True
         return func(*args, **kw)
     return result

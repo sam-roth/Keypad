@@ -5,7 +5,16 @@ from collections import namedtuple
 import colorsys
 
 class Color(namedtuple('Color', 'red green blue alpha')):
-        
+    
+    def __new__(cls, *args, **kw):
+        total = len(args) + len(kw)
+
+        if total == 4:
+            return super().__new__(cls, *args, **kw)
+        elif len(args) == 1 and len(kw) == 0:
+            return cls.from_hex(args[0])
+        else:
+            raise TypeError('wrong number of arguments to Color constructor')
     @classmethod
     def _parse_hexstring(cls, hexstring):
         
