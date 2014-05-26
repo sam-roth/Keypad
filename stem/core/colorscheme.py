@@ -84,6 +84,14 @@ class Colorscheme(object):
 
 
 class AbstractSolarized(Colorscheme):
+    '''
+    Abstract colorscheme based on
+    http://ethanschoonover.com/solarized .
+
+    The concrete colorschemes are :py:class:`SolarizedDark`
+    and :py:class:SolarizedLight.
+
+    '''
     _base03     = Color.from_hex('#002b36')
     _base02     = Color.from_hex('#073642')
     _base01     = Color.from_hex('#586e75')
@@ -138,3 +146,28 @@ class SolarizedDark(AbstractSolarized):
         )
 
 
+class SolarizedLight(AbstractSolarized):
+
+    fg = AbstractSolarized._base00
+    bg = AbstractSolarized._base3
+
+    selection_fg = AbstractSolarized._base3
+    selection_bg = AbstractSolarized._base0
+
+    cur_line_bg = AbstractSolarized._base2
+
+    fallback_val = fg.hsv[2]
+
+    def __init__(self):
+        super().__init__()
+
+        bold = ['todo', 'type', 'keyword', 'escape',
+                'function']
+
+        lc = self.lexical_categories
+        lc.update(comment=dict(color=self._base1),
+                  search=dict(bgcolor=self._yellow, color=self._base01))
+        for key in bold:
+            lc[key].update(bold=True)
+
+            
