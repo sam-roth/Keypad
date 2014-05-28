@@ -60,7 +60,7 @@ editor is the stem, then the plugins are leaves.
 
 #### C++ Completion
 
-* [Clang 3.4](http://clang.llvm.org)
+* [Clang 3.3](http://clang.llvm.org)
 
 **Note:** In order to use Clang for code completion, you may need to add a file
 to your `PYTHONPATH` with the name `stemrc.py` and the following contents,
