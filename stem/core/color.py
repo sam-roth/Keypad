@@ -21,8 +21,8 @@ class Color(namedtuple('Color', 'red green blue alpha')):
         if not hexstring.startswith('#'):
             raise ValueError('hex color must begin with "#": {!r}'.format(hexstring))
 
-        if len(hexstring) not in (4, 7):
-            raise ValueError('hex color must be either three or six hex digits long.')
+        if len(hexstring) not in (4, 7, 9):
+            raise ValueError('hex color must be either three, six, or eight hex digits long.')
 
         num = int(hexstring[1:], 16)
         if len(hexstring) == 4:
@@ -31,10 +31,13 @@ class Color(namedtuple('Color', 'red green blue alpha')):
             g = (0xF0 & num) >> 4
             r = (0xF00 & num) >> 8
             
-            return b | (b << 4) | (g << 8) | (g << 12) | (r << 16) | (r << 20)
+            return b | (b << 4) | (g << 8) | (g << 12) | (r << 16) | (r << 20), 255
 
         elif len(hexstring) == 7:
-            return num
+            return num, 255
+        elif len(hexstring) == 9:
+            return num >> 8, num & 0xFF
+
         
 
     @classmethod
@@ -49,17 +52,34 @@ class Color(namedtuple('Color', 'red green blue alpha')):
             
     @classmethod
     def from_hex(cls, num):
+        alpha = 255
         if isinstance(num, Color):
             return num
 
         if isinstance(num, str):
-            num = cls._parse_hexstring(num)
+            num, alpha = cls._parse_hexstring(num)
         
         b = (0x0000FF & num)
         g = (0x00FF00 & num) >> 8
         r = (0xFF0000 & num) >> 16
         
-        return cls.from_rgb(r, g, b)
+        return cls.from_rgb(r, g, b, alpha)
+
+    def composite(self, other):
+        lr,lg,lb,la = self
+        rr,rg,rb,ra = other
+
+        la /= 255
+        ra /= 255
+
+        ra *= (1 - la) # the background is filtered through the foreground
+
+        return Color.from_rgb(int(lr * la + rr * ra),
+                              int(lg * la + rg * ra),
+                              int(lb * la + rb * ra),
+                              int(255 * (la + ra)))
+        
+
 
 
     @property

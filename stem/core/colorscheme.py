@@ -1,6 +1,6 @@
 
 from .color import Color
-from ..util import clamp, deprecated
+from ..util import clamp, deprecated, scopedict
 import random
 import logging
 
@@ -171,3 +171,83 @@ class SolarizedLight(AbstractSolarized):
             lc[key].update(bold=True)
 
             
+class TextMateTheme(Colorscheme):
+    '''
+    Use a TextMate/Sublime Text color scheme.
+    '''
+
+    scopes = scopedict.splitkeys({
+        'comment': 'comment',
+
+        'constant.numeric': 'literal',
+        'constant.character': 'literal',
+        'string': 'literal',
+
+        'constant.language': 'function',
+        'entity.name.function': 'function',
+        'support.function': 'function',
+
+        'support.type': 'type',
+        'support.class': 'type',
+        'storage.type': 'type',
+        'storage.modifier': 'type',
+        
+        'meta': 'preprocessor',
+        'keyword.other': 'preprocessor',
+
+        'keyword': 'keyword',
+        
+        'invalid': 'error',
+    })
+
+    def __init__(self, theme):
+        super().__init__()
+        import plistlib
+        data = plistlib.readPlist(theme)
+        lc = self.lexical_categories
+        self.unassigned = []
+
+        for group in data.settings:
+            if 'settings' not in group:
+                continue
+
+            s = group.settings
+            if 'scope' not in group:
+                self.bg = Color.from_hex(s.background)
+                self.fg = Color.from_hex(s.foreground)
+                self.selection_bg = Color.from_hex(s.selection)
+                self.selection_fg = self.fg
+                self.cur_line_bg = Color.from_hex(s.lineHighlight).composite(self.bg)
+            else:
+
+                attrs = {}
+
+                if 'background' in s:
+                    attrs['bgcolor'] = Color.from_hex(s.background)
+                if 'foreground' in s:
+                    attrs['color'] = Color.from_hex(s.foreground)
+                if s.get('fontStyle') == 'bold':
+                    attrs['bold'] = True
+
+                assigned = False
+                for scope in group.scope.split(','):
+                    lcname = scopedict.most_specific(self.scopes, scope.strip(), default=None)
+                    if lcname not in lc:
+                        lc[lcname] = attrs
+                        assigned = True
+
+                if not assigned:
+                    self.unassigned.append(attrs)
+
+
+
+
+
+    def lexical_category_attrs(self, lexcat):
+        if lexcat not in self.lexical_categories:
+            if self.unassigned:
+                self.lexical_categories[lexcat] = self.unassigned.pop()
+            else:
+                self.lexical_categories[lexcat] = dict(color=Color.from_hex('#F0F'))
+
+        return self.lexical_categories[lexcat]
