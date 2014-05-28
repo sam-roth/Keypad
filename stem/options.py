@@ -39,11 +39,12 @@ TextViewIntegerMetrics          = True
 # work if you wish to use it.
 TextViewDoubleStrike            = False
 
-# CursorBlinkRate_Hz controls the number of blink cycles per second. CursorDutyCycle 
-# controls the fraction of time each period during which the cursor should be visible.
-# CursorDutyCycle is 0.8 by default to make it easier to find the cursor. There's a distinct lack of
-# research on this topic, and my intuition might be wrong about it, so YMMV, but I did find this:
-# https://twitter.com/ID_AA_Carmack/status/266267089596198912 .
+# CursorBlinkRate_Hz controls the number of blink cycles per second.
+# CursorDutyCycle  controls the fraction of time each period during which the
+# cursor should be visible. CursorDutyCycle is 0.8 by default to make it
+# easier to find the cursor. There's a distinct lack of research on this
+# topic, and my intuition might be wrong about it, so YMMV, but I did find
+# this: https://twitter.com/ID_AA_Carmack/status/266267089596198912 .
 CursorBlinkRate_Hz  = 1
 CursorDutyCycle     = 0.8
 
@@ -53,12 +54,27 @@ CursorDutyCycle     = 0.8
 class GeneralSettings(Settings):
     _ns_ = 'general'
     
-    integer_metrics = Field(bool, TextViewIntegerMetrics)
-    double_strike = Field(bool, TextViewDoubleStrike)
+    integer_metrics = Field(bool, TextViewIntegerMetrics,
+                            docs='You may wish to set this to False if spacing looks strange.')
+    double_strike = Field(bool, TextViewDoubleStrike,
+                          docs='Double striking text may improve legibility under FreeType '
+                               'when using light-on-dark color schemes. Generally, it makes '
+                               'the text look "bolder" without changing its metrics. '
+                               'This option is superfluous on Mac OS X, as CoreText '
+                               'performs appropriate gamma adjustment automatically; '
+                               'however, it should work if you wish to use it.')
     antialias = Field(bool, True)
     
-    cursor_blink_rate = Field(float, CursorBlinkRate_Hz)
-    cursor_duty_cycle = Field(float, CursorDutyCycle)
+    cursor_blink_rate = Field(float, CursorBlinkRate_Hz,
+                              docs='Controls the number of blink cycles per second')
+    cursor_duty_cycle = Field(float, CursorDutyCycle,
+                              docs='Controls the fraction of time each period during which the '
+                                   'cursor should be visible.'
+                                   'CursorDutyCycle is 0.8 by default to make it '
+                                   'easier to find the cursor. There\'s a distinct lack '
+                                   'of research on this topic, and my intuition might be wrong '
+                                   'about it, so YMMV, but I did find this: '
+                                   'https://twitter.com/ID_AA_Carmack/status/266267089596198912 .')
     
     tab_stop = Field(int, 4, safe=True)
     indent_text = Field(str, '    ', safe=True)
@@ -68,7 +84,13 @@ class GeneralSettings(Settings):
     colorscheme = Field(Factory, 'stem.core.colorscheme.SolarizedDark')
     user_config_home = Field(pathlib.Path, pathlib.Path(os.path.expanduser('~/.stem')))
     
-    font_family = Field(str, TextViewFont[0])
+    font_family = Field(str, TextViewFont[0],
+                        docs='The font for text views. If you\'re looking at the Sphinx docs, '
+                             'the default value you\'ll see applies only to the platform on which '
+                             'the documentation was compiled. For Mac OS X, the default is "Menlo", '
+                             'for Windows the default is "Consolas", and for others the default is '
+                             '"Monospace", which often resolves to some variant of Bitstream Vera '
+                             'Mono.')
     font_size   = Field(int, TextViewFont[1])
     font_yoffset = Field(float, 0.0)
     

@@ -10,7 +10,7 @@ from ..core.conftree import ConfTree
 from ..core import Signal
 import logging
 from ..core.color import Color
-
+from ..core.colorscheme import Colorscheme
 from ..options import GeneralConfig
 from ..core.nconfig import Config
 
@@ -23,7 +23,7 @@ def resolve_dotted_name(name):
     return getattr(mod, objname)
 
 class TextViewSettings(object):
-    def __init__(self, scheme, settings=None):
+    def __init__(self, scheme=Colorscheme, settings=None):
         self.default_scheme = scheme
         if not isinstance(settings, Config):
             warnings.warn(DeprecationWarning('The settings parameter must now receive an argument of '
@@ -106,7 +106,7 @@ class TextViewSettings(object):
         return text.expandtabs(self.tab_stop)
 
 
-def paint_attr_text(painter, text, bounding_rect, cfg):
+def paint_attr_text(painter, text, bounding_rect, cfg, bgcolor=None):
     fm = QFontMetricsF(cfg.q_font)
 
     # current coordinates
@@ -114,6 +114,10 @@ def paint_attr_text(painter, text, bounding_rect, cfg):
     yc = fm.ascent() + bounding_rect.top()
     raw_col = 0
     
+    if bgcolor is None:
+        q_bgcolor = cfg.q_bgcolor
+    else:
+        q_bgcolor = to_q_color(bgcolor)
 
     painter.setFont(cfg.q_font)
     
@@ -121,7 +125,7 @@ def paint_attr_text(painter, text, bounding_rect, cfg):
     # CompositionMode)
     with restoring(painter):
         painter.setCompositionMode(QPainter.CompositionMode_Source)
-        painter.fillRect(bounding_rect, cfg.q_bgcolor)
+        painter.fillRect(bounding_rect, q_bgcolor)
 
 
     current_attributes = {}
@@ -253,7 +257,7 @@ def text_size(text, cfg, window_width=None):
 
 
 
-def render_attr_text(text, cfg):
+def render_attr_text(text, cfg, bgcolor=None):
     '''
     Renders the `AttributedString` `text` to a pixmap.
 
@@ -274,7 +278,13 @@ def render_attr_text(text, cfg):
     #assert pixmap.hasAlpha()
     painter = QPainter(pixmap)
     with ending(painter):
-        paint_attr_text(painter, text, QRectF(QPointF(0, 0), QSizeF(bounding_rect_size.width(), bounding_rect_size.height())), cfg)
+        paint_attr_text(painter, 
+                        text,
+                        QRectF(QPointF(0, 0),
+                               QSizeF(bounding_rect_size.width(),
+                                      bounding_rect_size.height())),
+                        cfg,
+                        bgcolor=bgcolor)
 
     return pixmap
             
@@ -298,7 +308,10 @@ def tab_mark(text):
 # Updates will be overlayed with a translucent red box if set to True.
 FLASH_RERENDER = False
 
-def draw_attr_text(painter, rect, text, settings, partial=False, overlay=frozenset()):
+def draw_attr_text(painter, rect, text, 
+                   settings, partial=False,
+                   overlay=frozenset(),
+                   bgcolor=None):
     '''
     Draw the AttributedString text, rerendering it if necessary. Use the
     overlay formatting specified if any.
@@ -307,10 +320,14 @@ def draw_attr_text(painter, rect, text, settings, partial=False, overlay=frozens
         start_pos, end_pos, key, value.
 
     The overlay formatting will be applied to the string before displaying it.
+
+    The ``bgcolor`` parameter is the background color of the line, or ``None``
+    for the default.
     '''
     cache_key = 'stem.view.draw_attr_text.pixmap'
     draw_pos_key = 'stem.view.draw_attr_text.pos'
     overlay_key = 'stem.view.draw_attr_text.overlay_formatting'
+    bgcolor_key = 'stem.view.draw_attr_text.bgcolor'
 
     
     # Ensure that we don't get a mutable set here. That would be bad. (I'm
@@ -320,11 +337,13 @@ def draw_attr_text(painter, rect, text, settings, partial=False, overlay=frozens
 
     pixmap = text.caches.get(cache_key)
 
-    no_cache            = pixmap is None or \
-                          text.caches.get(overlay_key, frozenset()) != overlay
+    no_cache            = (pixmap is None 
+                           or text.caches.get(overlay_key, frozenset()) != overlay
+                           or bgcolor != text.caches.get(bgcolor_key))
     should_draw_text    = not partial or no_cache or \
                           text.caches.get(draw_pos_key, None) != rect.topLeft()
-    
+
+
 
     if no_cache:
         if overlay or '\t' in text.text:
@@ -341,14 +360,22 @@ def draw_attr_text(painter, rect, text, settings, partial=False, overlay=frozens
             except KeyError:
                 pass
 
-        pixmap = render_attr_text(text_to_draw, settings)
+        pixmap = render_attr_text(text_to_draw, 
+                                  settings,
+                                  bgcolor=bgcolor)
         text.caches[cache_key] = pixmap
-    
+        
     if should_draw_text or (FLASH_RERENDER and text.caches.get('flashlast')):
+        text.caches[bgcolor_key] = bgcolor
+        if bgcolor is not None:
+            q_bgcolor = to_q_color(bgcolor)
+        else:
+            q_bgcolor = settings.q_bgcolor
+
         text.caches[draw_pos_key] = rect.topLeft()
         with restoring(painter):
             painter.setCompositionMode(QPainter.CompositionMode_Source)
-            painter.fillRect(rect, settings.q_bgcolor)
+            painter.fillRect(rect, q_bgcolor)
         painter.drawPixmap(rect.topLeft(), pixmap)
         if FLASH_RERENDER:
             if no_cache:

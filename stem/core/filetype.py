@@ -49,3 +49,4 @@ class Filetype(object):
             cls._default = Filetype('<default>')
         
         return cls._default
+

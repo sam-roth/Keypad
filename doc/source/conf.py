@@ -44,6 +44,10 @@ extensions = [
     'sphinx.ext.inheritance_diagram',
 ]
 
+# autodoc_default_flags = ['members', 'undoc-members', 'inherited-members',
+#                          'show-inheritance']
+
+
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
@@ -215,14 +219,16 @@ html_static_path = ['_static']
 #html_use_smartypants = True
 
 # Custom sidebar templates, maps document names to template names.
-#html_sidebars = {}
+html_sidebars = {
+    'sidebar': ['*']
+}
 
 # Additional templates that should be rendered to pages, maps page names to
 # template names.
 #html_additional_pages = {}
 
 # If false, no module index is generated.
-#html_domain_indices = True
+# html_domain_indices = ['genindex', 'py-modindex', 'search', 'py-setindex']
 
 # If false, no index is generated.
 #html_use_index = True

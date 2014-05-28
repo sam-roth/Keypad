@@ -2,22 +2,6 @@
 import inspect
 
 
-# from .buffer_controller import BufferController
-# 
-# 
-# # Just a little function to remind me what I'm doing:
-# 
-# @interactive('write')
-# def write_buffer(obj:   BufferController,
-#                  path:  str):
-#     
-#     from pathlib import Path
-#     obj.write_to_path(Path(path))
-# 
-# 
-# write_buffer.__annotations__
-
-
 from collections import defaultdict, namedtuple
 from ..core import responder, errors
 from ..abstract.application import app
@@ -54,15 +38,28 @@ class InteractiveDispatcher(object):
         self._registry = defaultdict(dict)
 
     def register(self, name, impl):
-        argspec = inspect.getfullargspec(impl)
-
-        annots = [argspec.annotations.get(arg) for arg in argspec.args]
+        sig = inspect.signature(impl)
+        
+        annots = [p.annotation
+                  for p in sig.parameters.values()]
+        
 
         assert len(annots) >= 1, 'must annotate at least target object type'
 
-
         self._registry[name][annots[0]] = impl
-        #self._registry[name].append((annots[0], impl))
+
+    def unregister(self, name, impl):
+        sig = inspect.signature(impl)
+        
+        annots = [p.annotation
+                  for p in sig.parameters.values()]
+
+        assert len(annots) >= 1, 'must annotate at least target object type'
+
+        try:
+            del self._registry[name][annots[0]]
+        except KeyError:
+            pass
 
     def keys(self):
         return self._registry.keys()
@@ -79,7 +76,6 @@ class InteractiveDispatcher(object):
         tried = set()
 
         def rec_helper(resp):
-            
             for ty in type(resp).mro():
                 try:
                     handler = handlers[ty]
@@ -88,6 +84,8 @@ class InteractiveDispatcher(object):
                 else:
                     return ty, resp, handler
             else:
+                if resp is None:
+                    return None
                 for r in resp.next_responders:
                     result = rec_helper(r)
                     if result is not None:
@@ -207,7 +205,6 @@ def submenu(priority, path):
 
 def get_menu_item(path):
     return _get_item_by_path(root_menu, path.split('/'))
-
 
 class interactive(object):
     """

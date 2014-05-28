@@ -43,28 +43,6 @@ def _get_directory_contents_rec(path):
             yield subitem
 
     
-# 
-# 
-# def _get_directory_contents_rec(path):
-#     path = pathlib.Path(path)
-#     if not path.is_dir():
-#         yield path
-#     else:
-#         for item in path.iterdir():
-#             if not item.is_dir() and not item.name.startswith('.'):
-#                 yield item
-#                 
-#         for item in path.iterdir():
-#             if item.is_dir() and not item.name.startswith('.'):
-#                 try:
-#                     yield from _get_directory_contents_rec(item)
-#                 except OSError:
-#                     pass # skip over things like infinite symlinks
-# 
-
-    
-@autoextend(BufferController,
-            lambda tags: tags.get('cmdline'))
 class CmdlineCompleter(AbstractCompleter):
 
     TriggerPattern = re.compile(r'^')
@@ -99,36 +77,29 @@ class CmdlineCompleter(AbstractCompleter):
             # complete interactive command name
             self.show_completions([(iname, ) for iname in dispatcher.keys()])
             self.__compcat = 'Interactive'
+            
         else:
             # complete argument
             ty, resp, handler = dispatcher.find(app(), tokens[0])
-            
             spec = inspect.getfullargspec(handler)
             annots = [spec.annotations.get(arg) for arg in spec.args]
-            
+
             if len(tokens) < len(annots):
                 category = annots[len(tokens)]
-                
                 self.__compcat = category
                 if category == 'Path':
-                    #limited_glob = #itertools.islice(((str(p),) for p in pathlib.Path().glob('**/*') if not p.name.startswith('.')), 8192)
-                    
-                    
                     typed_rootpath = imode.current_cmdline[col-imode.cmdline_col:]
                     rootpath = _expand_user(typed_rootpath)
                     if not rootpath.is_dir():
                         rootpath = rootpath.parent
                         typed_rootpath = os.path.join(*(os.path.split(typed_rootpath)[:-1]))
-                            
-
                     
-                    limited_glob = itertools.islice(
-                        ((os.path.join(typed_rootpath, str(p.relative_to(rootpath))), ) for p in _get_directory_contents_rec(rootpath)),
-                        1024
-                    )
+                    limited_glob = itertools.islice(((os.path.join(typed_rootpath, 
+                                                                   str(p.relative_to(rootpath))),)
+                                                     for p in _get_directory_contents_rec(rootpath)),
+                                                    1024)
+                    
                     limited_glob = list(limited_glob)
-                    
                     self.show_completions(list(limited_glob))
-            
                 elif category == 'Interactive':
                     self.show_completions([(iname, ) for iname in dispatcher.keys()])

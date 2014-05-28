@@ -1,7 +1,7 @@
 
 import traceback
 
-from .cua_interaction import CUAInteractionMode
+from .cua_interaction import CUAInteractionMode, isprint
 from ..core import Signal, Keys, errors
 from ..buffers import Cursor, Span
 from ..buffers.buffer_protector import BufferProtector
@@ -53,6 +53,14 @@ class CommandLineInteractionMode(CUAInteractionMode):
             run('complete')
 
 
+
+    @Signal
+    def text_written(self):
+        '''
+        Text was written to the buffer.
+        '''
+        pass
+
     @property
     def cmdline_col(self):
         return len(self.__prompt)
@@ -77,6 +85,7 @@ class CommandLineInteractionMode(CUAInteractionMode):
     def __on_write_text(self, text):
         Cursor(self.controller.buffer).last_line().end().insert('\n' + str(text))
         self.__next_line()
+        self.text_written()
 
     def update_cmdline(self):
         self.__history_pos = 0
@@ -124,6 +133,34 @@ class CommandLineInteractionMode(CUAInteractionMode):
                 self.show_error('{} [{}]'.format(str(error), type(error).__name__))
 
             notification_queue.run_in_main_thread(error_shower)
+
+    def _on_key_press(self, evt):
+        success = True
+        with self.curs.manip.history.transaction():
+            try:
+                binding = self.keybindings[evt.key]
+            except KeyError:
+                if isprint(evt.text):
+                    if self.__protector.region.contains_inclusive(
+                            self.controller.selection.insert_cursor.pos):
+                        self.controller.selection.move(self.__protector.region.
+                                                       end_curs.pos)
+                        self.controller.selection.right()
+
+                    self.controller.selection.text = evt.text
+            else:
+                try:
+                    binding(evt)
+                except errors.UserError as exc:
+                    logging.exception(exc)
+
+                    self.show_error(str(exc) + ' [' + type(exc).__name__ + ']')
+                    success = False
+
+            if success:
+                self._show_default_modeline()
+
+        plane_height, plane_width = self.controller.view.plane_size
 
     def __set_last_line(self, text):
         home = Cursor(self.controller.buffer).last_line().home()

@@ -8,7 +8,7 @@ from ..core                     import notification_queue, AttributedString
 from ..core.attributed_string   import upper_bound
 from ..buffers                  import Cursor, Span
 from .interactive               import interactive, run, dispatcher
-from ..abstract.application     import Application, app
+from ..abstract.application     import app
 
 import logging
 

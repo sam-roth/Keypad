@@ -1,6 +1,6 @@
 
 from .color import Color
-from ..util import clamp
+from ..util import clamp, deprecated, scopedict
 import random
 import logging
 
@@ -28,6 +28,7 @@ class Colorscheme(object):
 
         return self.lexical_categories[lexcat]
 
+    @deprecated
     def emphasize(self, color, steps):
         
         color = Color.from_hex(color)
@@ -37,12 +38,60 @@ class Colorscheme(object):
         
         return Color.from_hsv(h, s, v, color.alpha)
 
+    def emphasize_pair(self, fg, bg, steps):
+        
+        steps *= 16
+
+        bh, bs, bv = Color(bg).hsv
+        fh, fs, fv = Color(fg).hsv
+
+        # We'll need to choose a strategy for this based on the value
+        # of the colors.
+
+        max_v = max(bv, fv)
+        min_v = min(bv, fv)
+
+        if max_v + steps <= 255:
+            # increase the value of both colors
+            bv += steps
+            fv += steps
+        elif min_v - steps >= 0:
+            # decrease the value of both colors
+            bv -= steps
+            fv -= steps
+
+        elif min_v - steps/2 >= 0 and max_v + steps/2 <= 255:
+            # increase the value of one color and decrease
+            # the value of the other
+            min_v -= steps/2
+            max_v += steps/2
+            if bv < fv:
+                bv = min_v
+                fv = max_v
+            else:
+                bv = max_v
+                fv = min_v
+        
+        else:
+            # admit defeat
+            pass
+
+        return Color.from_hsv(fh, fs, fv), Color.from_hsv(bh, bs, bv)
+
     @property
     def cursor_color(self):
         return self.fg
 
 
 class AbstractSolarized(Colorscheme):
+    '''
+    Abstract colorscheme based on
+    http://ethanschoonover.com/solarized .
+
+    The concrete colorschemes are :py:class:`SolarizedDark`
+    and :py:class:SolarizedLight.
+
+    '''
     _base03     = Color.from_hex('#002b36')
     _base02     = Color.from_hex('#073642')
     _base01     = Color.from_hex('#586e75')
@@ -96,3 +145,109 @@ class SolarizedDark(AbstractSolarized):
             search=dict(bgcolor=self._yellow, color=self.selection_fg),
         )
 
+
+class SolarizedLight(AbstractSolarized):
+
+    fg = AbstractSolarized._base00
+    bg = AbstractSolarized._base3
+
+    selection_fg = AbstractSolarized._base3
+    selection_bg = AbstractSolarized._base0
+
+    cur_line_bg = AbstractSolarized._base2
+
+    fallback_val = fg.hsv[2]
+
+    def __init__(self):
+        super().__init__()
+
+        bold = ['todo', 'type', 'keyword', 'escape',
+                'function']
+
+        lc = self.lexical_categories
+        lc.update(comment=dict(color=self._base1),
+                  search=dict(bgcolor=self._yellow, color=self._base01))
+        for key in bold:
+            lc[key].update(bold=True)
+
+            
+class TextMateTheme(Colorscheme):
+    '''
+    Use a TextMate/Sublime Text color scheme.
+    '''
+
+    scopes = scopedict.splitkeys({
+        'comment': 'comment',
+
+        'constant.numeric': 'literal',
+        'constant.character': 'literal',
+        'string': 'literal',
+
+        'constant.language': 'function',
+        'entity.name.function': 'function',
+        'support.function': 'function',
+
+        'support.type': 'type',
+        'support.class': 'type',
+        'storage.type': 'type',
+        'storage.modifier': 'type',
+        
+        'meta': 'preprocessor',
+        'keyword.other': 'preprocessor',
+
+        'keyword': 'keyword',
+        
+        'invalid': 'error',
+    })
+
+    def __init__(self, theme):
+        super().__init__()
+        import plistlib
+        data = plistlib.readPlist(theme)
+        lc = self.lexical_categories
+        self.unassigned = []
+
+        for group in data.settings:
+            if 'settings' not in group:
+                continue
+
+            s = group.settings
+            if 'scope' not in group:
+                self.bg = Color.from_hex(s.background)
+                self.fg = Color.from_hex(s.foreground)
+                self.selection_bg = Color.from_hex(s.selection)
+                self.selection_fg = self.fg
+                self.cur_line_bg = Color.from_hex(s.lineHighlight).composite(self.bg)
+            else:
+
+                attrs = {}
+
+                if 'background' in s:
+                    attrs['bgcolor'] = Color.from_hex(s.background)
+                if 'foreground' in s:
+                    attrs['color'] = Color.from_hex(s.foreground)
+                if s.get('fontStyle') == 'bold':
+                    attrs['bold'] = True
+
+                assigned = False
+                for scope in group.scope.split(','):
+                    lcname = scopedict.most_specific(self.scopes, scope.strip(), default=None)
+                    if lcname not in lc:
+                        lc[lcname] = attrs
+                        assigned = True
+
+                if not assigned:
+                    self.unassigned.append(attrs)
+
+
+
+
+
+    def lexical_category_attrs(self, lexcat):
+        if lexcat not in self.lexical_categories:
+            if self.unassigned:
+                self.lexical_categories[lexcat] = self.unassigned.pop()
+            else:
+                self.lexical_categories[lexcat] = dict(color=Color.from_hex('#F0F'))
+
+        return self.lexical_categories[lexcat]

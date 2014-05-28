@@ -5,10 +5,7 @@ from stem.options import UserConfigHome
 from stem.api import BufferController
 from stem.control.command_line_interaction import CommandLineInteractionMode
 
-@autoextend(BufferController, 
-            lambda tags: tags.get('cmdline'))
 class HistoryWatcher(object):
-
     def __init__(self, buf_ctl):
         self.buf_ctl = buf_ctl
         self.imode = buf_ctl.interaction_mode       
@@ -30,7 +27,6 @@ class HistoryWatcher(object):
         except IOError:
             pass
 
-    
     def __after_cmdline_accepted(self):
         hist = self.imode.command_history
         if hist:

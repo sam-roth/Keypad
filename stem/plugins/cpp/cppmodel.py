@@ -68,6 +68,8 @@ class CXXCompletionResults(AbstractCompletionResults):
 class CXXCodeModel(IndentRetainingCodeModel):
     completion_triggers = ['.', '::', '->']
     call_tip_triggers = ['(', ')']
+    line_comment = '//'
+    
     def __init__(self, *args, **kw):
         super().__init__(*args, **kw)
         self.cxx_config = CXXConfig.from_config(self.conf)

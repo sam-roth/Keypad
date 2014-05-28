@@ -71,7 +71,8 @@ class Factory(object):
 Conversions.register(Factory, Factory)
 
 class Field(object):
-    def __init__(self, type, default=None, safe=False):
+    def __init__(self, type, default=None, safe=False,
+                 docs=None):
         '''
         Denote that the field should have the given type and default value.
         
@@ -83,6 +84,7 @@ class Field(object):
         self.default = Conversions.convert(type, default)
         self.name = None
         self.safe = safe
+        self.__doc__ = docs
         
     def __repr__(self):
         return 'Field{!r}'.format((self.type, self.default, self.name))

@@ -9,6 +9,7 @@ from .qt_util               import KeyEvent, ABCWithQtMeta
 from ..core                 import AttributedString, Signal
 from ..core.key             import SimpleKeySequence, Keys, KeySequenceDict
 from ..abstract.completion  import AbstractCompletionView
+from ..core.colorscheme     import Colorscheme
 
 from . import options
 
@@ -66,16 +67,21 @@ class CompletionListItemDelegate(QItemDelegate):
 
     def __init__(self, settings):
         super().__init__()
+        self.set_settings(settings)
+        
+    def set_settings(self, settings):
         nset = self.settings = copy.copy(settings)
 
         sset = self.selected_settings = copy.copy(settings)
         sch = nset.scheme
         
-        sset.bgcolor = sch.emphasize(nset.q_bgcolor.name(), 1)
-        sset.fgcolor = sch.emphasize(nset.fgcolor, 1)
+
+        sset.bgcolor = nset.scheme.cur_line_bg
+        sset.fgcolor = nset.fgcolor
 
         for s in (self.settings, self.selected_settings):
             s.q_font = QFont(s.q_font)
+
 
     def paint(self, painter, option, index):
         
@@ -199,17 +205,10 @@ class CompletionView(QWidget, AbstractCompletionView, metaclass=ABCWithQtMeta):
     def __init__(self, settings=None, parent=None):
         super().__init__(parent)
         from . import view
-
-        if settings is None:
-            settings = TextViewSettings()
-        else:
-            settings = copy.copy(settings)
-
-
-        settings.q_bgcolor = settings.q_completion_bgcolor
-        scheme = settings.scheme
         
         self._outer_layout = QVBoxLayout(self)
+
+
 
         self._outer_container = QWidget(self)
         self._outer_container.setObjectName('outer_container')
@@ -226,14 +225,11 @@ class CompletionView(QWidget, AbstractCompletionView, metaclass=ABCWithQtMeta):
         self._docs = view.TextView(self._container)
         self._docs.update_plane_size()
         self._docs.disable_partial_update = True
-        self._docs.settings = settings
+        
 
         self._container.addWidget(self._listWidget)
         self._container.addWidget(self._docs)
 
-        #self._layout = QVBoxLayout(self._container)
-        #self._layout.addWidget(self._listWidget)
-        #self._layout.addWidget(self._docs)
 
         self._size_grip = PopupSizeGrip(self._outer_container)
         
@@ -248,33 +244,20 @@ class CompletionView(QWidget, AbstractCompletionView, metaclass=ABCWithQtMeta):
 
         self.setWindowFlags(Qt.Popup)
         
-        #self.setAttribute(Qt.WA_TranslucentBackground)
         if options.CompletionViewOpacity != 1:
             self.setAttribute(Qt.WA_NoSystemBackground)
-        #self.setAttribute(Qt.WA_OpaquePaintEvent, True)
 
         self._listWidget.setAttribute(Qt.WA_MacShowFocusRect, False)
         self._listWidget.setHeaderHidden(True)
 
-        #self._docs.scrolled.connect(self._on_scroll)
-        
-
-        stylesheet = completion_view_stylesheet.format(
-            settings=settings,
-            selbg=scheme.emphasize(scheme.bg, 1),
-            border_radius='10px' if options.CompletionViewOpacity != 1 else '0px'
-        )
-        self.setStyleSheet(stylesheet)
-
         self.model = CompletionListModel()
         self._listWidget.setModel(self.model)
-        self._listWidget.setItemDelegate(CompletionListItemDelegate(settings))
+        self._listWidget.setItemDelegate(CompletionListItemDelegate(TextViewSettings(Colorscheme)))
         self._listWidget.selectionModel().currentRowChanged.connect(self.after_current_row_change)
         self._listWidget.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
 
         self.setFocusProxy(self._listWidget)
         self._listWidget.installEventFilter(self)
-        #self._docs.installEventFilter(self)
         self._docs.setFocusProxy(self._listWidget)
         
         self.done       += self._close
@@ -284,12 +267,47 @@ class CompletionView(QWidget, AbstractCompletionView, metaclass=ABCWithQtMeta):
         self.resize(400, 400)
         self._pos_locked = self.pos()
 
-    #def _on_scroll(self, start_line):
-    #    self._docs.start_line = start_line
-    #    self._docs.full_redraw()
-
-
     
+        self.__set_settings(settings)
+        settings.reloaded.connect(self.__reset_settings)
+        self.__orig_settings = settings
+
+
+        self._docs.scrolled.connect(self._on_scroll)
+
+    def _on_scroll(self, start_line):
+        self._docs.start_line = start_line
+        self._docs.full_redraw()
+
+    def __reset_settings(self):
+        self.__set_settings(self.__orig_settings)
+
+    def __set_settings(self, settings):
+
+        import logging
+        if settings is None:
+            settings = TextViewSettings()
+        else:
+            settings = copy.copy(settings)
+
+        settings.q_bgcolor = settings.q_completion_bgcolor
+        scheme = settings.scheme
+
+        self._docs.settings = settings
+
+        stylesheet = completion_view_stylesheet.format(
+            settings=settings,
+            selbg=scheme.cur_line_bg,
+            border_radius='10px' if options.CompletionViewOpacity != 1 else '0px'
+        )
+
+        self.setStyleSheet(stylesheet)
+        
+        item_delegate = self._listWidget.itemDelegate()
+        item_delegate.set_settings(settings)
+
+
+
     visible = qt_prop('isVisible', 'setVisible')
 
     def move_(self, *args, **kw):

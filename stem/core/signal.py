@@ -104,6 +104,7 @@ class Signal(object):
     def __init__(self, proto_func):
         self._proto_func = proto_func
         self._instances = weakref.WeakKeyDictionary()
+        functools.update_wrapper(self, proto_func)
 
     def for_instance(self, instance):
         return self.__get__(instance, None)
@@ -119,6 +120,7 @@ class Signal(object):
                                       instance)
             
             inst = makeInstanceSignal(method, sender=instance)
+            functools.update_wrapper(inst, self._proto_func)
 
             self._instances[instance] = inst
 

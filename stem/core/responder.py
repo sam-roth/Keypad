@@ -20,6 +20,9 @@ class Responder(object):
         If there's no matching `@interactive` command at this level, try finding one that matches
         one of these objects.
         '''
+        if not all(isinstance(r, Responder) for r in responders):
+            raise TypeError('Argument to add_next_responders must be a Responder')
+
         new_responders = weakref.WeakSet(responders) - self._next_responders
         for responder in new_responders:
             responder.responder_chain_changed.connect(self.responder_chain_changed)
@@ -40,13 +43,14 @@ class Responder(object):
 
     @property
     def next_responders(self):
-        return list(self._next_responders)
+        return list(x for x in self._next_responders if x is not None)
     
 
     @property
     def next_responder(self): 
-        if self._next_responders:
-            return next(iter(self._next_responders))
+        nr = self.next_responders
+        if nr:
+            return nr[0]
         else:
             return None
     

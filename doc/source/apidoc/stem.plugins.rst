@@ -16,10 +16,7 @@ Submodules
 
 .. toctree::
 
-   stem.plugins.cmdline_completer
-   stem.plugins.cmdline_history
    stem.plugins.indent
-   stem.plugins.parmatch
    stem.plugins.search
    stem.plugins.server
    stem.plugins.templates

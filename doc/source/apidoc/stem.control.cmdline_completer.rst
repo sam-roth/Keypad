@@ -1,7 +1,7 @@
-stem.plugins.cmdline_completer module
+stem.control.cmdline_completer module
 =====================================
 
-.. automodule:: stem.plugins.cmdline_completer
+.. automodule:: stem.control.cmdline_completer
     :members:
     :undoc-members:
     :show-inheritance:

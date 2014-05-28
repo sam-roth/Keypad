@@ -10,6 +10,14 @@ class ExistentialError(UserError):
     does not exist that is required for an operation.
     '''
     
+class NoCodeModelError(ExistentialError):
+    '''
+    The operation requires a code model and there wasn't one.
+
+    Note: The code model provides syntax highlighting, code completion,
+    and other language-specific features.
+    '''
+
 class NoSuchCommandError(ExistentialError):
     '''
     No meaning is known for the command in this context.

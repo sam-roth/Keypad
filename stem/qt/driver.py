@@ -7,14 +7,16 @@ from ..control import behavior # module contains autoconnects
 import pathlib
 
 from ..core import notification_queue, errors
-from ..control.buffer_set import BufferSetController
-from .buffer_set import BufferSetView
 
-from ..abstract.application import Application as AbstractApplication
+from ..abstract.application import (AbstractApplication, 
+                                    SaveResult,
+                                    MessageBoxKind)
 
 from .qt_util import ABCWithQtMeta
 from ..control.interactive import interactive
 import logging
+from ..core.nconfig import Config
+
 
 class _ProcessPosted(QEvent):
     '''
@@ -28,6 +30,14 @@ class _ProcessPosted(QEvent):
         super().__init__(_ProcessPosted.ProcessPostedType)
 from ..core.processmgr.client import AsyncServerProxy
 
+
+_message_box_kinds = {
+    None: QMessageBox.NoIcon,
+    MessageBoxKind.question: QMessageBox.Question,
+    MessageBoxKind.warning: QMessageBox.Warning,
+    MessageBoxKind.error: QMessageBox.Critical
+}
+
 class Application(AbstractApplication, QApplication, metaclass=ABCWithQtMeta):
 
     def __init__(self, args):
@@ -39,12 +49,36 @@ class Application(AbstractApplication, QApplication, metaclass=ABCWithQtMeta):
             if mversion > QSysInfo.MV_10_8:
                 # Workaround for QTBUG-32789
                 QFont.insertSubstitution('.Lucida Grande UI', 'Lucida Grande')
-
         
-        logging.debug('init app')
+        QApplication.setApplicationName('Stem')
         super().__init__(args)
-        logging.debug('init done')
 
+    def _message_box(self, parent, 
+                     text, choices,
+                     accept=0, reject=-1,
+                     kind=None):
+    
+        assert choices, 'must provide at least one choice'
+
+        mbox = QMessageBox(parent)
+        mbox.setText(text)
+
+
+        buttons = [mbox.addButton(c, QMessageBox.ActionRole) 
+                   for c in choices]
+
+        mbox.setIcon(_message_box_kinds[kind])
+        mbox.setWindowFlags(Qt.Sheet)
+        mbox.setWindowModality(Qt.WindowModal)
+
+        if accept is not None:
+            mbox.setDefaultButton(buttons[accept])
+        if reject is not None:
+            mbox.setEscapeButton(buttons[reject])
+
+        mbox.exec_()
+
+        return choices[buttons.index(mbox.clickedButton())]
 
     @property
     def clipboard_value(self):
@@ -60,20 +94,13 @@ class Application(AbstractApplication, QApplication, metaclass=ABCWithQtMeta):
         self.clipboard().setText(value)
 
     def exec_(self):
-        
         self.setWheelScrollLines(10)
-
-        controller = BufferSetController(BufferSetView())
-        controller.view.show()
-        controller.view.raise_()
-
-        #mw = MainWindow()
-        #mw.show()
-        #mw.raise_()
-        
-        
-
         notification_queue.register_post_handler(self._on_post)
+
+        mw = self.new_window()
+        ed = self.new_editor()
+        mw.add_editor(ed)
+
 
         result = super().exec_()
         AsyncServerProxy.shutdown_all()        
@@ -90,14 +117,49 @@ class Application(AbstractApplication, QApplication, metaclass=ABCWithQtMeta):
         else:
             return super().event(evt)
 
-    
-
     def _on_post(self):
         self.postEvent(self, _ProcessPosted())
         
-        
     def timer(self, time_s, callback):
         QTimer.singleShot(int(time_s * 1000), callback)
+
+    def save_prompt(self, editor):
+        editor.setFocus()
+        mb = QMessageBox(editor)
+        mb.setWindowFlags(Qt.Sheet)
+        mb.setWindowModality(Qt.WindowModal)
+        mb.setText('This buffer has been modified. Do you want to save your changes?')
+        mb.setStandardButtons(mb.Save | mb.Discard | mb.Cancel)
+
+        mb.setDefaultButton(mb.Save)
+        mb.setEscapeButton(mb.Cancel)
+
+
+        result = mb.exec_()
+        if result == mb.Discard:
+            return SaveResult.discard
+        elif result == mb.Save:
+            return SaveResult.save
+        else:
+            return SaveResult.cancel
+
+    def get_save_path(self, editor):
+        save_path = QFileDialog.getSaveFileName(editor, 'Save')
+        if save_path:
+            return save_path
+        else:
+            return None
+
+    def _new_window(self):
+        from .main_window import MainWindow
+        w = MainWindow(Config.root.derive())
+        w.show()
+        w.raise_()
+        return w
+
+    def _new_editor(self):
+        from .editor import Editor
+        return Editor(Config.root.derive())
 
 def _fatal_handler(*args, **kw):
     import os
@@ -123,7 +185,6 @@ def _message_handler(ty, msg):
     else:
         handler('%s', _decode_if_needed(msg))
 
-USE_IPYTHON = True
 
 
 
@@ -136,9 +197,9 @@ def main():
 
     logging.basicConfig(level=logging.DEBUG,
                         format=logfmt)
-    
 
-        
+    application = Application(sys.argv)
+
     global config
     from .. import config
     
@@ -149,48 +210,10 @@ def main():
         QtCriticalMsg: logging.critical,
         QtFatalMsg:    _fatal_handler
     }
-        
-    
+
     qInstallMsgHandler(_message_handler)    
-#   
-
- 
-    if USE_IPYTHON:
-        from ..control import BufferController
-        @interactive('embedipython')
-        def embed_ipython(bc: BufferController):
-            import IPython
-            IPython.embed()
-#         import threading
-#         def target():
-#             import IPython
-#             IPython.embed()
-#         thd = threading.Thread(target=target)
-#         thd.start()
-#         
-    sys.exit(Application(sys.argv).exec_())
+    sys.exit(application.exec_())
     
         
-#@interactive('reload')
-def reload_all(app: Application):
-    '''
-    WARNING: Don't use this. It will screw up typechecks.
-    '''
-    import imp
-    import stem
-    import IPython.lib.deepreload
-    import pkgutil
-    import importlib
-    for mldr, name, is_pkg in pkgutil.walk_packages(stem.__path__, 'stem.'):
-        try:
-            mod = importlib.import_module(name)
-            IPython.lib.deepreload.reload(mod)
-        except:
-            logging.exception('error reloading %r', name)
-
-
-    
-
-
 if __name__ == '__main__':
     main()

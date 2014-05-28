@@ -70,13 +70,13 @@ class BasicTextView(QAbstractScrollArea):
             self.overlay_spans = {}
 
             
-            self._cursor_blink_on_timer = QTimer()
+            self._cursor_blink_on_timer = QTimer(self)
 #             self._cursor_blink_on_timer.setInterval((1.0-options.CursorDutyCycle)/options.CursorBlinkRate_Hz * 1000)
 
             self._cursor_blink_on_timer.setSingleShot(True)
             self._cursor_blink_on_timer.timeout.connect(self._on_cursor_blink_on)
 
-            self._cursor_blink_off_timer = QTimer()
+            self._cursor_blink_off_timer = QTimer(self)
 #             self._cursor_blink_off_timer.setInterval(options.CursorDutyCycle/options.CursorBlinkRate_Hz * 1000)
             self._cursor_blink_off_timer.setSingleShot(True)
             self._cursor_blink_off_timer.timeout.connect(self._on_cursor_blink_off)
@@ -124,14 +124,18 @@ class BasicTextView(QAbstractScrollArea):
             return 'reload'
         else:
             return 'cancel'
-            
+
     def _on_settings_reloaded(self):
-        for line in self._lines:
-            line.invalidate()
-        self.full_redraw()
         settings = options.GeneralSettings.from_config(self.config)
         self.__set_cursor_blink_rate(settings.cursor_blink_rate, settings.cursor_duty_cycle)
-        
+
+        for line in self._lines:
+            line.invalidate()
+        for line in self.modelines:
+            line.invalidate()
+
+        self.update_plane_size()
+        self.full_redraw()    
     @property
     def config(self):
         return self._config
@@ -364,6 +368,7 @@ class BasicTextView(QAbstractScrollArea):
         super().resizeEvent(event)
         self.update_plane_size()
 
+
     def _viewport_paint(self, event):
         painter = QPainter(self.viewport())
         with ending(painter):
@@ -484,15 +489,26 @@ class BasicTextView(QAbstractScrollArea):
                             overlays.add((line_start_x, line_end_x, attr_key, attr_val))
     
                     if i == cursor_line and should_draw_cursor:
+
                         if self._cursor_type == self.CursorType.Rect:
-                            overlays.add((cursor_col, cursor_col+1, 'cartouche', self.settings.fgcolor))
+                            overlays.add((cursor_col, cursor_col+1, 
+                                          'cartouche', self.settings.fgcolor))
+
                         elif self._cursor_type == self.CursorType.FillRect:
-                            # FIXME: this should overwrite the selection overlay.
-                            overlays.add((cursor_col, cursor_col+1, 'bgcolor', self.settings.fgcolor))
-                            overlays.add((cursor_col, cursor_col+1, 'color', self.settings.bgcolor))
+                            overlays.add((cursor_col, cursor_col+1, 
+                                          'bgcolor', self.settings.fgcolor))
+
+                            overlays.add((cursor_col, cursor_col+1, 
+                                          'color', self.settings.bgcolor))
+
                 elif i == len(text_lines) + self.start_line:
                     text_lines_end = y
                     modeline_start = y = self.height() - height * len(self.modelines) - self._margins.bottom()
+
+                if i == cursor_line:
+                    line_bgcolor = self.settings.scheme.cur_line_bg
+                else:
+                    line_bgcolor = None
 
                 drew_line, renewed_cache = draw_attr_text(
                     painter, 
@@ -500,7 +516,9 @@ class BasicTextView(QAbstractScrollArea):
                     row, 
                     self.settings,
                     partial=(self._partial_redraw_ok and i != self._last_cursor_line),
-                    overlay=overlays)
+                    overlay=overlays,
+                    bgcolor=line_bgcolor)
+
                 if drew_line: lines_drawn += 1
                 if renewed_cache: lines_updated += 1
 
