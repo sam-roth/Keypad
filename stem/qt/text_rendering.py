@@ -10,7 +10,7 @@ from ..core.conftree import ConfTree
 from ..core import Signal
 import logging
 from ..core.color import Color
-
+from ..core.colorscheme import Colorscheme
 from ..options import GeneralConfig
 from ..core.nconfig import Config
 
@@ -23,7 +23,7 @@ def resolve_dotted_name(name):
     return getattr(mod, objname)
 
 class TextViewSettings(object):
-    def __init__(self, scheme, settings=None):
+    def __init__(self, scheme=Colorscheme, settings=None):
         self.default_scheme = scheme
         if not isinstance(settings, Config):
             warnings.warn(DeprecationWarning('The settings parameter must now receive an argument of '
