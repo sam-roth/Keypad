@@ -1,7 +1,7 @@
 
 
 from .control import keybinding, BufferController
-from .control.interactive import interactive, menu, submenu
+from .control.interactive import interactive, menu
 from .core import Keys, errors
 from .core.tag import autoextend, autoconnect
 from .core.nconfig import Config, Settings
@@ -42,7 +42,6 @@ __all__ = '''
     unbind
     interactive
     menu
-    submenu
     Keys
     autoextend
     autoconnect

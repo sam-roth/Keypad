@@ -30,7 +30,8 @@ else:
 
 
 
-submenu(0, 'File')
+
+menu(0, 'File')
 
 menu(1,
      'File/New',
@@ -51,7 +52,7 @@ menu(4,
      'gui_quit',
      keybinding=Keys.ctrl.w)
 
-submenu(1, 'Edit')
+menu(1, 'Edit')
 
 menu(0,
      'Edit/Undo',
@@ -82,27 +83,6 @@ menu(4,
      'complete',
      keybinding=PortCtrl.space)
 
-#menu(5,
-#     'Edit/Indent',
-#     'indent_block',
-#     keybinding=Keys.tab)
-#
-#
-#menu(5.1,
-#     'Edit/Dedent',
-#     'indent_block',
-#     -1,
-#     keybinding=Keys.shift.tab)
-#menu(5.2,
-#     'Edit/Align New Line',
-#     'newline_aligned',
-#     keybinding=Keys.ctrl.return_)
-#
-#menu(5.3,
-#     'Edit/Dedent or Backspace',
-#     'dedent_or_backspace',
-#     keybinding=Keys.backspace.optional(Keys.shift))
-#
 menu(5.5,
      'Edit/Toggle Comment',
       'comment_toggle',
@@ -135,7 +115,7 @@ menu(8,
      keybinding=Keys.ctrl.bracketright)
 
     
-submenu(2, 'Window')
+menu(2, 'Window')
 
 menu(0,
      'Window/Activate Commandline',
@@ -152,16 +132,13 @@ menu(2,
      -1,
      keybinding=Keys.ctrl.braceleft)
 
-submenu(3, 'View')
+menu(3, 'View')
 menu(0, 'View/Increase Font Size', 'adjust_font_size', 1, keybinding=Keys.ctrl.plus)
 menu(1, 'View/Decrease Font Size', 'adjust_font_size', -1, keybinding=Keys.ctrl.minus)
 
-submenu(4, 'Semantics')
+menu(4, 'Semantics')
 
 menu(0, 'Semantics/Find Declaration', 'find_declaration', keybinding=Keys.shift.f3)
 menu(1, 'Semantics/Find Definition',  'find_definition', keybinding=Keys.f3)
 menu(2, 'Semantics/Show Diagnostic', 'show_diagnostics', keybinding=Keys.f2)
 
-
-# import stem.plugins.server
-# stem.plugins.server.start_server()

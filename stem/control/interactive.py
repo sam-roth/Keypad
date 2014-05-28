@@ -187,21 +187,21 @@ dispatcher = InteractiveDispatcher()
 
 root_menu = Menu()
 
-def menu(priority, path, interactive_name, *args, keybinding=None):
-    _add_menu_by_hier(
-        root_menu,
-        MenuItem(
-            keybinding,
-            interactive_name,
-            *args
-        ),
-        path.split('/'),
-        priority
-    )
+def menu(priority, path, interactive_name=None, *args, keybinding=None):
+    if interactive_name is None:
+        _set_priority_by_path(root_menu, path.split('/'), priority)
+    else:
+        _add_menu_by_hier(
+            root_menu,
+            MenuItem(
+                keybinding,
+                interactive_name,
+                *args
+            ),
+            path.split('/'),
+            priority
+        )
 
-
-def submenu(priority, path):
-    _set_priority_by_path(root_menu, path.split('/'), priority)
 
 def get_menu_item(path):
     return _get_item_by_path(root_menu, path.split('/'))
