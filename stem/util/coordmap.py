@@ -36,11 +36,8 @@ class TextCoordMapper:
         else:
             return None
 
-    def clear_after(self, y):
-        del self.__lines[y:]
-
-    def clear(self):
-        self.__lines = RangeDict(1)
+    def clear(self, first=0, last=None):
+        del self.__lines[int(first):int(last)]
 
     def put_region(self, 
                    *,

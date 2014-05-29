@@ -34,6 +34,9 @@ class TextLayoutEngine:
         tstop = self._settings.tab_stop
         line_spacing = Qt.QFontMetricsF(self._settings.q_font).lineSpacing()
 
+
+        self._mapper.clear(plane_pos.y(), plane_pos.y() + line_spacing)
+
         with TextPainter(device=device, settings=self._settings) as tp:
             if bgcolor is not None:
                 tp.q_bgcolor = to_q_color(bgcolor)
@@ -142,6 +145,9 @@ class TextLayoutEngine:
     def get_line_pixmap(self, *, plane_pos, line, width, 
                         overlays=frozenset(), wrap=False, 
                         line_id=0, bgcolor=None):
+        '''
+        Return a QPixmap containing the rendered line.
+        '''
 
         params_key = 'get_line_pixmap_params'
         pixmap_key = 'get_line_pixmap_pixmap'
@@ -193,9 +199,8 @@ class TextLayoutEngine:
 
         return cache[pixmap_key]
 
-
-
-
+    def map_from_point(self, point):
+        return self._mapper.map_from_point(point.x(), point.y())
 
 
 
@@ -219,7 +224,6 @@ class TestWidget(Qt.QWidget):
         tle = self.tle
         hw = AttributedString(lorem.text.strip())
 
-        tle._mapper.clear()
         y, x = self.curs
         pixmap = tle.get_line_pixmap(plane_pos=Qt.QPointF(0,0),
                                      line=hw,
@@ -241,7 +245,7 @@ class TestWidget(Qt.QWidget):
         if ev.type() in (Qt.QEvent.MouseButtonPress, Qt.QEvent.MouseMove):
             p = ev.pos()
     
-            r = self.tle._mapper.map_from_point(p.x(), p.y())
+            r = self.tle.map_from_point(p)
             if r is not None:
                 self.curs = r
     
