@@ -19,6 +19,18 @@ class TextPainter:
         self._metrics = Qt.QFontMetricsF(self.settings.q_font)
         self.device = device
         self.reset()
+        self._base_attrs = {
+            'bgcolor': self.settings.q_bgcolor,
+            'color': self.settings.q_fgcolor
+        }
+
+        self._cur_lc_attrs = {}
+        self._cur_attrs = {}
+
+        self._attrs = ChainMap(self._cur_attrs, self._cur_lc_attrs, self._base_attrs)
+
+
+
 
     def reset(self):
         self.q_bgcolor = self.settings.q_bgcolor
@@ -39,19 +51,24 @@ class TextPainter:
     def update_attrs(self, attrs):
         sentinel = object()
 
-        c = attrs.get('color', sentinel)
+        for k, v in attrs.items():
+            if v is None:
+                try:
+                    del self._cur_attrs[k]
+                except KeyError:
+                    pass
+            else:
+                self._cur_attrs[k] = v
 
-        if c is None:
-            self._painter.setPen(self.q_fgcolor)
-        elif c is not sentinel:
-            self._painter.setPen(to_q_color(c))
+        lc = attrs.get('lexcat', sentinel)
+        if lc is not sentinel:
+            self._cur_lc_attrs.clear()
+            if lc is not None:
+                self._cur_lc_attrs.update(self.settings.scheme.lexical_category_attrs(lc))
+                
+        self._painter.setPen(to_q_color(self._attrs['color']))
+        self._painter.setBrush(to_q_color(self._attrs['bgcolor']))
 
-        c = attrs.get('bgcolor', sentinel)
-
-        if c is None:
-            self._painter.setBrush(self.q_bgcolor)
-        elif c is not sentinel:
-            self._painter.setBrush(to_q_color(c))
 
 
 
