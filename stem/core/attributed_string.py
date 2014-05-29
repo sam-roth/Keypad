@@ -127,7 +127,7 @@ class RangeDict(object):
         return self.length
 
     def span_info(self, idx):
-        data_index = upper_bound(self._data, (idx, None), key=lambda x: x[0]) - 1
+        idx = upper_bound(self._data, (idx, None), key=lambda x: x[0]) - 1
         if idx >= 0 and idx < len(self._data):
             return RangeDict.SpanInfo(start=self._data[idx][0],
                                       end=self._data[idx+1][0] if idx + 1 < len(self._data) else self.length,
@@ -370,8 +370,9 @@ class AttributedString(object):
         if isinstance(index, slice):
             start, stop, stride = index.indices(len(self))
             copy = self.clone()
-            copy.remove(0, start)
             copy.remove(stop, None)
+            copy.remove(0, start)
+
 
             return copy
         else:
