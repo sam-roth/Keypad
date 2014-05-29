@@ -16,7 +16,7 @@ class TextPainter:
     '''
     def __init__(self, *, settings=None, device=None):
         self.settings = settings or TextViewSettings()
-        self._metrics = Qt.QFontMetrics(self.settings.q_font)
+        self._metrics = Qt.QFontMetricsF(self.settings.q_font)
         self.device = device
         self.reset()
 
@@ -55,16 +55,20 @@ class TextPainter:
 
 
 
-    def paint_background(self, pos, cells):
+    def paint_background(self, pos, cells, bgcolor=None):
         r = Qt.QRectF(pos, Qt.QSizeF(cells * self.settings.char_width,
                                   self._metrics.lineSpacing()))
 
-        self._painter.fillRect(r, self._painter.brush())
+        if bgcolor is not None:
+            bgcolor = to_q_color(bgcolor)
+        else:
+            bgcolor = self._painter.brush()
+        self._painter.fillRect(r, bgcolor)
 
         return r.topRight()
 
-    def paint_span(self, pos, text, color=None):
-        ep = self.paint_background(pos, len(text))
+    def paint_span(self, pos, text, color=None, bgcolor=None):
+        ep = self.paint_background(pos, len(text), bgcolor=bgcolor)
         p = Qt.QPointF(pos.x(), self._metrics.ascent() + pos.y())
         if color is not None:
             oldpen = self._painter.pen()

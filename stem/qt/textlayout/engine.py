@@ -5,6 +5,7 @@ from PyQt4 import Qt
 
 from stem.core import AttributedString
 from stem.util.coordmap import TextCoordMapper
+from stem.control import lorem
 
 from ..text_rendering import TextViewSettings, apply_overlay
 from ..qt_util import ending, to_q_color
@@ -65,7 +66,8 @@ class TextLayoutEngine:
 
                     tp.update_attrs(deltas)
                     d1 = tp.paint_span(d0, subchunk_tx, color=color)
-                    w = d1.x() - d0.x()
+                    w = Qt.QFontMetricsF(self._settings.q_font).width(subchunk_tx)
+                    d1 = Qt.QPointF(d0.x() + w, d0.y())
 
                     # store the region in the mapper, so that mouse positions can be mapped back to text
                     # positions
@@ -75,7 +77,7 @@ class TextLayoutEngine:
                                             char_count=len(subchunk),
                                             line_spacing=line_spacing,
                                             line_id=line_id,
-                                            offset=offset)
+                                            offset=int(offset))
 
                     offset += len(subchunk)
                     phys_col += len(subchunk_tx)
@@ -91,27 +93,109 @@ class TextLayoutEngine:
         to which the logical line given should be mapped.
         '''
 
-        # TODO: character wrapping
-
         overlays = frozenset(overlays)
-        params = line, width, overlays, wrap
+        params = width, overlays, wrap
 
         cache = line.caches.setdefault(id(self), {})
 
         if cache.get('transform_params') != params:
             cache['transform_params'] = params
             if overlays:
-                overlaid = (apply_overlay(line, overlays), )
+                overlaid = apply_overlay(line, overlays)
             else:
-                overlaid = (line, )
+                overlaid = line
 
-            cache['transform_result'] = overlaid
+            if wrap:
+                # calculate where the string has to be wrapped in order to prevent it from exceeding
+                # the window width
+                chars_per_line = width // self._settings.char_width
+                phys_col = 0
+                tstop = self._settings.tab_stop
+                prev_split = 0
+                split = []
+                for i, ch in enumerate(overlaid.text):
+                    if phys_col >= chars_per_line:
+                        split.append(overlaid[prev_split:i])
+                        prev_split = i
+                        phys_col -= chars_per_line
 
-            return overlaid
+                    if ch == '\t':
+                        n_tabs = phys_col // tstop
+                        next_tabstop = (n_tabs + 1) * tstop
+                        rem = next_tabstop - phys_col
+                        phys_col += rem
+                    else:
+                        phys_col += 1
+
+    
+                split.append(overlaid[prev_split:])
+                phys_lines = tuple(split)
+            else:
+                phys_lines = (overlaid, )
+
+            cache['transform_result'] = phys_lines
+
+            return phys_lines
         else:
             return cache['transform_result']
 
-    
+    def get_line_pixmap(self, *, plane_pos, line, width, 
+                        overlays=frozenset(), wrap=False, 
+                        line_id=0, bgcolor=None):
+
+        params_key = 'get_line_pixmap_params'
+        pixmap_key = 'get_line_pixmap_pixmap'
+
+        fm = Qt.QFontMetricsF(self._settings.q_font)
+
+        overlays = frozenset(overlays)
+
+        params = (plane_pos.x(), plane_pos.y()), width, overlays, wrap, bgcolor, line_id
+
+        cache = line.caches.setdefault(id(self), {})
+
+        if cache.get(params_key) != params:
+            cache[params_key] = params
+            lines = self.transform_line_for_display(line=line,
+                                                    width=width,
+                                                    overlays=overlays,
+                                                    wrap=wrap)
+            pm = Qt.QPixmap(Qt.QSize(width,
+                                     len(lines) * fm.lineSpacing()))
+
+
+            painter = Qt.QPainter(pm)
+            with ending(painter):
+                if bgcolor is None:
+                    bgcolor = self._settings.q_bgcolor
+                else:
+                    bgcolor = to_q_color(bgcolor)
+
+                painter.fillRect(pm.rect(), bgcolor)
+
+
+            offset = 0
+            for i, phys_line in enumerate(lines):
+                line_plane_pos = Qt.QPointF(plane_pos.x(), plane_pos.y() + i * fm.lineSpacing())
+
+                self.render_line_to_device(plane_pos=line_plane_pos,
+                                           device_pos=Qt.QPointF(0, i * fm.lineSpacing()),
+                                           device=pm,
+                                           text=phys_line,
+                                           line_id=line_id,
+                                           offset=offset,
+                                           bgcolor=bgcolor)
+
+
+                offset += len(phys_line)
+
+            cache[pixmap_key] = pm
+
+        return cache[pixmap_key]
+
+
+
+
 
 
 
@@ -125,36 +209,46 @@ class TestWidget(Qt.QWidget):
 
         tle = TextLayoutEngine()
         self.tle = tle
-        pixmap = Qt.QPixmap(Qt.QSize(1000, 300))    
 
-        hw = AttributedString.join([AttributedString('Hello\tab\t, ll', color='#FFF'),
-                                    AttributedString('ll!', color='#FF0')])
-        (hw,) = tle.transform_line_for_display(line=hw,
-                                               width=1000,
-                                               overlays=frozenset([(0, 1, 'bgcolor', '#000')]))
+        self.resize(Qt.QSize(1000, 300))
+        self.curs = 0,0 
+        self.update_pixmap()
 
-        tle.render_line_to_device(plane_pos=Qt.QPointF(0, 0),
-                                  device_pos=Qt.QPointF(0, 0),
-                                  device=pixmap,
-                                  text=hw)
 
+    def update_pixmap(self):
+        tle = self.tle
+        hw = AttributedString(lorem.text.strip())
+
+        tle._mapper.clear()
+        y, x = self.curs
+        pixmap = tle.get_line_pixmap(plane_pos=Qt.QPointF(0,0),
+                                     line=hw,
+                                     width=self.width(),
+                                     overlays=frozenset([(x, x+1, 'bgcolor', '#FFF')]),
+                                     wrap=True)
+
+        self.pixmap = pixmap
+
+    def paintEvent(self, ev):
+        self.update_pixmap()
+        p = Qt.QPainter(self)
+        with ending(p):
+            p.drawPixmap(Qt.QPoint(0,0), self.pixmap)
+
+
+    def event(self, ev):
+
+        if ev.type() in (Qt.QEvent.MouseButtonPress, Qt.QEvent.MouseMove):
+            p = ev.pos()
+    
+            r = self.tle._mapper.map_from_point(p.x(), p.y())
+            if r is not None:
+                self.curs = r
+    
+            self.repaint()
+        return super().event(ev)
 
     
-        self.lbl = lbl = Qt.QLabel(self)
-        lbl.setPixmap(pixmap)
-        layout.addWidget(lbl)
-        self.resize(pixmap.size() + Qt.QSize(10, 10))
-
-        self.tle._mapper.dump()
-
-    def mousePressEvent(self, ev):
-
-        p = self.lbl.mapFromParent(ev.pos())
-        print(p)
-        print(self.tle._mapper.map_from_point(p.x(), p.y()))
-        return super().mousePressEvent(ev)
-
-
 refs = []
 def test1():
     global refs
