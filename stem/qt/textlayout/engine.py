@@ -75,18 +75,6 @@ class TextLayoutEngine:
                     w = Qt.QFontMetricsF(self._settings.q_font).width(subchunk_tx)
                     d1 = Qt.QPointF(d0.x() + w, d0.y())
 
-                    # store the region in the mapper, so that mouse positions can be mapped back to text
-                    # positions
-                    self._mapper.put_region(x=p.x(),
-                                            y=p.y(),
-                                            char_width=w/len(subchunk),
-                                            char_count=len(subchunk),
-                                            line_spacing=line_spacing,
-                                            line_id=line_id,
-                                            offset=int(offset))
-
-
-
                     offset += len(subchunk)
                     phys_col += len(subchunk_tx)
                     p.setX(p.x() + w)
@@ -171,7 +159,6 @@ class TextLayoutEngine:
         cache = line.caches.setdefault(id(self), {})
 
         if cache.get(params_key) != params:
-            print('redraw line', line_id)
             cache[params_key] = params
             lines = self.transform_line_for_display(line=line,
                                                     width=width,
@@ -216,83 +203,6 @@ class TextLayoutEngine:
 
     def map_from_point(self, point):
         return self._mapper.map_from_point(point.x(), point.y())
-
-
-
-
-class TestWidget(Qt.QWidget):
-
-    def __init__(self):
-        super().__init__()
-    
-        layout = Qt.QVBoxLayout(self)
-
-        tle = TextLayoutEngine()
-        self.tle = tle
-
-        self.resize(Qt.QSize(1000, 300))
-        self.curs = 0,0 
-        self.update_pixmap()
-
-
-    def update_pixmap(self):
-        tle = self.tle
-        hw = AttributedString(lorem.text.strip())
-
-        y, x = self.curs
-        pixmap = tle.get_line_pixmap(plane_pos=Qt.QPointF(0,0),
-                                     line=hw,
-                                     width=self.width(),
-                                     overlays=frozenset([(x, x+1, 'bgcolor', '#FFF')]),
-                                     wrap=True)
-
-        self.pixmap = pixmap
-
-    def paintEvent(self, ev):
-        self.update_pixmap()
-        p = Qt.QPainter(self)
-        with ending(p):
-            p.drawPixmap(Qt.QPoint(0,0), self.pixmap)
-
-
-    def event(self, ev):
-
-        if ev.type() in (Qt.QEvent.MouseButtonPress, Qt.QEvent.MouseMove):
-            p = ev.pos()
-    
-            r = self.tle.map_from_point(p)
-            if r is not None:
-                self.curs = r
-    
-            self.repaint()
-        return super().event(ev)
-
-    
-refs = []
-def test1():
-    global refs
-
-
-    lbl = TestWidget()
-    lbl.show()
-    lbl.raise_()
-
-    refs += [lbl]
-
-if __name__ == '__main__':
-    import sys
-    app = Qt.QApplication(sys.argv)
-    test1()
-    app.exec()
-
-
-
-
-
-
-
-
-
 
 
 

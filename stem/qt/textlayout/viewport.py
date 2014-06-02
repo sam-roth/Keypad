@@ -1,6 +1,7 @@
 
 import functools
 import collections
+import itertools
 
 from ..qt_util import *
 from ..text_rendering import TextViewSettings
@@ -12,6 +13,25 @@ from stem.core.attributed_string import RangeDict
 from stem.util.coordmap import LinearInterpolator
 
 LineID = collections.namedtuple('LineID', 'section number')
+
+class _OverlayManager:
+    def __init__(self, overlays):
+        self.overlays = list(itertools.chain.from_iterable(overlays.values()))
+
+    def line(self, i, length):
+        for overlay_span, attr_key, attr_val in self.overlays:
+            start_pos, end_pos = overlay_span.start_curs.pos, overlay_span.end_curs.pos
+    
+            start_y, start_x = start_pos
+            end_y, end_x = end_pos
+            
+            if start_y <= i <= end_y:
+                line_start_x = 0 if i != start_y else start_x
+                line_end_x = length if i != end_y else end_x
+    
+                yield line_start_x, line_end_x, attr_key, attr_val
+
+
 
 
 class TextViewport(QWidget):
@@ -26,6 +46,11 @@ class TextViewport(QWidget):
         self._line_number_for_y = RangeDict()
         self._line_offsets = {}
         self._right_margin = 5
+        self._overlays = {}
+
+    def set_overlays(self, token, overlays):
+        self._overlays[token] = overlays
+        self.update()
 
     @property
     def right_margin(self):
@@ -95,8 +120,7 @@ class TextViewport(QWidget):
         self._line_number_for_y = RangeDict()
         self._line_offsets.clear()
 
-
-
+        omgr = _OverlayManager(self._overlays)
 
         with ending(painter):
             if self._origin != QPointF(0, 0):
@@ -123,7 +147,7 @@ class TextViewport(QWidget):
                                                             width=self.width() 
                                                                  - self._origin.x()
                                                                  - self.right_margin,
-                                                            overlays=frozenset(),
+                                                            overlays=omgr.line(i, len(line)),
                                                             wrap=True,
                                                             line_id=LineID(None, i),
                                                             bgcolor=None)
