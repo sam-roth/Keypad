@@ -25,6 +25,16 @@ class TextViewport(QWidget):
         self._first_line = 0
         self._line_number_for_y = RangeDict()
         self._line_offsets = {}
+        self._right_margin = 5
+
+    @property
+    def right_margin(self):
+        return self._right_margin
+
+    @right_margin.setter
+    def right_margin(self, value):
+        self._right_margin = value
+        self.update()
 
     def _on_text_modified(self, chg):
         self.update()
@@ -98,6 +108,11 @@ class TextViewport(QWidget):
                                         QSizeF(self._origin.x(),
                                                self.height())),
                                  self._settings.q_bgcolor)
+                painter.fillRect(QRectF(QPointF(self.width() - self.right_margin,
+                                                0),
+                                        QSizeF(self.right_margin,
+                                               self.height())),
+                                 self._settings.q_bgcolor)
             plane_pos = QPointF(0, 0)
 
             for i, line in enumerate(self._buffer.lines[self.first_line:],
@@ -105,7 +120,9 @@ class TextViewport(QWidget):
 
                 pm, o = self._layout_engine.get_line_pixmap(plane_pos=plane_pos,
                                                             line=line,
-                                                            width=self.width() - self._origin.x(),
+                                                            width=self.width() 
+                                                                 - self._origin.x()
+                                                                 - self.right_margin,
                                                             overlays=frozenset(),
                                                             wrap=True,
                                                             line_id=LineID(None, i),

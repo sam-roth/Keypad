@@ -38,7 +38,7 @@ class TextLayoutEngine:
 
         self._mapper.clear(plane_pos.y(), plane_pos.y() + line_spacing)
 
-        subchunk_offsets = [(device_pos.x(), 0)]
+        subchunk_offsets = [(device_pos.x(), offset)]
 
         with TextPainter(device=device, settings=self._settings) as tp:
             if bgcolor is not None:
@@ -117,9 +117,10 @@ class TextLayoutEngine:
                 overlaid = line
 
             if wrap:
+                fm = Qt.QFontMetricsF(self._settings.q_font)
                 # calculate where the string has to be wrapped in order to prevent it from exceeding
                 # the window width
-                chars_per_line = width // self._settings.char_width
+                chars_per_line = int(width / fm.width('x'))
                 phys_col = 0
                 tstop = self._settings.tab_stop
                 prev_split = 0
@@ -128,7 +129,7 @@ class TextLayoutEngine:
                     if phys_col >= chars_per_line:
                         split.append(overlaid[prev_split:i])
                         prev_split = i
-                        phys_col -= chars_per_line
+                        phys_col = 0
 
                     if ch == '\t':
                         n_tabs = phys_col // tstop
@@ -170,6 +171,7 @@ class TextLayoutEngine:
         cache = line.caches.setdefault(id(self), {})
 
         if cache.get(params_key) != params:
+            print('redraw line', line_id)
             cache[params_key] = params
             lines = self.transform_line_for_display(line=line,
                                                     width=width,
