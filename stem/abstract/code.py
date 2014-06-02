@@ -135,7 +135,7 @@ class AbstractCodeModel(metaclass=ABCMeta):
         self.conf = conf
     
     @abstractmethod
-    def indent_level(self, line):
+    def indent_level(self, line, cur_line=None):
         '''
         Return the indentation level as a multiple of the tab stop for a given line.
         '''
@@ -191,11 +191,14 @@ class AbstractCodeModel(metaclass=ABCMeta):
                 
     def indentation(self, pos):
         c = Cursor(self.buffer).move(pos)
+        cur_line = c.y
+
+        
         for _ in c.walklines(-1):
             if c.searchline(r'^\s*$') is None:
                 c.home()
                 break
-            
+
         # find the start of the statement
         try:
             while True:
@@ -207,7 +210,8 @@ class AbstractCodeModel(metaclass=ABCMeta):
         except RuntimeError: # got to the outermost level
             pass
 
-        level = self.indent_level(c.y)
+
+        level = self.indent_level(c.y, cur_line=cur_line)
         col = self.alignment_column(pos)
         
         return Indent(level, col)
@@ -268,7 +272,7 @@ class AbstractCodeModel(metaclass=ABCMeta):
 
 class IndentRetainingCodeModel(AbstractCodeModel):
     indent_after = r'[{:]\s*$'
-    dedent_before = r'}\s*$'
+    dedent_before = r'^\s*}\s*$'
 
     def highlight(self):
         pass
@@ -276,9 +280,8 @@ class IndentRetainingCodeModel(AbstractCodeModel):
     def completions_async(self, pos):
         raise NotImplementedError
     
-    def indent_level(self, line):
+    def indent_level(self, line, cur_line=None):
         c = Cursor(self.buffer).move(line, 0)
-        
         for _ in c.walklines(-1):
             m = c.searchline(r'^\s*\S')
             if m:
@@ -289,9 +292,10 @@ class IndentRetainingCodeModel(AbstractCodeModel):
                 itext = m.group(0)
                 itext = itext.expandtabs(tstop)
                 ilevel = len(itext) // len(indent_text.expandtabs(tstop))
+
                 if self.indent_after is not None and c.searchline(self.indent_after):
                     ilevel += 1
-                elif self.dedent_before is not None and c.searchline(self.dedent_before):
+                elif self.dedent_before is not None and c.y == cur_line and c.searchline(self.dedent_before):
                     ilevel -= 1
                 return ilevel
         else:
