@@ -121,7 +121,7 @@ class CUAInteractionMode(Responder):
         self.view = controller.view
 
         self.modeline = AttributedString()
-        self.view.modelines.append(self.modeline)
+        self.view.modelines = (self.modeline,)
         
 
         def mov(func, *args, ignore_shift=False):
@@ -214,7 +214,7 @@ class CUAInteractionMode(Responder):
         self.controller.view.scrolled.disconnect(self._on_view_scrolled)
         self.controller.view.mouse_down_char.disconnect(self._on_mouse_down)
         self.controller.view.mouse_move_char.disconnect(self._on_mouse_move)
-        self.view.modelines.remove(self.modeline)
+        self.view.modelines = ()
 
 
     def _on_view_scrolled(self, start_line):
@@ -248,6 +248,8 @@ class CUAInteractionMode(Responder):
         if isinstance(text, str):
             self.modeline.set_attribute('color', '#268bd2')
 
+        self.view.modelines = [self.modeline]
+
 
     def _show_default_modeline(self):
         self.modeline.remove(0, None)
@@ -262,6 +264,8 @@ class CUAInteractionMode(Responder):
         loc_hint = '{0}:{1}:{2}'.format(path, self.curs.y+1, self.curs.x+1)
         self.modeline.append('{:<50} [{}]'.format(loc_hint, type(self).__name__))
         self.modeline.set_attributes(0, None, color='#268bd2')
+
+        self.view.modelines = [self.modeline]
 
 
     def show_error(self, text):

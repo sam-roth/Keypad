@@ -176,6 +176,26 @@ class TextLayoutEngine:
         else:
             return cache['transform_result']
 
+    def check_pixmap_clean(self, *, plane_pos, line, width,
+                        overlays=frozenset(), wrap=False, 
+                        line_id=0, bgcolor=None, carets=None):
+        '''
+        Return true if the line does not need to be rerendered.
+        '''
+        carets = tuple(carets or ())
+
+        params_key = 'get_line_pixmap_params'
+
+        fm = Qt.QFontMetricsF(self._settings.q_font)
+
+        overlays = frozenset(overlays)
+
+        params = width, overlays, wrap, bgcolor, line_id, carets
+
+        cache = line.caches.setdefault(id(self), {})
+
+        return cache.get(params_key) == params
+            
     def get_line_pixmap(self, *, plane_pos, line, width, 
                         overlays=frozenset(), wrap=False, 
                         line_id=0, bgcolor=None, carets=None):

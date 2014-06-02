@@ -30,6 +30,11 @@ class Colorscheme(object):
 
         return self.lexical_categories[lexcat]
 
+
+    @property
+    def extra_line_bg(self):
+        return self.nontext_bg
+
     @deprecated
     def emphasize(self, color, steps):
         

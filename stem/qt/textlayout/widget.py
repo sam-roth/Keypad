@@ -26,6 +26,7 @@ class TextView(QAbstractScrollArea):
         self.setFocusProxy(self._viewport)
         self.setFrameShape(QFrame.NoFrame)
 
+        self.setAttribute(Qt.WA_StaticContents)
     def _update_size(self, *args):
         self.verticalScrollBar().setRange(0, len(self.buffer.lines))
 
@@ -120,12 +121,11 @@ class TextViewProxyMixin:
 
     @property
     def modelines(self):
-        logging.warning('TextViewProxy.modelines not implemented')
-        return []
+        return self._view.text_viewport.extra_lines
     
     @modelines.setter
     def modelines(self, value):
-        logging.warning('TextViewProxy.modelines not implemented')
+        self._view.text_viewport.extra_lines = value
 
 
 

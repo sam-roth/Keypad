@@ -135,13 +135,22 @@ def findall(bufctl: BufferController, *pattern):
     searcher = _get_searcher(bufctl)
     pattern = ' '.join(pattern) if pattern else None
     
-    bufctl.view.overlay_spans['search'] = [
-        (Span(Cursor(bufctl.buffer).move(y, x),
-              Cursor(bufctl.buffer).move(y, x).advance(length)),
+
+    def make_span(y, x, length):
+        start = Cursor(bufctl.buffer).move(y, x)
+        end = Cursor(bufctl.buffer).move(y, x).advance(length)
+    
+        end.chirality = end.Chirality.Left
+
+        return Span(start, end)
+
+
+    bufctl.view.set_overlays('search', [
+        (make_span(y, x, length),
          'lexcat',
          'search')
         for ((y, x), length) in searcher.searchall(pattern)
-    ]
+    ])
     
 
 @interactive('findclear', 'fc')
@@ -152,7 +161,7 @@ def findclear(bufctl: BufferController):
     Remove the highlighting from a previous use of "findall".
     '''
     try:
-        del bufctl.view.overlay_spans['search']
+        bufctl.view.set_overlays('search', [])
     except KeyError:
         pass
 
@@ -160,5 +169,5 @@ def findclear(bufctl: BufferController):
 @autoconnect(BufferController.buffer_was_changed,
              lambda tags: tags.get('regex_searcher'))
 def buffer_modified(bufctl, chg):
-
-    findclear(bufctl)
+    findall(bufctl)
+#     findclear(bufctl)

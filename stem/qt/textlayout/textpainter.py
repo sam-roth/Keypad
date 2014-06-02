@@ -7,7 +7,7 @@ from stem.core import AttributedString
 from stem.util.coordmap import TextCoordMapper
 
 from ..text_rendering import TextViewSettings
-from ..qt_util import ending, to_q_color
+from ..qt_util import ending, to_q_color, restoring
 
 
 class TextPainter:
@@ -71,7 +71,7 @@ class TextPainter:
             sel_color = self.settings.scheme.selection_fg
         if sel_bgcolor == 'auto':
             sel_bgcolor = self.settings.scheme.selection_bg
-            
+        
         self._painter.setPen(to_q_color(sel_color or self._attrs.get('color', self.settings.q_fgcolor)))
         self._painter.setBrush(to_q_color(sel_bgcolor or self._attrs.get('bgcolor', self.settings.q_bgcolor)))
 
@@ -92,7 +92,9 @@ class TextPainter:
         r = Qt.QRectF(pos, Qt.QSizeF(cells * self.settings.char_width,
                                   self._metrics.lineSpacing()))
 
-        if bgcolor is not None and self._attrs.get('sel_bgcolor') is None:
+        if (bgcolor is not None 
+            and self._attrs.get('sel_bgcolor') is None
+            and self._attrs.get('bgcolor') is None):
             bgcolor = to_q_color(bgcolor)
         else:
             bgcolor = self._painter.brush()
@@ -106,7 +108,22 @@ class TextPainter:
         if color is not None:
             oldpen = self._painter.pen()
             self._painter.setPen(to_q_color(color))
+
         self._painter.drawText(p, text)
+
+        if self._attrs.get('error'):
+            with restoring(self._painter):
+                pen = Qt.QPen(to_q_color('#F00'))
+                pen.setWidth(2)
+
+                pen.setStyle(Qt.Qt.DotLine)
+
+                self._painter.setPen(pen)
+
+
+                self._painter.drawLine(Qt.QLineF(p, Qt.QPointF(ep.x(), p.y())))
+
+
         if color is not None:
             self._painter.setPen(oldpen)
 

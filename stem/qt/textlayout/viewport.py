@@ -65,7 +65,10 @@ class TextViewport(QWidget):
         self._overlays = {}
         self._carets = {}
         self._last_line = len(self.buffer.lines)
+        self._extra_lines = ()
+        self._prev_paint_range = (0, 0)
 
+        self.setAttribute(Qt.WA_OpaquePaintEvent)
         self._general_settings = GeneralSettings.from_config(config)
         self._general_settings.value_changed.connect(self._reload_settings)
 
@@ -136,8 +139,12 @@ class TextViewport(QWidget):
                 (section, line), col = m
                 self.mouse_move_char(event.buttons(), line, col)
             return True
-
         else:
+
+            if event.type() in (QEvent.FocusIn, QEvent.Show):
+                self._prev_paint_range = -1, -1
+                self.update()
+
             return super().event(event)
 
 
@@ -240,6 +247,16 @@ class TextViewport(QWidget):
         self._origin = value
         self.update()
 
+
+    @property
+    def extra_lines(self):
+        return self._extra_lines
+
+    @extra_lines.setter
+    def extra_lines(self, value):
+        self._extra_lines = tuple(x.clone() for x in value)
+        self.update()
+
     def map_from_point(self, point):
         point = point - self.origin
 
@@ -272,11 +289,9 @@ class TextViewport(QWidget):
 
 
     def paintEvent(self, event):
-        super().paintEvent(event)
+        FLASH_RERENDER = False
 
         painter = QPainter(self)
-        self._line_number_for_y = RangeDict()
-        self._line_offsets.clear()
 
         omgr = _OverlayManager(self._overlays,
                                self._carets)
@@ -284,6 +299,8 @@ class TextViewport(QWidget):
         cursor_visible = self._cursor_visible
 
         with ending(painter):
+            prev_first_line, prev_last_line = self._prev_paint_range
+
             if self._origin != QPointF(0, 0):
                 painter.fillRect(QRectF(QPointF(0, 0),
                                         QSizeF(self.width(),
@@ -300,53 +317,152 @@ class TextViewport(QWidget):
                                  self._settings.q_bgcolor)
             plane_pos = QPointF(0, 0)
 
-            for i, line in enumerate(self._buffer.lines[self.first_line:],
-                                     self.first_line):
-
-
-                all_carets = omgr.carets(i)
-                carets = all_carets if self._cursor_visible else None
-                bgcolor = self._settings.scheme.cur_line_bg if all_carets else None
 
 
 
-                pm, o = self._layout_engine.get_line_pixmap(plane_pos=plane_pos,
-                                                            line=line,
-                                                            width=self.width() 
-                                                                 - self._origin.x()
-                                                                 - self.right_margin,
-                                                            overlays=omgr.line(i, len(line)),
+            # prerender extra lines
+            extra_line_pixmaps = []
+            total_extra_line_height = 5
+            for i, extra_line in enumerate(self.extra_lines):
+                pm, _ = self._layout_engine.get_line_pixmap(plane_pos=QPointF(0, 0),
+                                                            line=extra_line,
+                                                            width=(self.width()
+                                                                   - self.origin.x()
+                                                                   - self.right_margin),
+                                                            overlays=(),
                                                             wrap=True,
-                                                            line_id=LineID(None, i),
-                                                            bgcolor=bgcolor,
-                                                            carets=carets)
-                if bgcolor is not None and self._origin.x() != 0:
-                    painter.fillRect(QRectF(QPointF(0, plane_pos.y() + self._origin.y()),
-                                            QSizeF(self._origin.x(), pm.height())),
-                                     to_q_color(bgcolor))
-                painter.drawPixmap(plane_pos + self._origin, pm)
+                                                            line_id=LineID('extra', i),
+                                                            bgcolor=self.settings.scheme.extra_line_bg,
+                                                            carets=None)
 
-                line_id = LineID(None, i)
-                self._line_number_for_y[int(plane_pos.y()):int(plane_pos.y()+pm.height())] = line_id
-                self._y_for_line_number[line_id] = int(plane_pos.y()), int(plane_pos.y() + pm.height())
-                self._line_offsets[line_id] = plane_pos.y(), o
+                extra_line_pixmaps.append(pm)
+                total_extra_line_height += pm.height()
 
-                plane_pos.setY(plane_pos.y() + pm.height())
 
-                if plane_pos.y() + self._origin.y() >= self.height():
-                    self._last_line = i
+
+            def gen_lines():
+                for i, line in enumerate(self._buffer.lines[self.first_line:],
+                                         self.first_line):
+                    yield LineID(None, i), i, line
+
+
+            clean_cache_key = str(id(self)) + '.clean'
+
+            for line_id, doc_line_num, line in gen_lines():
+                
+
+                clean_rect = line.caches.get(clean_cache_key, None)
+                if FLASH_RERENDER:
+                    flashlast = line.caches.get('flashlast', False)
+                else:
+                    flashlast = False
+
+                if doc_line_num is not None:
+                    all_carets = omgr.carets(doc_line_num)
+                    carets = all_carets if self._cursor_visible else None
+                    bgcolor = self._settings.scheme.cur_line_bg if all_carets else None
+                    overlays = tuple(omgr.line(doc_line_num, len(line)))
+                else:
+                    all_carets = ()
+                    carets = None
+                    bgcolor = None
+                    overlays = ()
+
+                params = dict(plane_pos=plane_pos,
+                              line=line,
+                              width=(self.width()
+                                     - self.origin.x()
+                                     - self._right_margin),
+                              overlays=overlays,
+                              wrap=True,
+                              line_id=line_id,
+                              bgcolor=bgcolor,
+                              carets=carets)
+
+                line_clean = ((prev_first_line <= doc_line_num < prev_last_line)
+                              and not flashlast
+                              and clean_rect is not None
+                              and clean_rect.top() == int(plane_pos.y())
+                              and self._layout_engine.check_pixmap_clean(**params))
+
+#                 if ((prev_first_line <= doc_line_num <= prev_last_line) 
+#                     and clean_rect is not None 
+#                     and clean_rect.top() == int(plane_pos.y())): # and not event.rect().contains(clean_rect.toRect()):
+                if line_clean:
+#                     print('CLEAN', line_id)
+                    plane_pos.setY(plane_pos.y() + clean_rect.height())
+                else:    
+#                     print('DIRTY', line_id)
+                    pm, o = self._layout_engine.get_line_pixmap(**params)
+#                     pm, o = self._layout_engine.get_line_pixmap(plane_pos=plane_pos,
+#                                                                 line=line,
+#                                                                 width=self.width() 
+#                                                                      - self._origin.x()
+#                                                                      - self.right_margin,
+#                                                                 overlays=overlays,
+#                                                                 wrap=True,
+#                                                                 line_id=line_id,
+#                                                                 bgcolor=bgcolor,
+#                                                                 carets=carets)
+#     
+    
+    
+
+                    if bgcolor is not None and self._origin.x() != 0:
+                        painter.fillRect(QRectF(QPointF(0, plane_pos.y() + self._origin.y()),
+                                                QSizeF(self._origin.x(), pm.height())),
+                                         to_q_color(bgcolor))
+                    painter.drawPixmap(plane_pos + self._origin, pm)
+                    line.caches[clean_cache_key] = QRect((plane_pos).toPoint(),
+                                                         pm.size())
+                    if FLASH_RERENDER:
+                        if not flashlast:
+                            painter.fillRect(QRectF(plane_pos + self._origin,
+                                                    QSizeF(pm.size())),
+                                             QColor.fromRgb(255, 0, 0, 128))
+                            line.caches['flashlast'] = True
+                        else:
+                            line.caches['flashlast'] = False
+
+                    self._line_number_for_y[int(plane_pos.y()):int(plane_pos.y()+pm.height())] = line_id
+                    self._y_for_line_number[line_id] = int(plane_pos.y()), int(plane_pos.y() + pm.height())
+                    self._line_offsets[line_id] = plane_pos.y(), o
+    
+                    plane_pos.setY(plane_pos.y() + pm.height())
+    
+                if (plane_pos.y() + self._origin.y()
+                    >= self.height() - total_extra_line_height):
+                    self._last_line = doc_line_num
                     break
+
             else:
                 self._last_line = len(self.buffer.lines)
 
+
+            del self._line_number_for_y[int(plane_pos.y() + self._origin.y()):]
+
+            self._prev_paint_range = self.first_line, self.last_line
+
             if plane_pos.y() + self._origin.y() < self.height():
                 topleft = plane_pos + QPointF(0, self._origin.y())
+                topleft.setX(0)
+
                 painter.fillRect(QRectF(topleft,
                                         QSizeF(self.width(),
                                                self.height() - topleft.y())),
                                  to_q_color(self._settings.scheme.nontext_bg))
 
+            elp_pos = QPointF(self._origin.x(),
+                              self.height()
+                              - total_extra_line_height)
+            for elp in extra_line_pixmaps:
+                painter.drawPixmap(elp_pos, elp)
+                elp_pos.setY(elp_pos.y() + elp.height())
 
+#                 if self._origin.x() != 0:
+#                     painter.fillRect(QRectF(QPointF(0, elp_pos.y() + self._origin.y()),
+#                                             QSizeF(self._origin.x(), elp.height())),
+#                                      to_q_color(self._settings.scheme.extra_line_bg))
         
     @Signal
     def mouse_down_char(self, line, col): pass

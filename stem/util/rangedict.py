@@ -42,18 +42,21 @@ class RangeDict(collections.MutableMapping):
         self._data[lo] = value
 
     def del_interval(self, lo, hi):
-        self.put_interval(lo, hi, None)
-
-        delta = hi - lo
+        if hi is not None:
+            self.put_interval(lo, hi, None)
+        else:
+            self.put_interval(lo, lo+1, None)
 
         i = self._data.lower_bound(lo)
         ks, vs = self._data.item(slice(i, None))
         self._data.erase(slice(i, None))
 
-        for k, v in zip(ks, vs):
-            nk = k - delta
-            if nk >= lo:
-                self._data[nk] = v
+        if hi is not None:
+            delta = hi - lo    
+            for k, v in zip(ks, vs):
+                nk = k - delta
+                if nk >= lo:
+                    self._data[nk] = v
 
     def splice(self, key, delta):
         if delta == 0:
