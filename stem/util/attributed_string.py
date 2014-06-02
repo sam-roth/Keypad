@@ -55,6 +55,28 @@ class AttributedString:
         return self._text
 
 
+    @classmethod
+    def join(cls, *args):
+            
+        if len(args) == 1:
+            delim = ''
+            strings, = args
+        elif len(args) == 2:
+            delim, strings = args
+        else:
+            raise TypeError('join() takes one or two arguments')
+
+        # TODO: make this more efficient
+        result = AttributedString()
+
+        for i, string in enumerate(strings):
+            if i != 0:
+                result.append(delim)
+            result.append(string)
+        return result
+
+
+
     def insert(self, index, text):
         if index is None:
             index = len(self._text)
