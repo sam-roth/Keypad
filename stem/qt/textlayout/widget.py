@@ -9,6 +9,7 @@ class TextWidget(QAbstractScrollArea):
         super().__init__(parent)
 
         self._viewport = TextViewport(self)
+        self._viewport.origin = QPointF(10, 10)
         self.setViewport(self._viewport)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
         self._viewport.buffer_text_modified.connect(self._update_size)
@@ -44,7 +45,6 @@ def main():
     import sys
     from stem.control import lorem
     from stem.buffers import Buffer
-    
     app = QApplication(sys.argv)
 
     tw = TextWidget()
@@ -53,7 +53,7 @@ def main():
 
     buf = Buffer()
 
-    buf.insert((0, 0), lorem.text_wrapped)
+    buf.insert((0, 0), lorem.text)
 
     tw.buffer = buf
 

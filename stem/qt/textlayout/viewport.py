@@ -3,6 +3,7 @@ import functools
 import collections
 
 from ..qt_util import *
+from ..text_rendering import TextViewSettings
 
 from .engine import TextLayoutEngine
 from stem.buffers import Buffer
@@ -14,11 +15,13 @@ LineID = collections.namedtuple('LineID', 'section number')
 
 
 class TextViewport(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, *, settings=None):
         super().__init__(parent)
 
-        self._layout_engine = TextLayoutEngine()
+        self._settings = settings or TextViewSettings()
+        self._layout_engine = TextLayoutEngine(settings)
         self.buffer = Buffer()
+        self._origin = QPointF(0, 0)
         self._first_line = 0
         self._line_number_for_y = RangeDict(1)
         self._line_offsets = {}
@@ -52,7 +55,18 @@ class TextViewport(QWidget):
         self._first_line = value
         self.update()
 
+    @property
+    def origin(self):
+        return QPointF(self._origin)
+
+    @origin.setter
+    def origin(self, value):
+        self._origin = value
+        self.update()
+
     def map_from_point(self, point):
+        point = point - self.origin
+
         line_id = self._line_number_for_y[point.y()]
 
         y, line_offsets = self._line_offsets[line_id]
@@ -71,29 +85,52 @@ class TextViewport(QWidget):
         self._line_number_for_y = RangeDict(self.height())
         self._line_offsets.clear()
 
+
+
+
         with ending(painter):
+            if self._origin != QPointF(0, 0):
+                painter.fillRect(QRectF(QPointF(0, 0),
+                                        QSizeF(self.width(),
+                                               self._origin.y())),
+                                 self._settings.q_bgcolor)
+                painter.fillRect(QRectF(QPointF(0, 0),
+                                        QSizeF(self._origin.x(),
+                                               self.height())),
+                                 self._settings.q_bgcolor)
             plane_pos = QPointF(0, 0)
 
             for i, line in enumerate(self._buffer.lines[self.first_line:],
                                      self.first_line):
+
                 pm, o = self._layout_engine.get_line_pixmap(plane_pos=plane_pos,
                                                             line=line,
-                                                            width=self.width(),
+                                                            width=self.width() - self._origin.x(),
                                                             overlays=frozenset(),
                                                             wrap=True,
                                                             line_id=LineID(None, i),
                                                             bgcolor=None)
                 
-                painter.drawPixmap(plane_pos, pm)
+                painter.drawPixmap(plane_pos + self._origin, pm)
 
                 line_id = LineID(None, i)
                 self._line_number_for_y[int(plane_pos.y()):int(plane_pos.y()+pm.height())] = line_id
                 self._line_offsets[line_id] = plane_pos.y(), o
 
                 plane_pos.setY(plane_pos.y() + pm.height())
-    
-                if plane_pos.y() >= self.height():
+
+                if plane_pos.y() + self._origin.y() >= self.height():
                     break
+
+            if plane_pos.y() + self._origin.y() < self.height():
+                topleft = plane_pos + QPointF(0, self._origin.y())
+                painter.fillRect(QRectF(topleft,
+                                        QSizeF(self.width(),
+                                               self.height() - topleft.y())),
+                                 to_q_color(self._settings.scheme.nontext_bg))
+
+
+
 def main():
     import sys
     from stem.control import lorem
