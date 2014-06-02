@@ -31,7 +31,6 @@ class TextPainter:
 
 
 
-
     def reset(self):
         self.q_bgcolor = self.settings.q_bgcolor
         self.q_fgcolor = self.settings.q_fgcolor

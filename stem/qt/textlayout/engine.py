@@ -60,7 +60,9 @@ class TextLayoutEngine:
 
         subchunk_offsets = [(device_pos.x(), offset)]
 
-        bar_carets = list(reversed([c.pos[1] for c in carets if c.type == CaretType.bar]))
+        bar_carets = sorted([c.pos[1] for c in carets 
+                             if c.type == CaretType.bar
+                             and offset <= c.pos[1] <= offset + len(text)], reverse=True)
 
         with TextPainter(device=device, settings=self._settings) as tp:
             if bgcolor is not None:
@@ -94,12 +96,12 @@ class TextLayoutEngine:
                         color = None
 
                     tp.update_attrs(deltas)
-                    d1 = tp.paint_span(d0, subchunk_tx, color=color)
+                    d1 = tp.paint_span(d0, subchunk_tx, color=color, bgcolor=bgcolor)
 
                     w = fm.width(subchunk_tx)
                     d1 = Qt.QPointF(d0.x() + w, d0.y())
 
-                    while bar_carets and offset < bar_carets[-1] < offset + len(subchunk):
+                    while bar_carets and offset <= bar_carets[-1] < offset + len(subchunk):
                         tp.paint_bar_caret(Qt.QPointF(d0.x() + fm.width(subchunk[:bar_carets[-1] - offset]),
                                                       d0.y()))
 
@@ -114,6 +116,9 @@ class TextLayoutEngine:
 
                     subchunk_offsets.append((d0.x(), offset))
 
+            while bar_carets and bar_carets[-1] == offset:
+                tp.paint_bar_caret(d0)
+                bar_carets.pop()
         return tuple(subchunk_offsets)
 
     def transform_line_for_display(self, *, line, width,

@@ -11,6 +11,7 @@ import collections
 
 from .engine import TextLayoutEngine
 from stem.buffers import Buffer
+from stem.abstract.textview import MouseButton
 from stem.core import Signal
 from stem.core.attributed_string import RangeDict
 from stem.util.coordmap import LinearInterpolator
@@ -80,7 +81,39 @@ class TextViewport(QWidget):
         self._cursor_visible = False
         self._reload_settings()
         self._cursor_blink_on_timer.start()
-        
+
+        qc = self.cursor()
+        qc.setShape(Qt.IBeamCursor)
+        self.setCursor(qc)
+
+    def event(self, event):
+        if event.type() == QEvent.KeyPress:
+            self.keyPressEvent(event)
+            return True
+        elif event.type() == QEvent.ShortcutOverride:
+            ce_evt = marshal_key_event(event)
+            self.should_override_app_shortcut(ce_evt)
+            if ce_evt.is_intercepted:
+                event.accept()
+                return True
+            else:
+                return super().event(event)
+        elif event.type() == QEvent.MouseButtonPress:
+            m = self.map_from_point(event.pos())
+            if m is not None:
+                (section, line), col = m
+                self.mouse_down_char(line, col)
+            return True
+        elif event.type() == QEvent.MouseMove:
+            m = self.map_from_point(event.pos())
+            if m is not None:
+                (section, line), col = m
+                self.mouse_move_char(event.buttons(), line, col)
+            return True
+
+        else:
+            return super().event(event)
+
 
     def _reload_settings(self, *args):
         self._cursor_blink_on_timer.setInterval(self._general_settings.cursor_blink_rate *
@@ -215,7 +248,11 @@ class TextViewport(QWidget):
                                      self.first_line):
 
 
-                carets = omgr.carets(i) if self._cursor_visible else None
+                all_carets = omgr.carets(i)
+                carets = all_carets if self._cursor_visible else None
+                bgcolor = self._settings.scheme.cur_line_bg if all_carets else None
+
+
 
                 pm, o = self._layout_engine.get_line_pixmap(plane_pos=plane_pos,
                                                             line=line,
@@ -225,9 +262,12 @@ class TextViewport(QWidget):
                                                             overlays=omgr.line(i, len(line)),
                                                             wrap=True,
                                                             line_id=LineID(None, i),
-                                                            bgcolor=None,
+                                                            bgcolor=bgcolor,
                                                             carets=carets)
-                
+                if bgcolor is not None and self._origin.x() != 0:
+                    painter.fillRect(QRectF(QPointF(0, plane_pos.y() + self._origin.y()),
+                                            QSizeF(self._origin.x(), pm.height())),
+                                     to_q_color(bgcolor))
                 painter.drawPixmap(plane_pos + self._origin, pm)
 
                 line_id = LineID(None, i)
@@ -246,6 +286,18 @@ class TextViewport(QWidget):
                                                self.height() - topleft.y())),
                                  to_q_color(self._settings.scheme.nontext_bg))
 
+        
+    @Signal
+    def mouse_down_char(self, line, col): pass
+
+    @Signal
+    def mouse_move_char(self, buttons, line, col): pass
+
+    @Signal
+    def key_press(self, event: KeyEvent): pass
+
+    @Signal
+    def should_override_app_shortcut(self, event: KeyEvent): pass
 
 
 def main():
