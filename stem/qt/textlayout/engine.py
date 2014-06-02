@@ -1,17 +1,37 @@
+
 import re
+import enum
+
 from collections import ChainMap
 
 from PyQt4 import Qt
 
 from stem.core import AttributedString
 from stem.core.attributed_string import RangeDict
-from stem.util.coordmap import TextCoordMapper
+from stem.util.coordmap import TextCoordMapper, LinearInterpolator
 from stem.control import lorem
 
 from ..text_rendering import TextViewSettings, apply_overlay
 from ..qt_util import ending, to_q_color
 
 from .textpainter import TextPainter
+
+
+class CaretType(enum.Enum):
+    off = 0
+    bar = 1
+
+class Caret:
+    Type = CaretType
+
+    __slots__ = 'type', 'pos'
+
+    def __init__(self, type, pos):
+        self.type = CaretType(type)
+        self.pos = pos
+
+    def __repr__(self):
+        return 'Caret({!r}, {!r})'.format(self.type, self.pos)
 
 class TextLayoutEngine:
     def __init__(self, settings=None):
@@ -22,7 +42,7 @@ class TextLayoutEngine:
 
     def render_line_to_device(self, *, plane_pos, device_pos, 
                               device, text, bgcolor=None, start_col=0,
-                              line_id=0, offset=0):
+                              line_id=0, offset=0, carets=()):
         '''
         :param device_pos: The position on the device to which the line will be rendered.
         :param plane_pos:  The position on the screen, relative to the plane, where the line
@@ -34,11 +54,13 @@ class TextLayoutEngine:
         '''
         tstop = self._settings.tab_stop
         line_spacing = Qt.QFontMetricsF(self._settings.q_font).lineSpacing()
-
+        fm = Qt.QFontMetricsF(self._settings.q_font)
 
         self._mapper.clear(plane_pos.y(), plane_pos.y() + line_spacing)
 
         subchunk_offsets = [(device_pos.x(), offset)]
+
+        bar_carets = list(reversed([c.pos[1] for c in carets if c.type == CaretType.bar]))
 
         with TextPainter(device=device, settings=self._settings) as tp:
             if bgcolor is not None:
@@ -66,14 +88,24 @@ class TextLayoutEngine:
 
                         # show tabs using an average of the fg and bg colors
                         color = to_q_color(self._settings.fgcolor.mean(self._settings.bgcolor))
+
                     else:
                         subchunk_tx = subchunk
                         color = None
 
                     tp.update_attrs(deltas)
                     d1 = tp.paint_span(d0, subchunk_tx, color=color)
-                    w = Qt.QFontMetricsF(self._settings.q_font).width(subchunk_tx)
+
+                    w = fm.width(subchunk_tx)
                     d1 = Qt.QPointF(d0.x() + w, d0.y())
+
+                    while bar_carets and offset < bar_carets[-1] < offset + len(subchunk):
+                        tp.paint_bar_caret(Qt.QPointF(d0.x() + fm.width(subchunk[:bar_carets[-1] - offset]),
+                                                      d0.y()))
+
+                        bar_carets.pop()
+                        
+
 
                     offset += len(subchunk)
                     phys_col += len(subchunk_tx)
@@ -141,10 +173,12 @@ class TextLayoutEngine:
 
     def get_line_pixmap(self, *, plane_pos, line, width, 
                         overlays=frozenset(), wrap=False, 
-                        line_id=0, bgcolor=None):
+                        line_id=0, bgcolor=None, carets=None):
         '''
         Return a QPixmap containing the rendered line.
         '''
+
+        carets = tuple(carets or ())
 
         params_key = 'get_line_pixmap_params'
         pixmap_key = 'get_line_pixmap_pixmap'
@@ -154,7 +188,7 @@ class TextLayoutEngine:
 
         overlays = frozenset(overlays)
 
-        params = width, overlays, wrap, bgcolor, line_id
+        params = width, overlays, wrap, bgcolor, line_id, carets
 
         cache = line.caches.setdefault(id(self), {})
 
@@ -190,7 +224,8 @@ class TextLayoutEngine:
                                                      text=phys_line,
                                                      line_id=line_id,
                                                      offset=offset,
-                                                     bgcolor=bgcolor)
+                                                     bgcolor=bgcolor,
+                                                     carets=carets)
 
                 line_offsets.append(((i+1) * fm.lineSpacing(), offsets))
                 

@@ -6,17 +6,28 @@ import itertools
 from ..qt_util import *
 from ..text_rendering import TextViewSettings
 
+import enum
+import collections
+
 from .engine import TextLayoutEngine
 from stem.buffers import Buffer
 from stem.core import Signal
 from stem.core.attributed_string import RangeDict
 from stem.util.coordmap import LinearInterpolator
+from stem.options import GeneralSettings
 
 LineID = collections.namedtuple('LineID', 'section number')
 
 class _OverlayManager:
-    def __init__(self, overlays):
+    def __init__(self, overlays, carets):
         self.overlays = list(itertools.chain.from_iterable(overlays.values()))
+        self._carets = collections.defaultdict(list)
+
+        for caret_list in carets.values():
+            for caret in caret_list:
+                y, x = caret.pos
+                self._carets[y].append(caret)
+
 
     def line(self, i, length):
         for overlay_span, attr_key, attr_val in self.overlays:
@@ -31,15 +42,17 @@ class _OverlayManager:
     
                 yield line_start_x, line_end_x, attr_key, attr_val
 
-
+    def carets(self, i):
+        return self._carets.get(i, [])
 
 
 class TextViewport(QWidget):
-    def __init__(self, parent=None, *, settings=None):
+
+    def __init__(self, parent=None, *, config=None):
         super().__init__(parent)
 
-        self._settings = settings or TextViewSettings()
-        self._layout_engine = TextLayoutEngine(settings)
+        self._settings = TextViewSettings(settings=config)
+        self._layout_engine = TextLayoutEngine(self._settings)
         self.buffer = Buffer()
         self._origin = QPointF(0, 0)
         self._first_line = 0
@@ -47,9 +60,64 @@ class TextViewport(QWidget):
         self._line_offsets = {}
         self._right_margin = 5
         self._overlays = {}
+        self._carets = {}
+
+        self._general_settings = GeneralSettings.from_config(config)
+        self._general_settings.value_changed.connect(self._reload_settings)
+
+
+        self.setFocusPolicy(Qt.StrongFocus)
+        t = self._cursor_blink_on_timer = QTimer(self)
+        t.timeout.connect(self._on_cursor_blink_on)
+
+        t = self._cursor_blink_off_timer = QTimer(self)
+        t.timeout.connect(self._on_cursor_blink_off)
+
+        for timer in [self._cursor_blink_on_timer,
+                      self._cursor_blink_off_timer]:
+            timer.setSingleShot(True)
+
+        self._cursor_visible = False
+        self._reload_settings()
+        self._cursor_blink_on_timer.start()
+        
+
+    def _reload_settings(self, *args):
+        self._cursor_blink_on_timer.setInterval(self._general_settings.cursor_blink_rate *
+                                                (1 - self._general_settings.cursor_duty_cycle) *
+                                                1000)
+        self._cursor_blink_off_timer.setInterval(self._general_settings.cursor_blink_rate *
+                                                 self._general_settings.cursor_duty_cycle *
+                                                 1000)
+
+    def _on_cursor_blink_on(self):
+        self._cursor_visible = True
+        self._cursor_blink_off_timer.start()
+        self.update()
+
+    def _on_cursor_blink_off(self):
+        self._cursor_visible = False
+        self._cursor_blink_on_timer.start()
+        self.update()
+
+    def focusInEvent(self, event):
+        event.accept()
+        self._cursor_blink_off_timer.start()
+        self._cursor_visible = True
+
+    def focusOutEvent(self, event):
+        event.accept()
+        self._cursor_blink_on_timer.stop()
+        self._cursor_blink_off_timer.stop()
+        self._cursor_visible = False
+
 
     def set_overlays(self, token, overlays):
         self._overlays[token] = overlays
+        self.update()
+
+    def set_carets(self, token, carets):
+        self._carets[token] = tuple(carets)
         self.update()
 
     @property
@@ -60,6 +128,7 @@ class TextViewport(QWidget):
     def right_margin(self, value):
         self._right_margin = value
         self.update()
+        
 
     def _on_text_modified(self, chg):
         self.update()
@@ -120,7 +189,10 @@ class TextViewport(QWidget):
         self._line_number_for_y = RangeDict()
         self._line_offsets.clear()
 
-        omgr = _OverlayManager(self._overlays)
+        omgr = _OverlayManager(self._overlays,
+                               self._carets)
+
+        cursor_visible = self._cursor_visible
 
         with ending(painter):
             if self._origin != QPointF(0, 0):
@@ -142,6 +214,9 @@ class TextViewport(QWidget):
             for i, line in enumerate(self._buffer.lines[self.first_line:],
                                      self.first_line):
 
+
+                carets = omgr.carets(i) if self._cursor_visible else None
+
                 pm, o = self._layout_engine.get_line_pixmap(plane_pos=plane_pos,
                                                             line=line,
                                                             width=self.width() 
@@ -150,7 +225,8 @@ class TextViewport(QWidget):
                                                             overlays=omgr.line(i, len(line)),
                                                             wrap=True,
                                                             line_id=LineID(None, i),
-                                                            bgcolor=None)
+                                                            bgcolor=None,
+                                                            carets=carets)
                 
                 painter.drawPixmap(plane_pos + self._origin, pm)
 

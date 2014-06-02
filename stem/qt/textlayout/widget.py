@@ -4,17 +4,20 @@ from ..qt_util import *
 from .viewport import TextViewport
 from stem.api import interactive, BufferController
 from stem.buffers import Span
+from .engine import Caret
+from stem.options import GeneralSettings
 
 class TextWidget(QAbstractScrollArea):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, *, config=None):
         super().__init__(parent)
 
-        self._viewport = TextViewport(self)
+        self._viewport = TextViewport(self, config=config)
         self._viewport.origin = QPointF(10, 10)
         self.setViewport(self._viewport)
         self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
         self._viewport.buffer_text_modified.connect(self._update_size)
         self._cursor = None
+
 
     def _update_size(self, *args):
         self.verticalScrollBar().setRange(0, len(self.buffer.lines))
@@ -24,20 +27,8 @@ class TextWidget(QAbstractScrollArea):
         if m is not None:
             (sec, line), col = m
 
-            sp = Span.from_pos(self.buffer,
-                               (line, col),
-                               length=1)
-
-            self._viewport.set_overlays('cursor',
-                                        [(sp, 'bgcolor', '#FFF')])
-
-
-
-#             if self._cursor is not None:
-#                 l, c = self._cursor
-#                 self._viewport.buffer.lines[l].set_attributes(c, c + 1, bgcolor=None)
-#             self._viewport.buffer.lines[line].set_attributes(col, col + 1, bgcolor='#FFF')
-#             self._cursor = line, col
+            self._viewport.set_carets('cursor',
+                                      [Caret(Caret.Type.bar, (line, col))])
             self._viewport.update()
     
         print(self._viewport.map_from_point(event.pos()))

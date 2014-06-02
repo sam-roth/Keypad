@@ -70,6 +70,16 @@ class TextPainter:
         self._painter.setBrush(to_q_color(self._attrs['bgcolor']))
 
 
+    def paint_bar_caret(self, pos, color=None):
+        r = Qt.QRectF(pos, Qt.QSizeF(2, self._metrics.lineSpacing()))
+
+        if color is not None:
+            color = to_q_color(color)
+        else:
+            color = to_q_color(self._attrs['color'])
+
+        self._painter.fillRect(r, color)
+
 
 
     def paint_background(self, pos, cells, bgcolor=None):
