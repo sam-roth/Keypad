@@ -34,15 +34,17 @@ from .interactive import interactive
 class BufferController(Tagged, Responder):
     def __init__(self, buffer_set, view, buff, provide_interaction_mode=True, config=None):
         '''
-        :type view: stem.qt.view.TextView
+        :type view: stem.abstract.textview.AbstractTextView
         :type buff: stem.buffers.Buffer
         '''
+
         super().__init__()
 
         self.last_canonical_cursor_pos = 0,0
         self._view              = view
         self.buffer             = buff
-        self.view.lines         = self.buffer.lines
+#         self.view.lines         = self.buffer.lines
+        self.view.buffer        = buff
         self.view.keep          = self
         self.__file_mtime       = 0
 
@@ -55,13 +57,13 @@ class BufferController(Tagged, Responder):
         self.selection          = gs.selection(self.manipulator, self.config)
         self._code_model = None
         
-        self.view.scrolled                  += self._on_view_scrolled      
+#         self.view.scrolled                  += self._on_view_scrolled      
         self.manipulator.executed_change    += self.user_changed_buffer
         self.manipulator.executed_change    += self.__on_user_changed_buffer
         buff.text_modified                  += self.buffer_was_changed 
         buff.text_modified                  += self._after_buffer_modification
         self.history.transaction_committed  += self._after_history_transaction_committed
-        self.view.closing                   += self.closing
+#         self.view.closing                   += self.closing
         self.selection.moved                += self.scroll_to_cursor
         self.selection.moved                += self.selection_moved
         self.loaded_from_path               += self.__path_change
@@ -84,7 +86,9 @@ class BufferController(Tagged, Responder):
 
         
         self.__last_autoindent_curs = None
-        self.completion_controller = CompletionController(self)    
+
+        self.completion_controller = CompletionController(self)
+
     
         self._last_path = None
 
@@ -139,10 +143,7 @@ class BufferController(Tagged, Responder):
             if dc is not None:
                 dc.overlays_changed.disconnect(
                     self.__on_diagnostic_overlay_change)
-                try:
-                    del self.view.overlay_spans['diagnostics']
-                except KeyError:
-                    pass
+                self.view.set_overlays('diagnostics', [])
 
             self._diagnostics_controller = None
             self._code_model.dispose()
@@ -160,7 +161,7 @@ class BufferController(Tagged, Responder):
                 self._diagnostics_controller = dc
                 
     def __on_diagnostic_overlay_change(self):
-        self.view.overlay_spans['diagnostics'] = self._diagnostics_controller.overlays
+        self.view.set_overlays('diagnostics', self._diagnostics_controller.overlays)
         
     def __on_user_changed_buffer(self, chg):
         if self.code_model is None:
@@ -385,8 +386,9 @@ class BufferController(Tagged, Responder):
                 (span, 'sel_bgcolor', 'auto')
             ])
         
-        self.view.overlay_spans['selection'] = overlay_spans
-        self.view.overlay_spans['matched_brace'] = []
+
+        self.view.set_overlays('selection', overlay_spans)
+        self.view.set_overlays('matched_brace', [])
         # update matched braces
         if self.code_model is not None:
             try:
@@ -415,26 +417,31 @@ class BufferController(Tagged, Responder):
                             (span, 'sel_color', 'auto'),
                             (span, 'sel_bgcolor', 'auto')
                         ]
-                    self.view.overlay_spans['matched_brace'] = overlays
+
+                    self.view.set_overlays('matched_brace', overlays)
             except (RuntimeError, IndexError):
                 pass
         
-        if full:
-            self.view.full_redraw()
-        else:
-            self.view.partial_redraw()
+#         if full:
+#             self.view.full_redraw()
+#         else:
+#             self.view.partial_redraw()
 
-    
+
     @in_main_thread
     # defer this until later in the event loop, since final scroll position
     # position is hysteretic (path dependent)
-    def scroll_to_cursor(self):
+    def scroll_to_cursor(self, *, center=False):
         curs = self.selection.insert_cursor
-        if self.view.start_line > curs.pos[0]:
-            self.view.scroll_to_line(curs.pos[0])
-        elif self.view.start_line + self.view.buffer_lines_visible <= curs.pos[0]:
-            self.view.scroll_to_line(curs.pos[0] - self.view.buffer_lines_visible + 1)
-            
+        self.view.scroll_to_line(curs.pos[0], center=center)
+
+#
+#         curs = self.selection.insert_cursor
+#         if self.view.start_line > curs.pos[0]:
+#             self.view.scroll_to_line(curs.pos[0])
+#         elif self.view.start_line + self.view.buffer_lines_visible <= curs.pos[0]:
+#             self.view.scroll_to_line(curs.pos[0] - self.view.buffer_lines_visible + 1)
+#             
         
 from ..abstract.application import app
 
@@ -452,6 +459,7 @@ def next_cursor_position(bc: BufferController):
 @interactive('line')
 def goto_line(bc: BufferController, line):
     bc.selection.move(line=int(line))
+    bc.view.scroll_to_line(int(line), center=True)
     bc.refresh_view()
 
 @interactive('open_brace')

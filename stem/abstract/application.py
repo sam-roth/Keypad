@@ -66,6 +66,10 @@ class AbstractApplication(Responder, metaclass=abc.ABCMeta):
                      accept=0, reject=-1, kind=None):
         pass
 
+    @abc.abstractmethod
+    def beep(self):
+        pass
+
     @staticmethod
     def instance():
         '''

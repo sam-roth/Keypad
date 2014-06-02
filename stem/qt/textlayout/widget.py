@@ -6,12 +6,15 @@ from stem.api import interactive, BufferController
 from stem.buffers import Span
 from .engine import Caret
 from stem.options import GeneralSettings
-from stem.abstract.textview import AbstractTextView, MouseButton
+from stem.abstract.textview import (AbstractTextView, 
+                                    MouseButton,
+                                    AbstractCodeView)
+
+import logging
 
 class TextView(QAbstractScrollArea):
     def __init__(self, parent=None, *, config=None):
         super().__init__(parent)
-
         self._viewport = TextViewport(self, config=config)
         self._viewport.origin = QPointF(10, 10)
         self.setViewport(self._viewport)
@@ -19,9 +22,17 @@ class TextView(QAbstractScrollArea):
         self._viewport.buffer_text_modified.connect(self._update_size)
         self._cursor = None
 
+        self._viewport.setFocusProxy(None)
+        self.setFocusProxy(self._viewport)
+        self.setFrameShape(QFrame.NoFrame)
 
     def _update_size(self, *args):
         self.verticalScrollBar().setRange(0, len(self.buffer.lines))
+
+
+    @property
+    def text_viewport(self):
+        return self._viewport
 
     @property
     def buffer(self):
@@ -37,20 +48,42 @@ class TextView(QAbstractScrollArea):
             return super().viewportEvent(event)
         else:
             return False
-#         if event.type() == QEvent.Paint:
-#             return False # keep Qt from painting over the text
-#         else:
-#             return super().viewportEvent(event)
-# 
 
     def scrollContentsBy(self, dx, dy):
         self._viewport.first_line = self.verticalScrollBar().value()
 
 
-class TextViewProxy(AbstractTextView):
+class CodeView(TextView):
+    def __init__(self, parent=None, *, config=None):
+        super().__init__(parent=parent, config=config)
+
+        from ..call_tip_view import CallTipView
+        from ..completion_view import CompletionView
+
+        self._call_tip_view = CallTipView(self._viewport.settings, self)
+        self._completion_view = CompletionView(self._viewport.settings, self)
+
+
+    @property
+    def completion_view(self): 
+        return self._completion_view
+
+    @property
+    def call_tip_model(self):
+        return self._call_tip_view.model
+
+    @call_tip_model.setter
+    def call_tip_model(self, value):
+        self._call_tip_view.model = value
+
+
+
+
+
+class TextViewProxyMixin:
     def __init__(self, view):
 
-        self.__view = view
+        self._view = view
         self.__cursor_pos = None
 
         view._viewport.mouse_move_char.connect(self.mouse_move_char)
@@ -59,12 +92,23 @@ class TextViewProxy(AbstractTextView):
         view._viewport.should_override_app_shortcut.connect(self.should_override_app_shortcut)
 
     @property
+    def modelines(self):
+        logging.warning('TextViewProxy.modelines not implemented')
+        return []
+    
+    @modelines.setter
+    def modelines(self, value):
+        logging.warning('TextViewProxy.modelines not implemented')
+
+
+
+    @property
     def buffer(self):
-        return self.__view.buffer
+        return self._view.buffer
 
     @buffer.setter
     def buffer(self, value):
-        self.__view.buffer = value
+        self._view.buffer = value
 
     @property
     def cursor_pos(self):
@@ -73,22 +117,67 @@ class TextViewProxy(AbstractTextView):
     @cursor_pos.setter
     def cursor_pos(self, value):
         self.__cursor_pos = value
-        self.__view._viewport.set_carets('TextViewProxy.cursor',
-                                         [Caret(Caret.Type.bar, value)] if value is not None else [])
+        self._view._viewport.set_carets('TextViewProxy.cursor',
+                                        [Caret(Caret.Type.bar, value)] if value is not None else [])
 
     @property
     def first_line(self):
-        return self.__view._viewport.first_line
+        return self._view._viewport.first_line
 
     @first_line.setter
     def first_line(self, value):
-        self.__view.verticalScrollBar().setValue(value)
+        self._view.verticalScrollBar().setValue(value)
+
+    @property
+    def last_line(self):
+        return self._view.text_viewport.last_line
 
     def set_overlays(self, token, overlays):
-        self.__view._viewport.set_overlays(token, overlays)
+        self._view._viewport.set_overlays(token, overlays)
 
     def update(self):
-        self.__view._viewport.update()
+        self._view._viewport.update()
+
+class TextViewProxy(TextViewProxyMixin, AbstractTextView):
+    pass
+
+
+class CodeViewProxyMixin(TextViewProxyMixin):
+
+    def __init__(self, *args, **kw):
+        super().__init__(*args, **kw)
+
+
+        self.completion_view.key_press.connect(self.key_press)
+
+    @property
+    def completion_view(self): 
+        return self._view.completion_view
+                
+    @property
+    def call_tip_model(self):
+        return self._view.call_tip_model
+
+    @call_tip_model.setter
+    def call_tip_model(self, value):
+        self._view.call_tip_model = value
+
+
+    def show_completions(self):
+        l, c = self.cursor_pos
+        p = self._view._viewport.map_to_point(l, c)
+        p = self._view._viewport.mapToGlobal(p)
+
+        self.completion_view.visible=True
+        self.completion_view.move_(p)
+
+
+    @property
+    def plane_size(self):
+        return self._view.text_viewport.plane_size
+
+class CodeViewProxy(CodeViewProxyMixin, AbstractCodeView):
+    pass
 
 
 class DummyBufferController:
@@ -111,9 +200,13 @@ class DummyBufferController:
 
         self.view.mouse_down_char.connect(self.mouse_down_char)
         self.view.mouse_move_char.connect(self.mouse_move_char)
+        self.view.key_press.connect(self.key_press)
         self.view.update()
 
 
+
+    def key_press(self, event):
+        print('got key event', event)
 
     def mouse_down_char(self, line, col):
         print('mdc', line, col)

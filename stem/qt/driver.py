@@ -53,6 +53,10 @@ class Application(AbstractApplication, QApplication, metaclass=ABCWithQtMeta):
         QApplication.setApplicationName('Stem')
         super().__init__(args)
 
+
+    def beep(self):
+        QApplication.beep()
+
     def _message_box(self, parent, 
                      text, choices,
                      accept=0, reject=-1,

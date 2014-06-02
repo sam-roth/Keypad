@@ -58,10 +58,12 @@ class TextViewport(QWidget):
         self._origin = QPointF(0, 0)
         self._first_line = 0
         self._line_number_for_y = RangeDict()
+        self._y_for_line_number = {}
         self._line_offsets = {}
         self._right_margin = 5
         self._overlays = {}
         self._carets = {}
+        self._last_line = float('inf')
 
         self._general_settings = GeneralSettings.from_config(config)
         self._general_settings.value_changed.connect(self._reload_settings)
@@ -86,9 +88,27 @@ class TextViewport(QWidget):
         qc.setShape(Qt.IBeamCursor)
         self.setCursor(qc)
 
+    @property
+    def plane_size(self):
+        fm = QFontMetricsF(self.settings.q_font)
+        height = (self.height() - self.origin.y()) / fm.lineSpacing()
+        width = (self.width() - self.origin.x()) / fm.width('x')
+
+        return int(height), int(width)
+
+    @property
+    def last_line(self):
+        return self._last_line
+
+    @property
+    def settings(self):
+        return self._settings
+
     def event(self, event):
+        import logging
         if event.type() == QEvent.KeyPress:
-            self.keyPressEvent(event)
+            self.key_press(marshal_key_event(event))
+            event.accept()
             return True
         elif event.type() == QEvent.ShortcutOverride:
             ce_evt = marshal_key_event(event)
@@ -206,13 +226,31 @@ class TextViewport(QWidget):
 
         line_id = self._line_number_for_y[point.y()]
 
-        y, line_offsets = self._line_offsets[line_id]
+        try:
+            y, line_offsets = self._line_offsets[line_id]
+        except KeyError:
+            return None
+            
         for dy, offsets in line_offsets:
             if y + dy >= point.y():
                 col = LinearInterpolator(offsets)(point.x(), saturate=True)
                 return line_id, int(col)
         else:
             assert False, 'wrong line was selected by self._line_number_for_y[point.y()]'
+
+    def map_to_point(self, line, col):
+        line_id = LineID(None, line)
+        y0, line_offsets = self._line_offsets.get(line_id, (0, ()))
+        for dy, offsets in line_offsets:
+            print(y0, dy, offsets)
+            if offsets and col >= offsets[0][1] and col <= offsets[-1][1]:
+                inv = [(y,x) for (x,y) in offsets]
+                x = LinearInterpolator(inv)(col, saturate=True)
+
+                return (QPointF(x, y0 + dy) + self.origin).toPoint()
+        else:
+            return None
+
 
 
     def paintEvent(self, event):
@@ -272,12 +310,16 @@ class TextViewport(QWidget):
 
                 line_id = LineID(None, i)
                 self._line_number_for_y[int(plane_pos.y()):int(plane_pos.y()+pm.height())] = line_id
+                self._y_for_line_number[line_id] = int(plane_pos.y()), int(plane_pos.y() + pm.height())
                 self._line_offsets[line_id] = plane_pos.y(), o
 
                 plane_pos.setY(plane_pos.y() + pm.height())
 
                 if plane_pos.y() + self._origin.y() >= self.height():
+                    self._last_line = i
                     break
+            else:
+                self._last_line = float('inf')
 
             if plane_pos.y() + self._origin.y() < self.height():
                 topleft = plane_pos + QPointF(0, self._origin.y())
@@ -285,6 +327,7 @@ class TextViewport(QWidget):
                                         QSizeF(self.width(),
                                                self.height() - topleft.y())),
                                  to_q_color(self._settings.scheme.nontext_bg))
+
 
         
     @Signal
@@ -298,7 +341,6 @@ class TextViewport(QWidget):
 
     @Signal
     def should_override_app_shortcut(self, event: KeyEvent): pass
-
 
 def main():
     import sys

@@ -3,17 +3,19 @@
 from stem.abstract.editor import AbstractEditor
 from stem.core.responder import Responder
 from stem.abstract.application import app
-from .view import TextView
+# from .view import TextView
+from .textlayout.widget import CodeView, CodeViewProxy
 from .qt_util import *
 from stem.core.signal import Signal
 
 class Editor(AbstractEditor, Responder, QWidget, metaclass=ABCWithQtMeta):
 
     def __init__(self, config):
-        self.__view = TextView()
+        self.__view = CodeView()
+        self.__prox = CodeViewProxy(self.__view)
         self.__config = config.derive()
 
-        AbstractEditor.__init__(self, self.__view, self.__config)
+        AbstractEditor.__init__(self, self.__prox, self.__config)
         Responder.__init__(self)
         QWidget.__init__(self)
 

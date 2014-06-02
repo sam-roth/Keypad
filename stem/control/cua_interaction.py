@@ -9,6 +9,9 @@ from ..core.responder           import Responder
 from .interactive               import interactive
 from ..buffers                  import Cursor
 
+from ..abstract.application import app
+from ..abstract.textview import MouseButton
+
 import unicodedata
 
 def isprint(ch):
@@ -120,13 +123,6 @@ class CUAInteractionMode(Responder):
         self.modeline = AttributedString()
         self.view.modelines.append(self.modeline)
         
-#        cursor_move = self.make_cursor_move
-#        remove = self.make_remove
-#        page_move = self.make_page_move
-#        select_all = self.select_all
-#        advance_word = self.make_advance_word
-#        delete_word = self.make_delete_word
-#
 
         def mov(func, *args, ignore_shift=False):
             def result(evt):
@@ -206,7 +202,6 @@ class CUAInteractionMode(Responder):
 
 
         self.controller.view.key_press.connect(self._on_key_press)
-        self.controller.view.scrolled.connect(self._on_view_scrolled)
         self.controller.view.mouse_down_char.connect(self._on_mouse_down)
         self.controller.view.mouse_move_char.connect(self._on_mouse_move)
 
@@ -226,18 +221,13 @@ class CUAInteractionMode(Responder):
         pass
 
     def _on_mouse_down(self, line, col):
-        #self.controller.anchor_cursor = None
-        #self.curs.move(0,0).down(line).right(col)
         sel = self.controller.selection
         sel.move(0,0).down(line).right(col)
         self._show_default_modeline()
         self.controller.refresh_view()
 
     def _on_mouse_move(self, buttons, line, col):
-        if buttons & self.controller.view.MouseButtons.Left:
-            #if self.controller.anchor_cursor is None:
-            #    self.controller.anchor_cursor = self.curs.clone()
-            #self.curs.move(0,0).down(line).right(col)
+        if buttons & MouseButton.left_button:
             sel = self.controller.selection
             with sel.select():
                 sel.move(0,0).down(line).right(col)
@@ -275,7 +265,7 @@ class CUAInteractionMode(Responder):
 
 
     def show_error(self, text):
-        self.controller.view.beep()
+        app().beep()
         self.show_modeline(AttributedString(
             text,
             bgcolor='#dc322f',
@@ -292,44 +282,14 @@ class CUAInteractionMode(Responder):
             except KeyError:
                 if isprint(evt.text):
                     self.controller.selection.text = evt.text
-                    #if self.controller.anchor_cursor is not None:
-                    #    self.curs.remove_to(self.controller.anchor_cursor)
-                    #    self.controller.anchor_cursor = None
-                    #self.curs.insert(evt.text)
             else:
                 try:
                     binding(evt)
                 except errors.UserError as exc:
                     logging.exception(exc)
-
                     self.show_error(str(exc) + ' [' + type(exc).__name__ + ']')
-                    
-                    #self.controller.view.beep()
-                    #self.modeline.remove(0, None)
-                    #self.modeline.append(str(exc) + ' [' + type(exc).__name__ + ']')
-                    #self.modeline.set_attribute('bgcolor', '#dc322f') #'#800')
-                    #self.modeline.set_attribute('color', '#fdf6e3')
-                    #self.modeline.set_attribute('color', '#FFF')
                     success = False
 
             if success:
                 self._show_default_modeline()
 
-        plane_height, plane_width = self.controller.view.plane_size
-
-        
-#         full_redraw_needed = False
-# 
-#         if self.view.start_line > self.curs.pos[0]:
-#             self.view.scroll_to_line(self.curs.pos[0])
-#             full_redraw_needed = True
-#         elif self.view.start_line + self.view.buffer_lines_visible <= self.curs.pos[0]:
-#             self.view.scroll_to_line(self.curs.pos[0] - self.view.buffer_lines_visible + 1)
-#             full_redraw_needed = True
-# 
-#         self.controller.refresh_view(full=full_redraw_needed)
-        
-
-#@interactive('imode_map', 'mmap')
-#def imode_map(imode: CUAInteractionMode, seq, *cmd):
-    

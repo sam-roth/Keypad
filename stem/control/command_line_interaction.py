@@ -160,7 +160,6 @@ class CommandLineInteractionMode(CUAInteractionMode):
             if success:
                 self._show_default_modeline()
 
-        plane_height, plane_width = self.controller.view.plane_size
 
     def __set_last_line(self, text):
         home = Cursor(self.controller.buffer).last_line().home()

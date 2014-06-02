@@ -4,6 +4,7 @@ from ..buffers import Buffer
 
 from ..control.interactive import interactive
 from ..core import Signal
+import logging
 
 class AbstractEditor(metaclass=abc.ABCMeta):
     

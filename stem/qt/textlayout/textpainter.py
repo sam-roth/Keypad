@@ -20,8 +20,8 @@ class TextPainter:
         self.device = device
         self.reset()
         self._base_attrs = {
-            'bgcolor': self.settings.q_bgcolor,
-            'color': self.settings.q_fgcolor
+#             'bgcolor': self.settings.q_bgcolor,
+#             'color': self.settings.q_fgcolor
         }
 
         self._cur_lc_attrs = {}
@@ -65,8 +65,15 @@ class TextPainter:
             if lc is not None:
                 self._cur_lc_attrs.update(self.settings.scheme.lexical_category_attrs(lc))
                 
-        self._painter.setPen(to_q_color(self._attrs['color']))
-        self._painter.setBrush(to_q_color(self._attrs['bgcolor']))
+        sel_color = self._attrs.get('sel_color')
+        sel_bgcolor = self._attrs.get('sel_bgcolor')
+        if sel_color == 'auto':
+            sel_color = self.settings.scheme.selection_fg
+        if sel_bgcolor == 'auto':
+            sel_bgcolor = self.settings.scheme.selection_bg
+            
+        self._painter.setPen(to_q_color(sel_color or self._attrs.get('color', self.settings.q_fgcolor)))
+        self._painter.setBrush(to_q_color(sel_bgcolor or self._attrs.get('bgcolor', self.settings.q_bgcolor)))
 
 
     def paint_bar_caret(self, pos, color=None):
@@ -75,7 +82,7 @@ class TextPainter:
         if color is not None:
             color = to_q_color(color)
         else:
-            color = to_q_color(self._attrs['color'])
+            color = to_q_color(self._attrs.get('color', self.settings.q_fgcolor))
 
         self._painter.fillRect(r, color)
 
@@ -85,7 +92,7 @@ class TextPainter:
         r = Qt.QRectF(pos, Qt.QSizeF(cells * self.settings.char_width,
                                   self._metrics.lineSpacing()))
 
-        if bgcolor is not None:
+        if bgcolor is not None and self._attrs.get('sel_bgcolor') is None:
             bgcolor = to_q_color(bgcolor)
         else:
             bgcolor = self._painter.brush()
