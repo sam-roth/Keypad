@@ -92,10 +92,20 @@ class RangeDict(object):
 
     SpanInfo = namedtuple('SpanInfo', 'start end value')
 
-    def __init__(self, length=0):
-        self._data = []
+    def __init__(self, length=0, *, _data=None):
+        if _data is None:
+            self._data = []
+        else:
+            self._data = _data
+
         self._length = length
 
+
+    @classmethod
+    def from_data(cls, data):
+        return cls(length=max(x for (x, _) in data),
+                   _data=data)
+        
 
     @property 
     def length(self):

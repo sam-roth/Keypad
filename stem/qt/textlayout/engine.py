@@ -4,6 +4,7 @@ from collections import ChainMap
 from PyQt4 import Qt
 
 from stem.core import AttributedString
+from stem.core.attributed_string import RangeDict
 from stem.util.coordmap import TextCoordMapper
 from stem.control import lorem
 
@@ -36,6 +37,8 @@ class TextLayoutEngine:
 
 
         self._mapper.clear(plane_pos.y(), plane_pos.y() + line_spacing)
+
+        subchunk_offsets = [(device_pos.x(), 0)]
 
         with TextPainter(device=device, settings=self._settings) as tp:
             if bgcolor is not None:
@@ -82,11 +85,16 @@ class TextLayoutEngine:
                                             line_id=line_id,
                                             offset=int(offset))
 
+
+
                     offset += len(subchunk)
                     phys_col += len(subchunk_tx)
                     p.setX(p.x() + w)
                     d0 = d1
 
+                    subchunk_offsets.append((d0.x(), offset))
+
+        return tuple(subchunk_offsets)
 
     def transform_line_for_display(self, *, line, width,
                                    overlays=frozenset(),
@@ -151,12 +159,13 @@ class TextLayoutEngine:
 
         params_key = 'get_line_pixmap_params'
         pixmap_key = 'get_line_pixmap_pixmap'
+        offset_key = 'offsets'
 
         fm = Qt.QFontMetricsF(self._settings.q_font)
 
         overlays = frozenset(overlays)
 
-        params = (plane_pos.x(), plane_pos.y()), width, overlays, wrap, bgcolor, line_id
+        params = width, overlays, wrap, bgcolor, line_id
 
         cache = line.caches.setdefault(id(self), {})
 
@@ -181,21 +190,25 @@ class TextLayoutEngine:
 
 
             offset = 0
+            line_offsets = []
+
             for i, phys_line in enumerate(lines):
                 line_plane_pos = Qt.QPointF(plane_pos.x(), plane_pos.y() + i * fm.lineSpacing())
 
-                self.render_line_to_device(plane_pos=line_plane_pos,
-                                           device_pos=Qt.QPointF(0, i * fm.lineSpacing()),
-                                           device=pm,
-                                           text=phys_line,
-                                           line_id=line_id,
-                                           offset=offset,
-                                           bgcolor=bgcolor)
+                offsets = self.render_line_to_device(plane_pos=line_plane_pos,
+                                                     device_pos=Qt.QPointF(0, i * fm.lineSpacing()),
+                                                     device=pm,
+                                                     text=phys_line,
+                                                     line_id=line_id,
+                                                     offset=offset,
+                                                     bgcolor=bgcolor)
 
-
+                line_offsets.append(((i+1) * fm.lineSpacing(), offsets))
+                
                 offset += len(phys_line)
 
-            cache[pixmap_key] = pm
+            cache[pixmap_key] = pm, tuple(line_offsets)
+
 
         return cache[pixmap_key]
 

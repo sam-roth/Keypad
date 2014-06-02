@@ -53,7 +53,7 @@ def main():
 
     buf = Buffer()
 
-    buf.insert((0, 0), lorem.text)
+    buf.insert((0, 0), lorem.text_wrapped)
 
     tw.buffer = buf
 
