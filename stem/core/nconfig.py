@@ -373,6 +373,9 @@ class Settings(metaclass=ConfigMeta):
     
     @classmethod
     def from_config(cls, config):
+        if config is None:
+            config = Config.root
+            
         if cls in config.groups:
             return config.groups[cls]
         elif config.chain is not None:
