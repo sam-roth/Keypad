@@ -271,7 +271,7 @@ class CUAInteractionMode(Responder):
             
         loc_hint = '{0}:{1}:{2}'.format(path, self.curs.y+1, self.curs.x+1)
         self.modeline.append('{:<50} [{}]'.format(loc_hint, type(self).__name__))
-        self.modeline.set_attribute('color', '#268bd2')
+        self.modeline.set_attributes(0, None, color='#268bd2')
 
 
     def show_error(self, text):

@@ -8,10 +8,16 @@ SpanInfo = collections.namedtuple('SpanInfo', 'start end value')
 
 class RangeDict(collections.MutableMapping):
 
-    __slots__ = '_data', 
+    __slots__ = '_data',
 
     def __init__(self):
         self._data = ListDict()
+
+
+    def copy(self):
+        rd = RangeDict()
+        rd._data = self._data.copy()
+        return rd
 
     def put_interval(self, lo, hi, value):
         if lo == hi:
@@ -73,19 +79,27 @@ class RangeDict(collections.MutableMapping):
             return None
 
     def span_info(self, key):
-        lb = self._data.lower_bound(key)
         ub = self._data.upper_bound(key)
-
-
         if ub - 1 >= 0:
             try: 
+                lo = self._data.key(ub - 1)
                 v = self._data.value(ub - 1)
             except IndexError: 
                 v = None
+                lo = None
         else:
             v = None
+            lo = None
 
-        return SpanInfo(lb, ub, v)
+        if ub >= 0:
+            try:
+                hi = self._data.key(ub)
+            except IndexError:
+                hi = None
+        else:
+            hi = None
+
+        return SpanInfo(lo, hi, v)
 
     @property
     def iterrange(self):

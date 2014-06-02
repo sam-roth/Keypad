@@ -14,6 +14,13 @@ class ListDict(collections.abc.MutableMapping):
         self._keys = []
         self._vals = []
 
+    def copy(self):
+        result = ListDict()
+        result._keys = self._keys.copy()
+        result._vals = self._vals.copy()
+
+        return result
+
     def lower_bound(self, key):
         '''
         Return the index of the first key greater than or equal to `key`.

@@ -23,7 +23,7 @@ class TextViewport(QWidget):
         self.buffer = Buffer()
         self._origin = QPointF(0, 0)
         self._first_line = 0
-        self._line_number_for_y = RangeDict(1)
+        self._line_number_for_y = RangeDict()
         self._line_offsets = {}
 
     def _on_text_modified(self, chg):
@@ -82,7 +82,7 @@ class TextViewport(QWidget):
         super().paintEvent(event)
 
         painter = QPainter(self)
-        self._line_number_for_y = RangeDict(self.height())
+        self._line_number_for_y = RangeDict()
         self._line_offsets.clear()
 
 

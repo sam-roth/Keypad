@@ -44,7 +44,7 @@ class TextWidget(QAbstractScrollArea):
 def main():
     import sys
     from stem.control import lorem
-    from stem.buffers import Buffer
+    from stem.buffers import Buffer, Cursor
     app = QApplication(sys.argv)
 
     tw = TextWidget()
@@ -54,6 +54,10 @@ def main():
     buf = Buffer()
 
     buf.insert((0, 0), lorem.text)
+
+    curs = Cursor(buf)
+    curs.down()
+    curs.line.set_attributes(color='#F00')
 
     tw.buffer = buf
 

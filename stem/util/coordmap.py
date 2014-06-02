@@ -92,16 +92,16 @@ class LinearInterpolator:
 class TextCoordMapper:
 
     def __init__(self):
-        self.__lines = RangeDict(1)
+        self.__lines = RangeDict()
 
     def __line(self, x, y, width, height):
-        if self.__lines.length <= y + height:
-            self.__lines.length = y + height + 10
+#         if self.__lines.length <= y + height:
+#             self.__lines.length = y + height + 10
         l = self.__lines[y]
         if l is None:
-            l = RangeDict(x + width+10)
-        elif l.length <= x + width:
-            l.length = x + width + 10
+            l = RangeDict()
+#         elif l.length <= x + width:
+#             l.length = x + width + 10
         self.__lines[y:y+height] = l
 
         return l

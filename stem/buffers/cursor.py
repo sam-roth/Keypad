@@ -256,7 +256,7 @@ class Cursor(object):
             start_x = self_x   if y == self_y   else 0
             end_x   = other_x  if y == other_y  else None
             
-            line.set_attribute(start_x, end_x, key, value)
+            line.set_attributes(start_x, end_x, **{key: value})
         
         return self
 
