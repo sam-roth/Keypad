@@ -63,6 +63,17 @@ class CodeView(TextView):
         self._call_tip_view = CallTipView(self._viewport.settings, self)
         self._completion_view = CompletionView(self._viewport.settings, self)
 
+        self._completion_view.installEventFilter(self)
+
+
+    def eventFilter(self, obj, ev):
+        if obj is self._completion_view:
+            if ev.type() == QEvent.Show:
+                self._viewport.simulate_focus = True
+            elif ev.type() == QEvent.Hide:
+                self._viewport.simulate_focus = False
+
+        return super().eventFilter(obj, ev)
 
     @property
     def completion_view(self): 

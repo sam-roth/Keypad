@@ -53,6 +53,7 @@ class TextViewport(QWidget):
         super().__init__(parent)
 
         self._settings = TextViewSettings(settings=config)
+
         self._layout_engine = TextLayoutEngine(self._settings)
         self.buffer = Buffer()
         self._origin = QPointF(0, 0)
@@ -63,7 +64,7 @@ class TextViewport(QWidget):
         self._right_margin = 5
         self._overlays = {}
         self._carets = {}
-        self._last_line = float('inf')
+        self._last_line = len(self.buffer.lines)
 
         self._general_settings = GeneralSettings.from_config(config)
         self._general_settings.value_changed.connect(self._reload_settings)
@@ -88,6 +89,9 @@ class TextViewport(QWidget):
         qc.setShape(Qt.IBeamCursor)
         self.setCursor(qc)
 
+        self._simulate_focus = False
+
+
     @property
     def plane_size(self):
         fm = QFontMetricsF(self.settings.q_font)
@@ -108,6 +112,8 @@ class TextViewport(QWidget):
         import logging
         if event.type() == QEvent.KeyPress:
             self.key_press(marshal_key_event(event))
+            self._cursor_blink_off_timer.stop()
+            self._on_cursor_blink_on()
             event.accept()
             return True
         elif event.type() == QEvent.ShortcutOverride:
@@ -143,26 +149,39 @@ class TextViewport(QWidget):
                                                  self._general_settings.cursor_duty_cycle *
                                                  1000)
 
-    def _on_cursor_blink_on(self):
-        self._cursor_visible = True
-        self._cursor_blink_off_timer.start()
+
+        for line in self.buffer.lines[self.first_line:self.last_line]:
+            line.invalidate()
+
         self.update()
+
+    def _on_cursor_blink_on(self):
+        self._cursor_visible = self.hasFocus() or self._simulate_focus
+        if self._cursor_visible:
+            self._cursor_blink_off_timer.start()
+            self.update()
 
     def _on_cursor_blink_off(self):
         self._cursor_visible = False
         self._cursor_blink_on_timer.start()
         self.update()
 
+    @property
+    def simulate_focus(self):
+        return self._simulate_focus
+
+    @simulate_focus.setter
+    def simulate_focus(self, value):
+        self._simulate_focus = value
+        self._on_cursor_blink_on()
+
     def focusInEvent(self, event):
         event.accept()
-        self._cursor_blink_off_timer.start()
-        self._cursor_visible = True
+        self._on_cursor_blink_on()
 
     def focusOutEvent(self, event):
         event.accept()
-        self._cursor_blink_on_timer.stop()
-        self._cursor_blink_off_timer.stop()
-        self._cursor_visible = False
+        self._on_cursor_blink_on()
 
 
     def set_overlays(self, token, overlays):
@@ -242,7 +261,6 @@ class TextViewport(QWidget):
         line_id = LineID(None, line)
         y0, line_offsets = self._line_offsets.get(line_id, (0, ()))
         for dy, offsets in line_offsets:
-            print(y0, dy, offsets)
             if offsets and col >= offsets[0][1] and col <= offsets[-1][1]:
                 inv = [(y,x) for (x,y) in offsets]
                 x = LinearInterpolator(inv)(col, saturate=True)
@@ -319,7 +337,7 @@ class TextViewport(QWidget):
                     self._last_line = i
                     break
             else:
-                self._last_line = float('inf')
+                self._last_line = len(self.buffer.lines)
 
             if plane_pos.y() + self._origin.y() < self.height():
                 topleft = plane_pos + QPointF(0, self._origin.y())
