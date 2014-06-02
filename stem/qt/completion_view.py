@@ -10,7 +10,7 @@ from ..core                 import AttributedString, Signal
 from ..core.key             import SimpleKeySequence, Keys, KeySequenceDict
 from ..abstract.completion  import AbstractCompletionView
 from ..core.colorscheme     import Colorscheme
-
+from stem.buffers import Cursor, Buffer
 from . import options
 
 
@@ -204,8 +204,8 @@ class CompletionView(QWidget, AbstractCompletionView, metaclass=ABCWithQtMeta):
     
     def __init__(self, settings=None, parent=None):
         super().__init__(parent)
-        from . import view
-        
+#         from . import view
+        from .textlayout.widget import TextView
         self._outer_layout = QVBoxLayout(self)
 
 
@@ -222,9 +222,10 @@ class CompletionView(QWidget, AbstractCompletionView, metaclass=ABCWithQtMeta):
         self._outer_container_layout.addWidget(self._container)
 
         self._listWidget = QTreeView(self._container)
-        self._docs = view.TextView(self._container)
-        self._docs.update_plane_size()
-        self._docs.disable_partial_update = True
+        self._docs = TextView(parent=self._container, 
+                              config=settings.config if settings else None)
+#         self._docs.update_plane_size()
+#         self._docs.disable_partial_update = True
         
 
         self._container.addWidget(self._listWidget)
@@ -273,11 +274,11 @@ class CompletionView(QWidget, AbstractCompletionView, metaclass=ABCWithQtMeta):
         self.__orig_settings = settings
 
 
-        self._docs.scrolled.connect(self._on_scroll)
+#         self._docs.scrolled.connect(self._on_scroll)
 
-    def _on_scroll(self, start_line):
-        self._docs.start_line = start_line
-        self._docs.full_redraw()
+#     def _on_scroll(self, start_line):
+#         self._docs.start_line = start_line
+#         self._docs.full_redraw()
 
     def __reset_settings(self):
         self.__set_settings(self.__orig_settings)
@@ -292,8 +293,6 @@ class CompletionView(QWidget, AbstractCompletionView, metaclass=ABCWithQtMeta):
 
         settings.q_bgcolor = settings.q_completion_bgcolor
         scheme = settings.scheme
-
-        self._docs.settings = settings
 
         stylesheet = completion_view_stylesheet.format(
             settings=settings,
@@ -367,12 +366,22 @@ class CompletionView(QWidget, AbstractCompletionView, metaclass=ABCWithQtMeta):
 
     @property
     def doc_lines(self):
-        return self._docs.lines
+        return self._docs.buffer.lines
 
     @doc_lines.setter
     def doc_lines(self, val):
-        self._docs.lines = val
-        self._docs.full_redraw()
+        try:
+            c = Cursor(self._docs.buffer)
+            c.remove_to(c.clone().last_line().end())
+
+            # TODO: allow for adding AttributedStrings here
+            text = '\n'.join(v.text if isinstance(v, AttributedString) else v
+                             for v in val)
+
+            c.insert(text)
+        except:
+            import logging
+            logging.exception('doc_lines')
 
     @property
     def doc_plane_size(self):

@@ -160,10 +160,19 @@ class AbstractCompleter(Responder, metaclass=abc.ABCMeta):
 
 
     def show_documentation(self, docs):
-        _, width = self.cview.doc_view.plane_size
-        formatted_docs = self.format_docs(docs, width)
-        self.cview.doc_view.lines = [AttributedString(r) for r in formatted_docs.splitlines()]        
-        self.cview.doc_view.full_redraw()
+
+        b = self.cview.doc_view.buffer
+        sc = Cursor(b)
+        ec = sc.clone().last_line().end()
+        sc.remove_to(ec)
+
+        docs = ''.join(docs).split('\n\n')
+        
+
+        docs = '\n\n'.join([re.subn(r'[ \t]+', ' ', d.replace('\n', ' '))[0] for d in docs])
+
+
+        sc.insert(docs)
 
     def show_completions(self, completions):
         self.completions = completions

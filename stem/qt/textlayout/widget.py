@@ -87,8 +87,24 @@ class CodeView(TextView):
     def call_tip_model(self, value):
         self._call_tip_view.model = value
 
+    def show_completion_view(self, cursor_pos):
+        p = self._viewport.map_to_point(*cursor_pos)
+        x = p.x()
+        y = p.y()
 
+        line_height = QFontMetricsF(self._viewport.settings.q_font).height()
 
+        normal_compl_rect = QRect(self.mapToGlobal(QPoint(x, y + line_height)),
+                                  self.completion_view.size())
+        intersect = QApplication.desktop().screenGeometry().intersected(normal_compl_rect)
+        if intersect != normal_compl_rect:
+            normal_compl_rect.moveBottomLeft(
+                self.mapToGlobal(
+                    QPoint(x, y - line_height)))
+        
+            
+        self.completion_view.move_(normal_compl_rect.topLeft())
+        self.completion_view.show()
 
 
 class TextViewProxyMixin:
@@ -175,13 +191,14 @@ class CodeViewProxyMixin(TextViewProxyMixin):
 
 
     def show_completions(self):
-        l, c = self.cursor_pos
-        p = self._view._viewport.map_to_point(l, c)
-        p = self._view._viewport.mapToGlobal(p)
-
-        self.completion_view.visible=True
-        self.completion_view.move_(p)
-
+        self._view.show_completion_view(self.cursor_pos)
+#         l, c = self.cursor_pos
+#         p = self._view._viewport.map_to_point(l, c)
+#         p = self._view._viewport.mapToGlobal(p)
+# 
+#         self.completion_view.visible=True
+#         self.completion_view.move_(p)
+# 
 
     @property
     def plane_size(self):
