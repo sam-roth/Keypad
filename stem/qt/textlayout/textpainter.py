@@ -9,6 +9,9 @@ from stem.util.coordmap import TextCoordMapper
 from ..text_rendering import TextViewSettings
 from ..qt_util import ending, to_q_color, restoring
 
+from functools import lru_cache
+
+
 
 class TextPainter:
     '''
@@ -19,11 +22,7 @@ class TextPainter:
         self._metrics = Qt.QFontMetricsF(self.settings.q_font)
         self.device = device
         self.reset()
-        self._base_attrs = {
-#             'bgcolor': self.settings.q_bgcolor,
-#             'color': self.settings.q_fgcolor
-        }
-
+        self._base_attrs = {}
         self._cur_lc_attrs = {}
         self._cur_attrs = {}
 
@@ -36,6 +35,9 @@ class TextPainter:
 
 
     def __enter__(self):
+        '''
+        Create the QPainter on the device.
+        '''
         self._painter = Qt.QPainter(self.device)
         self._painter.setFont(self.settings.q_font)
         self._painter.setPen(self.q_fgcolor)
@@ -43,10 +45,51 @@ class TextPainter:
         return self
 
     def __exit__(self, *args, **kw):
+        '''
+        End the painter.
+        '''
         self._painter.end()
         self._painter = None
 
+
+    def _make_font(self):
+        '''
+        Return the current font.
+        '''
+        font = Qt.QFont(self.settings.q_font)
+        font.setBold(self._attrs.get('bold') or False)
+        font.setItalic(self._attrs.get('italic') or False)
+        font.setUnderline(self._attrs.get('underline') or False)
+        return font
+
+    def _make_pen(self):
+        '''
+        Return the current pen.
+        '''
+        sel_color = self._attrs.get('sel_color')
+        if sel_color == 'auto':
+            sel_color = self.settings.scheme.selection_fg
+        
+        return Qt.QPen(to_q_color(sel_color 
+                                  or self._attrs.get('color',
+                                                     self.settings.q_fgcolor)))
+
+    def _make_brush(self):
+        '''
+        Return the current brush.
+        '''
+        sel_bgcolor = self._attrs.get('sel_bgcolor')
+        if sel_bgcolor == 'auto':
+            sel_bgcolor = self.settings.scheme.selection_bg
+        
+        return Qt.QBrush(to_q_color(sel_bgcolor 
+                                    or self._attrs.get('bgcolor',
+                                                       self.settings.q_bgcolor)))
+
     def update_attrs(self, attrs):
+        '''
+        Update internal state to reflect the string attributes given.
+        '''
         sentinel = object()
 
         for k, v in attrs.items():
@@ -58,36 +101,22 @@ class TextPainter:
             else:
                 self._cur_attrs[k] = v
 
-        font_changed = 'bold' in attrs or 'italic' in attrs
-
         lc = attrs.get('lexcat', sentinel)
         if lc is not sentinel:
-            font_changed = font_changed or 'bold' in self._cur_lc_attrs or 'italic' in self._cur_lc_attrs
             self._cur_lc_attrs.clear()
             if lc is not None:
                 lcattrs = self.settings.scheme.lexical_category_attrs(lc)
-                font_changed = font_changed or 'bold' in lcattrs or 'italic' in lcattrs
                 self._cur_lc_attrs.update(lcattrs)
-                
-        sel_color = self._attrs.get('sel_color')
-        sel_bgcolor = self._attrs.get('sel_bgcolor')
-        if sel_color == 'auto':
-            sel_color = self.settings.scheme.selection_fg
-        if sel_bgcolor == 'auto':
-            sel_bgcolor = self.settings.scheme.selection_bg
-        
-        self._painter.setPen(to_q_color(sel_color or self._attrs.get('color', self.settings.q_fgcolor)))
-        self._painter.setBrush(to_q_color(sel_bgcolor or self._attrs.get('bgcolor', self.settings.q_bgcolor)))
 
-        if font_changed:
-            font = Qt.QFont(self._painter.font())
-            font.setBold(self._attrs.get('bold') or False)
-            font.setItalic(self._attrs.get('italic') or False)
-            self._painter.setFont(font)
-            self._metrics = Qt.QFontMetricsF(font)
+        self._painter.setPen(self._make_pen())
+        self._painter.setBrush(self._make_brush())
+        self._painter.setFont(self._make_font())
 
 
     def paint_bar_caret(self, pos, color=None):
+        '''
+        Paint a bar-shaped caret in the given position.
+        '''
         r = Qt.QRectF(pos, Qt.QSizeF(2, self._metrics.lineSpacing()))
 
         if color is not None:
@@ -100,6 +129,10 @@ class TextPainter:
 
 
     def paint_background(self, pos, cells, bgcolor=None):
+        '''
+        Paint the background of the string. This is done automatically when
+        using paint_span().
+        '''
         r = Qt.QRectF(pos, Qt.QSizeF(cells * self.settings.char_width,
                                      self._metrics.lineSpacing()))
 
@@ -114,6 +147,10 @@ class TextPainter:
         return r.topRight()
 
     def paint_span(self, pos, text, color=None, bgcolor=None):
+        '''
+        Paint a contiguous span of a string with no format changes.
+        '''
+
         ep = self.paint_background(pos, len(text), bgcolor=bgcolor)
         p = Qt.QPointF(pos.x(), self._metrics.ascent() + pos.y())
         if color is not None:

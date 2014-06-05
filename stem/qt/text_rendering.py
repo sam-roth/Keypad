@@ -44,6 +44,7 @@ class TextViewSettings(object):
 
         
     def reload_settings(self, *args):
+        
         s = self.settings
         
         self.scheme = s.colorscheme()
