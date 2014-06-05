@@ -169,6 +169,7 @@ class MainWindow(AbstractWindow, QMainWindow, metaclass=ABCWithQtMeta):
         self.__mdi.setDocumentMode(True)
         self.__mdi.setViewMode(QMdiArea.TabbedView)
         self.__mdi.subWindowActivated.connect(self.__on_sub_window_activated)
+        self.__mdi.setTabsMovable(True)
 
         self._menus_by_hier = {}
         self._command_for_action = {}
