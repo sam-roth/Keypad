@@ -169,5 +169,4 @@ def findclear(bufctl: BufferController):
 @autoconnect(BufferController.buffer_was_changed,
              lambda tags: tags.get('regex_searcher'))
 def buffer_modified(bufctl, chg):
-    findall(bufctl)
-#     findclear(bufctl)
+    findclear(bufctl)
