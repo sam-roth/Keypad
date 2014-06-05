@@ -7,7 +7,34 @@ from .listdict import ListDict
 SpanInfo = collections.namedtuple('SpanInfo', 'start end value')
 
 class RangeDict(collections.MutableMapping):
+    '''
+    Provides a mapping of an interval of integers to a value.
 
+    Insert complexity: O(len(self)) worst-case
+
+    Query complexity: O(log(len(self))) worst-case
+
+    .. todo::
+        
+       No check is performed that would ensure that inserting at the end is O(1)
+       amortized. This ought to be possible.
+
+    >>> rd = RangeDict()
+    >>> rd[0:4] = 1
+    >>> rd
+    RangeDict({0: 1, 4: None})
+    >>> rd[0], rd[1]
+    (1, 1)
+    >>> rd[4] is None
+    True
+    >>> rd[5:6] = 2
+    >>> rd
+    RangeDict({0: 1, 4: None, 5: 2, 6: None})
+    >>> rd[7] = 3 # only slice assignment is supported
+    Traceback (most recent call last):
+        ...
+    TypeError
+    '''
     __slots__ = '_data',
 
     def __init__(self):
@@ -59,6 +86,21 @@ class RangeDict(collections.MutableMapping):
                     self._data[nk] = v
 
     def splice(self, key, delta):
+        '''
+        Alter the length of the `RangeDict` by `delta` at `key`.
+
+        >>> rd = RangeDict()
+
+        >>> rd[0:3] = 1
+        >>> rd
+        RangeDict({0: 1, 3: None})
+        >>> rd.splice(2, 10)
+        >>> rd
+        RangeDict({0: 1, 13: None})
+        >>> rd.splice(2, -10)
+        >>> rd
+        RangeDict({0: 1, 2: 1, 3: None})
+        '''
         if delta == 0:
             return
         elif delta < 0:
@@ -82,6 +124,17 @@ class RangeDict(collections.MutableMapping):
             return None
 
     def span_info(self, key):
+        '''
+        Return a `SpanInfo` namedtuple containing the endpoints of the span
+        that contains the key, as well as the value assigned to that span.
+
+        >>> rd = RangeDict()
+        >>> rd[0:3] = 1
+        >>> rd.span_info(2)
+        SpanInfo(start=0, end=3, value=1)
+        >>> rd.span_info(10000)
+        SpanInfo(start=3, end=None, value=None)
+        '''
         ub = self._data.upper_bound(key)
         if ub - 1 >= 0:
             try: 
