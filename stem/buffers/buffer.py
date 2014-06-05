@@ -72,6 +72,22 @@ class Buffer(object):
         
         text_lines = text.split('\n')
 
+        # TODO: this appears to be the best possible with builtin lists. It's also
+        # fast enough for my purposes, but it could use improvement. This library
+        # looks like it might be useful:
+        # https://pypi.python.org/pypi/blist/0.9.4
+        # Just for proof that this technique is actually fast enough:
+        # In [14]: xs = [0 for _ in range((1<<30))]
+        # 
+        # In [15]: %timeit xs.insert(int(len(xs)/2), 0)
+        # 1 loops, best of 3: 437 ms per loop
+        # 
+        # In [16]: len(xs)
+        # Out[16]: 1073741828
+        #
+        # This, of course, does not cover the case of multi-line insertions.
+        
+
         if len(text_lines) == 0:
             result = (y, x)
         elif len(text_lines) == 1:
@@ -83,6 +99,7 @@ class Buffer(object):
             line.remove(x, None)
             line.append(text_lines[0])
 
+
             self._lines = self._lines[:y+1] + \
                 [AttributedString(line) for line in text_lines[1:]] + self._lines[y+1:]
 
@@ -93,7 +110,7 @@ class Buffer(object):
 
             result = (y, len(removed_text))
 
-        self.text_modified(TextModification(pos=pos, insert=text))
+        self.text_modified(TextModification(pos=pos, insert=str(text)))
 
     @property
     def text(self):
