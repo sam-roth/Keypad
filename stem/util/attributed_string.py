@@ -5,12 +5,17 @@ from .attributes import Attributes
 class AttributedString:
 
     def __init__(self, text='', **attrs):
-        self._text = text
+
         self._attrs = Attributes()
 
         self.caches = {}
 
-        self._attrs.set_attributes(0, len(text), **attrs)
+        if isinstance(text, AttributedString):
+            self._text = ''
+            self.append(text)
+        else:
+            self._text = text
+            self._attrs.set_attributes(0, len(text), **attrs)
 
     def invalidate(self):
         self.caches.clear()
@@ -75,7 +80,21 @@ class AttributedString:
             result.append(string)
         return result
 
+    def __add__(self, other):
+        return self.join([self, other])
 
+    def split(self, delim=' '):
+        i = 0
+        result = []
+        while i < len(self):
+            j = self.text.find(delim, i)
+            if j < 0:
+                break
+            result.append(self[i:j])
+            i = j + len(delim)
+        if i < len(self):
+            result.append(self[i:])
+        return result
 
     def insert(self, index, text):
         if index is None:
@@ -123,4 +142,9 @@ class AttributedString:
         for key, attr in self._attrs.items():
             yield key, attr[index]
 
-            
+    def __str__(self):
+        return self.text
+
+    def __repr__(self):
+        return 'AttributedString(' + ', '.join(map(repr, self.iterchunks())) + ')'
+

@@ -67,6 +67,16 @@ class CodeView(TextView):
         self._completion_view.installEventFilter(self)
 
 
+    def viewportEvent(self, event):
+        if event.type() == QEvent.FocusOut:
+            self._call_tip_view.hide()
+        return super().viewportEvent(event)
+
+    def closeEvent(self, ev):
+        # HACK: if this isn't done explicitly, the interpreter tends to segfault
+        self._call_tip_view.deleteLater()
+        self._completion_view.deleteLater()
+
     def eventFilter(self, obj, ev):
         if obj is self._completion_view:
             if ev.type() == QEvent.Show:
