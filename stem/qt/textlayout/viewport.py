@@ -139,9 +139,14 @@ class TextViewport(QWidget):
                 (section, line), col = m
                 self.mouse_move_char(event.buttons(), line, col)
             return True
-        else:
 
-            if event.type() in (QEvent.FocusIn, QEvent.Show):
+        else:
+            if event.type() == QEvent.Resize:
+                first, last = self._prev_paint_range
+                for line in self.buffer.lines[first:last]:
+                    line.invalidate()
+                self.update()
+            elif event.type() in (QEvent.FocusIn, QEvent.Show):
                 self._prev_paint_range = -1, -1
                 self.update()
 
