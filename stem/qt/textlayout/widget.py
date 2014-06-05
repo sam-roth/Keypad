@@ -84,9 +84,28 @@ class CodeView(TextView):
     def call_tip_model(self):
         return self._call_tip_view.model
 
-    @call_tip_model.setter
-    def call_tip_model(self, value):
+    def set_call_tip_model(self, value, cursor_pos):
+
+        
         self._call_tip_view.model = value
+
+        line_height = QFontMetricsF(self._viewport.settings.q_font).height()
+
+        p = self._viewport.map_to_point(*cursor_pos)
+
+        x = p.x()
+        y = p.y()
+        
+        line_height = QFontMetricsF(self._viewport.settings.q_font).height()
+
+        rect = QRect()
+        rect.setSize(self._call_tip_view.size())
+        rect.moveBottomLeft(self.mapToGlobal(QPoint(x, y - line_height)))
+
+
+        self._call_tip_view.move(rect.topLeft())
+
+        
 
     def show_completion_view(self, cursor_pos):
         p = self._viewport.map_to_point(*cursor_pos)
@@ -143,6 +162,9 @@ class TextViewProxyMixin:
 
     @cursor_pos.setter
     def cursor_pos(self, value):
+        self._set_cursor_pos(value)
+
+    def _set_cursor_pos(self, value):
         self.__cursor_pos = value
         self._view._viewport.set_carets('TextViewProxy.cursor',
                                         [Caret(Caret.Type.bar, value)] if value is not None else [])
@@ -187,7 +209,7 @@ class CodeViewProxyMixin(TextViewProxyMixin):
 
     @call_tip_model.setter
     def call_tip_model(self, value):
-        self._view.call_tip_model = value
+        self._view.set_call_tip_model(value, self.cursor_pos)
 
 
     def show_completions(self):
@@ -199,6 +221,12 @@ class CodeViewProxyMixin(TextViewProxyMixin):
 #         self.completion_view.visible=True
 #         self.completion_view.move_(p)
 # 
+
+
+    def _set_cursor_pos(self, value):
+        if value and self.cursor_pos and value[0] != self.cursor_pos[0]:
+            self.call_tip_model = None
+        super()._set_cursor_pos(value)
 
     @property
     def plane_size(self):
