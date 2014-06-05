@@ -30,7 +30,6 @@ class TextPainter:
         self._attrs = ChainMap(self._cur_attrs, self._cur_lc_attrs, self._base_attrs)
 
 
-
     def reset(self):
         self.q_bgcolor = self.settings.q_bgcolor
         self.q_fgcolor = self.settings.q_fgcolor
@@ -59,11 +58,16 @@ class TextPainter:
             else:
                 self._cur_attrs[k] = v
 
+        font_changed = 'bold' in attrs or 'italic' in attrs
+
         lc = attrs.get('lexcat', sentinel)
         if lc is not sentinel:
+            font_changed = font_changed or 'bold' in self._cur_lc_attrs or 'italic' in self._cur_lc_attrs
             self._cur_lc_attrs.clear()
             if lc is not None:
-                self._cur_lc_attrs.update(self.settings.scheme.lexical_category_attrs(lc))
+                lcattrs = self.settings.scheme.lexical_category_attrs(lc)
+                font_changed = font_changed or 'bold' in lcattrs or 'italic' in lcattrs
+                self._cur_lc_attrs.update(lcattrs)
                 
         sel_color = self._attrs.get('sel_color')
         sel_bgcolor = self._attrs.get('sel_bgcolor')
@@ -74,6 +78,13 @@ class TextPainter:
         
         self._painter.setPen(to_q_color(sel_color or self._attrs.get('color', self.settings.q_fgcolor)))
         self._painter.setBrush(to_q_color(sel_bgcolor or self._attrs.get('bgcolor', self.settings.q_bgcolor)))
+
+        if font_changed:
+            font = Qt.QFont(self._painter.font())
+            font.setBold(self._attrs.get('bold') or False)
+            font.setItalic(self._attrs.get('italic') or False)
+            self._painter.setFont(font)
+            self._metrics = Qt.QFontMetricsF(font)
 
 
     def paint_bar_caret(self, pos, color=None):
@@ -90,7 +101,7 @@ class TextPainter:
 
     def paint_background(self, pos, cells, bgcolor=None):
         r = Qt.QRectF(pos, Qt.QSizeF(cells * self.settings.char_width,
-                                  self._metrics.lineSpacing()))
+                                     self._metrics.lineSpacing()))
 
         if (bgcolor is not None 
             and self._attrs.get('sel_bgcolor') is None

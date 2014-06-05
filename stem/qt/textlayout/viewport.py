@@ -39,7 +39,7 @@ class _OverlayManager:
             
             if start_y <= i <= end_y:
                 line_start_x = 0 if i != start_y else start_x
-                line_end_x = length if i != end_y else end_x
+                line_end_x = max(length, 1) if i != end_y else end_x
     
                 yield line_start_x, line_end_x, attr_key, attr_val
 
@@ -157,7 +157,8 @@ class TextViewport(QWidget):
                                                  1000)
 
 
-        for line in self.buffer.lines[self.first_line:self.last_line]:
+        for line in itertools.chain(self.buffer.lines,
+                                    self.extra_lines):
             line.invalidate()
 
         self.update()
@@ -414,7 +415,7 @@ class TextViewport(QWidget):
                         if bgcolor is None:
                             bgcolor = normal_bgcolor
                         painter.fillRect(QRectF(QPointF(0, plane_pos.y() + self._origin.y()),
-                                                QSizeF(self._origin.x(), pm.height())),
+                                                QSizeF(self.width(), pm.height())),
                                          to_q_color(bgcolor))
 
 

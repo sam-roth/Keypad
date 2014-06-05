@@ -54,21 +54,25 @@ class TextViewSettings(object):
         fontname, fontsize = s.font_family, s.font_size
         
 
-        self.q_font    = QFont(fontname)
-        self.q_font.setPointSizeF(fontsize)
+
         
         self.double_strike = s.double_strike
 
+        font = QFont(fontname)
+        font.setPointSizeF(fontsize)
+        
         #self.double_strike = s.get('DoubleStrike', options.TextViewDoubleStrike, bool)
         
         #if s.get('IntegerMetrics', options.TextViewIntegerMetrics, bool):
         if s.integer_metrics:
-            self.q_font.setStyleStrategy(QFont.ForceIntegerMetrics | self.q_font.styleStrategy())
+            font.setStyleStrategy(QFont.ForceIntegerMetrics | font.styleStrategy())
         
         #antialias = s.get('Antialias', True, bool)
         if not s.antialias:
-            self.q_font.setStyleStrategy(QFont.NoAntialias|self.q_font.styleStrategy())
-            
+            font.setStyleStrategy(QFont.NoAntialias|font.styleStrategy())
+
+        self.q_font    = font
+
         self.q_completion_bgcolor = to_q_color(self.scheme.bg)
         self.q_completion_bgcolor.setAlphaF(qt_options.CompletionViewOpacity)
 

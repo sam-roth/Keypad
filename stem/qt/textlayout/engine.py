@@ -42,7 +42,7 @@ class TextLayoutEngine:
 
     def render_line_to_device(self, *, plane_pos, device_pos, 
                               device, text, bgcolor=None, start_col=0,
-                              line_id=0, offset=0, carets=()):
+                              line_id=0, offset=0, carets=(), pad_width=None):
         '''
         :param device_pos: The position on the device to which the line will be rendered.
         :param plane_pos:  The position on the screen, relative to the plane, where the line
@@ -50,6 +50,8 @@ class TextLayoutEngine:
         :param line_id:    A unique identifier (such as a line number) for this line.
         :param start_col:  The first physical column of the string.
         :param offset:     The first logical column of the string.
+        :param pad:        If set, fill the rest of the line with the same bgcolor as the end of
+                           the line.
 
         '''
         tstop = self._settings.tab_stop
@@ -115,6 +117,10 @@ class TextLayoutEngine:
                     d0 = d1
 
                     subchunk_offsets.append((d0.x(), offset))
+                if pad_width is not None:
+                    width = (pad_width - d0.x()) // fm.width('x')
+                    tp.paint_background(d0, width, bgcolor=bgcolor)
+
 
             while bar_carets and bar_carets[-1] == offset:
                 tp.paint_bar_caret(d0)
