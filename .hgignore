@@ -5,3 +5,4 @@ venv
 .hgcheck
 doc/build/*
 .DS_Store
+*.orig

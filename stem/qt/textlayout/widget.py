@@ -157,6 +157,14 @@ class TextViewProxyMixin:
         self._view.text_viewport.extra_lines = value
 
 
+    @property
+    def modelines_visible(self):
+        return self._view.text_viewport.extra_lines_visible
+
+    @modelines_visible.setter
+    def modelines_visible(self, value):
+        self._view.text_viewport.extra_lines_visible = value
+
 
     @property
     def buffer(self):

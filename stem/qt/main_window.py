@@ -54,6 +54,7 @@ class CommandLineWidget(Responder, QWidget):
 
         self.__view = CodeView(self)
         self.__proxy = CodeViewProxy(self.__view)
+        self.__proxy.modelines_visible = False
 
         self.__controller = BufferController(buffer_set=None, 
                                              view=self.__proxy,
@@ -79,9 +80,6 @@ class CommandLineWidget(Responder, QWidget):
         self.__imode.accepted.connect(self.__run_command)
         self.__imode.text_written.connect(self.__on_text_written)
         
-        # disable modeline for this view
-        self.__view.modelines = []
-
         layout.addWidget(self.__view)
         self.setFocusProxy(self.__view)
 

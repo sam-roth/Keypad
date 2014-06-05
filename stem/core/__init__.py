@@ -6,7 +6,9 @@ from .structure             import Struct
 from .swapfile              import write_atomically
 from .command               import Command
 from .key                   import Keys
-
+from .color                 import Color
+from .colorscheme           import Colorscheme
+from .nconfig               import Config, Settings, Field
 
 from . import errors, commands, notification_queue
 

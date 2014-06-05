@@ -6,7 +6,7 @@ from PyQt4 import Qt
 from stem.core import AttributedString
 from stem.util.coordmap import TextCoordMapper
 
-from ..text_rendering import TextViewSettings
+from ..options import TextViewSettings
 from ..qt_util import ending, to_q_color, restoring
 
 from functools import lru_cache

@@ -49,6 +49,14 @@ class AbstractTextView(metaclass=abc.ABCMeta):
         
 
     @abc.abstractproperty
+    def modelines_visible(self):
+        pass
+
+    @modelines_visible.setter
+    def modelines_visible(self, value):
+        pass
+
+    @abc.abstractproperty
     def cursor_pos(self):
         pass
 

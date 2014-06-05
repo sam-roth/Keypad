@@ -11,10 +11,21 @@ from stem.core.attributed_string import RangeDict
 from stem.util.coordmap import TextCoordMapper, LinearInterpolator
 from stem.control import lorem
 
-from ..text_rendering import TextViewSettings, apply_overlay
+from ..options import TextViewSettings
 from ..qt_util import ending, to_q_color
 
 from .textpainter import TextPainter
+
+
+def apply_overlay(text, overlay):
+    text = text.clone()
+
+    for start, end, key, value in overlay:
+        if end >= len(text):
+            text.append(' ' * (end - len(text)))
+        text.set_attributes(start, end, **{key: value})
+
+    return text
 
 
 class CaretType(enum.Enum):

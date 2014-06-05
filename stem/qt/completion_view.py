@@ -4,7 +4,8 @@ import copy
 
 from PyQt4.Qt               import *
 
-from .text_rendering        import TextViewSettings, draw_attr_text, text_size
+from .options               import TextViewSettings
+# from .text_rendering        import TextViewSettings, draw_attr_text, text_size
 from .qt_util               import KeyEvent, ABCWithQtMeta, ending
 from ..core                 import AttributedString, Signal
 from ..core.key             import SimpleKeySequence, Keys, KeySequenceDict

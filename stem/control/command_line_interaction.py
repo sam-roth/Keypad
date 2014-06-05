@@ -32,7 +32,7 @@ class CommandLineInteractionMode(CUAInteractionMode):
             (Keys.tab,              lambda evt: run('complete'))
         ])
 
-        self.__prompt = ': '
+        self.__prompt = '\u27e9 '
         self.__command_history = []
         self.__history_pos = 0
         self.__current_cmdline = ''

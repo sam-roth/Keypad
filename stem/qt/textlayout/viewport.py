@@ -4,7 +4,7 @@ import collections
 import itertools
 
 from ..qt_util import *
-from ..text_rendering import TextViewSettings
+from ..options import TextViewSettings
 
 import enum
 import collections
@@ -94,6 +94,7 @@ class TextViewport(QWidget):
 
         self._simulate_focus = False
 
+        self._extra_lines_visible = True
 
     @property
     def plane_size(self):
@@ -151,6 +152,8 @@ class TextViewport(QWidget):
                 self.update()
 
             return super().event(event)
+
+
 
 
     def _reload_settings(self, *args):
@@ -253,6 +256,14 @@ class TextViewport(QWidget):
         self._origin = value
         self.update()
 
+    @property
+    def extra_lines_visible(self):
+        return self._extra_lines_visible
+
+    @extra_lines_visible.setter
+    def extra_lines_visible(self, value):
+        self._extra_lines_visible = value
+        self.update()
 
     @property
     def extra_lines(self):
@@ -335,7 +346,10 @@ class TextViewport(QWidget):
             # prerender extra lines
             extra_line_pixmaps = []
             total_extra_line_height = 5
-            for i, extra_line in enumerate(self.extra_lines):
+
+            extra_lines = self.extra_lines if self.extra_lines_visible else []
+
+            for i, extra_line in enumerate(extra_lines):
                 pm, _ = self._layout_engine.get_line_pixmap(plane_pos=QPointF(0, 0),
                                                             line=extra_line,
                                                             width=(self.width()
