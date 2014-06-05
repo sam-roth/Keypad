@@ -7,6 +7,7 @@ class LinearInterpolator:
     '''
     Note: data must be provided in sorted order.
     Queries may only be made between two given data points.
+    
     >>> f = LinearInterpolator([(0, 0), (100, 100)])
     >>> f(0)
     0.0
@@ -21,7 +22,6 @@ class LinearInterpolator:
       File "./stem/util/coordmap.py", line 27, in __call__
         'or beyond smallest index %s' % (lv, sv))
     ValueError: cannot extrapolate beyond largest index 100 or beyond smallest index 0
-    
     >>> f = LinearInterpolator([(0, 0), (100, 100), (200, 110)])
     >>> f(2)
     2.0
@@ -38,7 +38,6 @@ class LinearInterpolator:
       File "./stem/util/coordmap.py", line 27, in __call__
         'or beyond smallest index %s' % (lv, sv))
     ValueError: cannot extrapolate beyond largest index 200 or beyond smallest index 0
-    
     >>> f(199.9999)
     109.99999
     >>> f(200)
