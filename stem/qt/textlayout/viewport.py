@@ -301,20 +301,22 @@ class TextViewport(QWidget):
         with ending(painter):
             prev_first_line, prev_last_line = self._prev_paint_range
 
+            normal_bgcolor = self._settings.q_bgcolor
+
             if self._origin != QPointF(0, 0):
                 painter.fillRect(QRectF(QPointF(0, 0),
                                         QSizeF(self.width(),
                                                self._origin.y())),
-                                 self._settings.q_bgcolor)
-                painter.fillRect(QRectF(QPointF(0, 0),
-                                        QSizeF(self._origin.x(),
-                                               self.height())),
-                                 self._settings.q_bgcolor)
-                painter.fillRect(QRectF(QPointF(self.width() - self.right_margin,
-                                                0),
-                                        QSizeF(self.right_margin,
-                                               self.height())),
-                                 self._settings.q_bgcolor)
+                                 normal_bgcolor)
+#                 painter.fillRect(QRectF(QPointF(0, 0),
+#                                         QSizeF(self._origin.x(),
+#                                                self.height())),
+#                                  self._settings.q_bgcolor)
+#                 painter.fillRect(QRectF(QPointF(self.width() - self.right_margin,
+#                                                 0),
+#                                         QSizeF(self.right_margin,
+#                                                self.height())),
+#                                  self._settings.q_bgcolor)
             plane_pos = QPointF(0, 0)
 
 
@@ -408,11 +410,16 @@ class TextViewport(QWidget):
     
     
 
-                    if bgcolor is not None and self._origin.x() != 0:
+                    if self._origin.x() != 0:
+                        if bgcolor is None:
+                            bgcolor = normal_bgcolor
                         painter.fillRect(QRectF(QPointF(0, plane_pos.y() + self._origin.y()),
                                                 QSizeF(self._origin.x(), pm.height())),
                                          to_q_color(bgcolor))
+
+
                     painter.drawPixmap(plane_pos + self._origin, pm)
+
                     line.caches[clean_cache_key] = QRect((plane_pos).toPoint(),
                                                          pm.size())
                     if FLASH_RERENDER:
