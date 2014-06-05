@@ -2,11 +2,13 @@
 from stem.abstract.application import AbstractWindow, app, AbstractApplication
 from stem.abstract import ui
 
+from stem.core.errors import UserError
 from stem.core.responder import Responder
 from stem.core.nconfig import Config, Settings, Field
 from .qt_util import *
 from ..core.notification_queue import in_main_thread
 from ..control import interactive
+import traceback
 import logging
 
 class CommandLineViewSettings(Settings):
@@ -302,6 +304,15 @@ def show_error(win: MainWindow, msg):
     sb = win.statusBar()
     app().beep()
     sb.showMessage(str(msg) + ' [' + type(msg).__name__ + ']', 2500)
+
+    if isinstance(msg, BaseException):
+        tb = ''.join(traceback.format_exception(type(msg),
+                                                msg,
+                                                msg.__traceback__))
+        if isinstance(msg, UserError):
+            logging.debug('User error passed to show_error:\n%s', tb)
+        else:
+            logging.error('Exception passed to show_error:\n%s', tb)
 
 @interactive.interactive('activate_cmdline')
 def activate_cmdline(win: MainWindow):
