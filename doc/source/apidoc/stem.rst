@@ -22,7 +22,6 @@ Submodules
    stem.api
    stem.config
    stem.options
-   stem.settings
    stem.tests
 
 Module contents

@@ -27,6 +27,7 @@ Submodules
    stem.core.nconfig
    stem.core.notification_queue
    stem.core.observable_list
+   stem.core.plugin
    stem.core.responder
    stem.core.signal
    stem.core.structure

@@ -1,13 +1,19 @@
 stem.qt package
 ===============
 
+Subpackages
+-----------
+
+.. toctree::
+
+    stem.qt.textlayout
+
 Submodules
 ----------
 
 .. toctree::
 
    stem.qt.basic_view
-   stem.qt.buffer_set
    stem.qt.call_tip_view
    stem.qt.completion_view
    stem.qt.driver

@@ -7,6 +7,7 @@ Submodules
 .. toctree::
 
    stem.plugins.pymodel.pymodel
+   stem.plugins.pymodel.settings
    stem.plugins.pymodel.syntax
    stem.plugins.pymodel.tests
    stem.plugins.pymodel.worker

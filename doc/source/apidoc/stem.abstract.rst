@@ -10,6 +10,7 @@ Submodules
    stem.abstract.code
    stem.abstract.completion
    stem.abstract.editor
+   stem.abstract.textview
    stem.abstract.ui
 
 Module contents
