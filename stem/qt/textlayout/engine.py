@@ -35,7 +35,6 @@ class Caret:
 
 class TextLayoutEngine:
     def __init__(self, settings=None):
-        self._mapper = TextCoordMapper()
         self._settings = settings or TextViewSettings()
         self._tab = re.compile('(\t)')
 
@@ -44,6 +43,16 @@ class TextLayoutEngine:
                               device, text, bgcolor=None, start_col=0,
                               line_id=0, offset=0, carets=(), pad_width=None):
         '''
+
+        Render an AttributedString to the device. 
+
+        Normally, you should use the get_line_pixmap() method.
+
+        The string must consist of at most one physical line. It will not be wrapped.
+        Rendering is always performed: a cache will not be used. If you want to use caching,
+        use the get_line_pixmap() method instead.
+
+
         :param device_pos: The position on the device to which the line will be rendered.
         :param plane_pos:  The position on the screen, relative to the plane, where the line
                            will eventually be painted.
@@ -58,7 +67,6 @@ class TextLayoutEngine:
         line_spacing = Qt.QFontMetricsF(self._settings.q_font).lineSpacing()
         fm = Qt.QFontMetricsF(self._settings.q_font)
 
-        self._mapper.clear(plane_pos.y(), plane_pos.y() + line_spacing)
 
         subchunk_offsets = [(device_pos.x(), offset)]
 
@@ -186,7 +194,9 @@ class TextLayoutEngine:
                         overlays=frozenset(), wrap=False, 
                         line_id=0, bgcolor=None, carets=None):
         '''
-        Return true if the line does not need to be rerendered.
+        Return true if the line has not changed since the last time it was drawn.
+
+        This is useful if you don't want to redraw unchanged lines.
         '''
         carets = tuple(carets or ())
 
@@ -206,7 +216,15 @@ class TextLayoutEngine:
                         overlays=frozenset(), wrap=False, 
                         line_id=0, bgcolor=None, carets=None):
         '''
-        Return a QPixmap containing the rendered line.
+        Return a tuple of ``(QPixmap, [(y, [(x, col)])])`` containing the rendered line
+        and the offsets of each line and of each evenly spaced region of characters
+        in the line.
+
+        If the line hasn't changed since the last time this method was called, a
+        cached pixmap will be returned.
+
+        Use a :py:class:`stem.util.coordmap.LinearInterpolator` to find the
+        column for a given (x, y) position on the screen.
         '''
 
         carets = tuple(carets or ())
@@ -266,9 +284,6 @@ class TextLayoutEngine:
 
 
         return cache[pixmap_key]
-
-    def map_from_point(self, point):
-        return self._mapper.map_from_point(point.x(), point.y())
 
 
 
