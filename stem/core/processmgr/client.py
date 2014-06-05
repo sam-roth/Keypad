@@ -2,7 +2,6 @@
 import sys
 import subprocess
 import pickle
-pickle.load
 import concurrent.futures
 import threading
 import queue
@@ -32,8 +31,8 @@ def _make_inheritable(handle):
 
 class ServerProxy(object):
     def start(self):
-        from . import servermain
-        smod = servermain.__name__
+        smod = os.path.join(os.path.dirname(__file__),
+                            'bootstrap.py')
         
         lr, rw = os.pipe()
         rr, lw = os.pipe()
@@ -54,7 +53,6 @@ class ServerProxy(object):
         
         self.proc = subprocess.Popen([
             sys.executable,
-            '-m',
             smod,
             str(int(rh)),
             str(int(wh))
