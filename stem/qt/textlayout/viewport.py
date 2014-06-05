@@ -260,20 +260,24 @@ class TextViewport(QWidget):
 
     def map_from_point(self, point):
         point = point - self.origin
-
+        if point.y() < 0:
+            return LineID(None, max(0, self.first_line-1)), 0
         line_id = self._line_number_for_y[point.y()]
 
         try:
             y, line_offsets = self._line_offsets[line_id]
         except KeyError:
-            return None
+            y, x = self.buffer.end_pos
+            return LineID(None, y), x
             
         for dy, offsets in line_offsets:
             if y + dy >= point.y():
                 col = LinearInterpolator(offsets)(point.x(), saturate=True)
                 return line_id, int(col)
         else:
-            assert False, 'wrong line was selected by self._line_number_for_y[point.y()]'
+            y, x = self.buffer.end_pos
+            return LineID(None, min(y, self.last_line + 1)), x
+
 
     def map_to_point(self, line, col):
         line_id = LineID(None, line)
