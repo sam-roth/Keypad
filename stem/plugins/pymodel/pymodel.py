@@ -14,7 +14,7 @@ from stem.abstract.code import (AbstractCodeModel,
                                 AbstractCallTip)
  
 from stem.buffers import Cursor
-from . import syntax
+from . import syntax, settings
 from stem.core.processmgr.client import AsyncServerProxy
 from stem.core import AttributedString
 from stem.util import dump_object
@@ -83,11 +83,18 @@ class WorkerTask(object):
         script = jedi.Script(self.unsaved, line+1, col, self.filename)
         self.worker = worker
         return self.process(script)
-    
+
+class UpdateSettings:
+    def __init__(self, settings):
+        self.settings = settings
+
+    def __call__(self, worker):
+        self.settings.apply_settings()
+
 class Complete(WorkerTask):
     def process(self, script):
         compls = script.completions()
-        result = [c.name for c in compls]
+        result = [c.name_with_symbols for c in compls]
         self.worker.last_result = compls
         
         return result
@@ -183,6 +190,13 @@ class PythonCodeModel(IndentRetainingCodeModel):
         self.runner = AsyncServerProxy(WorkerStart())
         self.runner.start()
         self.disposed = False
+        self.__settings = settings.PythonCompletionSettings.from_config(self.conf)
+        self.__settings.value_changed.connect(self.__reload_config)
+
+        self.__reload_config()
+
+    def __reload_config(self, *args):
+        self.runner.submit(UpdateSettings(self.__settings))
 
 
     def call_tip_async(self, pos):
