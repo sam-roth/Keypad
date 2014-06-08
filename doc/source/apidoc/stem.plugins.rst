@@ -8,8 +8,8 @@ Subpackages
 
     stem.plugins.cpp
     stem.plugins.pymodel
-    stem.plugins.qprint
     stem.plugins.semantics
+    stem.plugins.shell
 
 Submodules
 ----------

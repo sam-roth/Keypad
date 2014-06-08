@@ -6,7 +6,7 @@ from sphinx.domains.python import (PyClassmember,
                                    Index)
 from sphinx.ext import autodoc
 from stem.core.nconfig import Settings, Field
-from stem.core.signal import Signal
+from stem.core.signal import Signal, InstanceSignal
 
 
 
@@ -47,11 +47,36 @@ class FieldDocumenter(autodoc.AttributeDocumenter):
 
 
 class SignalDirective(PyClassmember):
+    signal_prefix = 'signal '
     def needs_arglist(self):
         return True
 
     def get_signature_prefix(self, sig):
-        return 'signal '
+        return self.signal_prefix
+
+    def get_index_text(self, modname, name_cls):
+        name, cls = name_cls
+        add_modules = self.env.config.add_module_names
+        try:
+            clsname, methname = name.rsplit('.', 1)
+        except ValueError:
+            if modname:
+                return ('%s() (in module %s)') % (name, modname)
+            else:
+                return '%s()' % name
+        if modname:
+            return ('%s() (%s.%s signal)') % (methname, modname,
+                                                     clsname)
+        else:
+            return ('%s() (%s signal)') % (methname, clsname)
+
+class ClassSignalDirective(SignalDirective):
+    signal_prefix = 'class-signal '
+    def needs_arglist(self):
+        return True
+
+    def get_signature_prefix(self, sig):
+        return self.signal_prefix
 
     def get_index_text(self, modname, name_cls):
         name, cls = name_cls
@@ -70,25 +95,36 @@ class SignalDirective(PyClassmember):
             return ('%s() (%s signal)') % (methname, clsname)
 
 PythonDomain.directives['signal'] = SignalDirective
+PythonDomain.directives['classsignal'] = ClassSignalDirective
+
 PythonDomain.object_types['signal'] = ObjType('signal', 'sig', 'obj')
+PythonDomain.object_types['classsignal'] = ObjType('classsignal', 'csig', 'obj')
+
+
+PythonDomain.roles['csig'] = PyXRefRole()
 PythonDomain.roles['sig'] = PyXRefRole()
 
 class SignalDocumenter(autodoc.MethodDocumenter):
     priority = 100
-    objtype = 'signal'
-    directivetype = 'signal'
+#     objtype = 'signal'
+#     directivetype = 'signal'
 
     @classmethod
     def can_document_member(cls, member, membername,
                             isattr, parent):
 
-        return (isinstance(member, Signal)
+        return (isinstance(member, (Signal, InstanceSignal))
                 and not isinstance(parent, autodoc.ModuleDocumenter))
 
     def import_object(self):
         rv = super().import_object()
-        self.directivetype = 'signal'
-        self.objtype = 'signal'
+
+        if isinstance(rv, InstanceSignal):
+            self.directivetype = 'classsignal'
+            self.objtype = 'classsignal'
+        else:
+            self.directivetype = 'signal'
+            self.objtype = 'signal'
 
         return rv
 

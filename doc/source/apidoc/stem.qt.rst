@@ -13,7 +13,6 @@ Submodules
 
 .. toctree::
 
-   stem.qt.basic_view
    stem.qt.call_tip_view
    stem.qt.completion_view
    stem.qt.driver
@@ -21,8 +20,6 @@ Submodules
    stem.qt.main_window
    stem.qt.options
    stem.qt.qt_util
-   stem.qt.text_rendering
-   stem.qt.view
    stem.qt.widget
 
 Module contents
