@@ -6,18 +6,23 @@
 Welcome to Stem's documentation!
 ================================
 
-Contents:
-
-
-.. toctree::
-    apidoc/modules
-    apidoc/stem
+.. Contents:
+.. .. toctree:
+..     :maxdepth: 2
+.. 
+..     apidoc/stem
+..     plugins
+.. 
 
 Indices and tables
 ==================
 
-* :ref:`setindex`
 * :ref:`genindex`
 * :ref:`modindex`
 * :ref:`search`
 
+HOWTOs
+======
+
+* :ref:`plugin-creation-howto`
+* :ref:`signal-howto`

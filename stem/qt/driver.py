@@ -53,6 +53,10 @@ class Application(AbstractApplication, QApplication, metaclass=ABCWithQtMeta):
         QApplication.setApplicationName('Stem')
         super().__init__(args)
 
+
+    def beep(self):
+        QApplication.beep()
+
     def _message_box(self, parent, 
                      text, choices,
                      accept=0, reject=-1,
@@ -109,6 +113,8 @@ class Application(AbstractApplication, QApplication, metaclass=ABCWithQtMeta):
     def _queue_exc_handler(self, exc):
         if isinstance(exc, errors.UserError):
             interactive.run('show_error', exc)
+        else:
+            logging.error('exception occurred while processing notification queue')
     
     def event(self, evt):
         if evt.type() == _ProcessPosted.ProcessPostedType:
@@ -147,6 +153,13 @@ class Application(AbstractApplication, QApplication, metaclass=ABCWithQtMeta):
         save_path = QFileDialog.getSaveFileName(editor, 'Save')
         if save_path:
             return save_path
+        else:
+            return None
+
+    def get_open_path(self, parent):
+        open_path = QFileDialog.getOpenFileName(parent, 'Open')
+        if open_path:
+            return open_path
         else:
             return None
 

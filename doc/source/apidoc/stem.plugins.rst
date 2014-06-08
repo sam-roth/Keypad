@@ -8,15 +8,16 @@ Subpackages
 
     stem.plugins.cpp
     stem.plugins.pymodel
-    stem.plugins.qprint
     stem.plugins.semantics
+    stem.plugins.shell
 
 Submodules
 ----------
 
 .. toctree::
 
-   stem.plugins.indent
+   stem.plugins.comments
+   stem.plugins.filechange
    stem.plugins.search
    stem.plugins.server
    stem.plugins.templates

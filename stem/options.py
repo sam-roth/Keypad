@@ -2,9 +2,10 @@ import os
 import os.path
 import pathlib
 import platform
+import enum
 
 from .core import colorscheme
-from .core.nconfig import Settings, Field, Factory
+from .core.nconfig import Settings, Field, Factory, Conversions
 
 
 OnPosixSystem       = os.name == 'posix'
@@ -49,7 +50,20 @@ CursorBlinkRate_Hz  = 1
 CursorDutyCycle     = 0.8
 
 
+class HintingLevel(enum.IntEnum):
+    default = 0
+    none = 1
+    medium = 2
+    full = 3
 
+    @classmethod
+    def from_literal(cls, value):
+        if isinstance(value, str):
+            return cls[value]
+        else:
+            return cls(value)
+
+Conversions.register(HintingLevel, HintingLevel.from_literal)
 
 class GeneralSettings(Settings):
     _ns_ = 'general'
@@ -91,8 +105,14 @@ class GeneralSettings(Settings):
                              'for Windows the default is "Consolas", and for others the default is '
                              '"Monospace", which often resolves to some variant of Bitstream Vera '
                              'Mono.')
+
     font_size   = Field(int, TextViewFont[1])
     font_yoffset = Field(float, 0.0)
+    font_xstretch = Field(float, 1.0)
+    hinting_level = Field(HintingLevel, HintingLevel.default)
+    letter_spacing = Field(float, 1.0)
+    line_spacing = Field(float, 1.0)
+    weight = Field(float, 0.5)
     
     selection = Field(Factory, 'stem.buffers.selection.BacktabSelection')
     

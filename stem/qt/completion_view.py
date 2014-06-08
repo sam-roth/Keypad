@@ -4,14 +4,17 @@ import copy
 
 from PyQt4.Qt               import *
 
-from .text_rendering        import TextViewSettings, draw_attr_text, text_size
-from .qt_util               import KeyEvent, ABCWithQtMeta
+from .options               import TextViewSettings
+# from .text_rendering        import TextViewSettings, draw_attr_text, text_size
+from .qt_util               import KeyEvent, ABCWithQtMeta, ending
 from ..core                 import AttributedString, Signal
 from ..core.key             import SimpleKeySequence, Keys, KeySequenceDict
 from ..abstract.completion  import AbstractCompletionView
 from ..core.colorscheme     import Colorscheme
+from stem.buffers import Cursor, Buffer
 
 from . import options
+from .textlayout.engine import TextLayoutEngine
 
 
 completion_view_stylesheet = r"""
@@ -67,21 +70,24 @@ class CompletionListItemDelegate(QItemDelegate):
 
     def __init__(self, settings):
         super().__init__()
+        self._engine = TextLayoutEngine(settings)
         self.set_settings(settings)
+
         
     def set_settings(self, settings):
-        nset = self.settings = copy.copy(settings)
-
-        sset = self.selected_settings = copy.copy(settings)
-        sch = nset.scheme
-        
-
-        sset.bgcolor = nset.scheme.cur_line_bg
-        sset.fgcolor = nset.fgcolor
-
-        for s in (self.settings, self.selected_settings):
-            s.q_font = QFont(s.q_font)
-
+        self._settings = settings
+#         nset = self.settings = copy.copy(settings)
+# 
+#         sset = self.selected_settings = copy.copy(settings)
+#         sch = nset.scheme
+#         
+# 
+#         sset.bgcolor = nset.scheme.cur_line_bg
+#         sset.fgcolor = nset.fgcolor
+# 
+#         for s in (self.settings, self.selected_settings):
+#             s.q_font = QFont(s.q_font)
+# 
 
     def paint(self, painter, option, index):
         
@@ -90,23 +96,55 @@ class CompletionListItemDelegate(QItemDelegate):
         if not isinstance(display, AttributedString):
             display = AttributedString(display)
 
-        settings = self.selected_settings if option.state & QStyle.State_Selected \
-                   else self.settings
-        display.caches.clear()
-        draw_attr_text(painter,
-                       option.rect,
-                       display,
-                       settings)
-    
+#         settings = self.selected_settings if option.state & QStyle.State_Selected \
+#                    else self.settings
+
+        if option.state & QStyle.State_Selected:
+            bgcolor = self._settings.scheme.cur_line_bg
+        else:
+            bgcolor = None
+
+        pm, offsets = self._engine.get_line_pixmap(plane_pos=QPoint(0, 0),
+                                                   line=display,
+                                                   width=option.rect.width(),
+                                                   bgcolor=bgcolor)
+
+        painter.drawPixmap(option.rect, pm)
+
+
+#
+#         display.caches.clear()
+#         draw_attr_text(painter,
+#                        option.rect,
+#                        display,
+#                        settings)
+#     
     def sizeHint(self, option, index):
-        settings = self.selected_settings if option.state & QStyle.State_Selected \
-                   else self.settings
+
+#         settings = self.selected_settings if option.state & QStyle.State_Selected \
+#                    else self.settings
         display = index.model().data(index, Qt.DisplayRole)
-        if not isinstance(display, AttributedString):
-            display = AttributedString(display)
-        size = text_size(display, settings)
-        size.setWidth(size.width() + 5)
-        return size.toSize()
+
+        if isinstance(display, AttributedString):
+            display = display.text
+        
+        metrics = QFontMetricsF(self._settings.q_font)
+
+        display_exp = self._settings.expand_tabs(display)
+
+        width = self._settings.char_width * len(display_exp) + 5
+        height = self._settings.line_spacing
+
+        return QSize(width, height)
+
+
+#         size = metrics.size(0, display.expandtabs(self._settings.tab_stop))
+
+#         if not isinstance(display, AttributedString):
+#             display = AttributedString(display)
+#         size = text_size(display, settings)
+#         size.setWidth(size.width() + 5)
+#         return size.toSize()
         
 
 class CompletionListModel(QAbstractTableModel):
@@ -204,8 +242,7 @@ class CompletionView(QWidget, AbstractCompletionView, metaclass=ABCWithQtMeta):
     
     def __init__(self, settings=None, parent=None):
         super().__init__(parent)
-        from . import view
-        
+        from .textlayout.widget import TextView
         self._outer_layout = QVBoxLayout(self)
 
 
@@ -222,9 +259,8 @@ class CompletionView(QWidget, AbstractCompletionView, metaclass=ABCWithQtMeta):
         self._outer_container_layout.addWidget(self._container)
 
         self._listWidget = QTreeView(self._container)
-        self._docs = view.TextView(self._container)
-        self._docs.update_plane_size()
-        self._docs.disable_partial_update = True
+        self._docs = TextView(parent=self._container, 
+                              config=settings.config if settings else None)
         
 
         self._container.addWidget(self._listWidget)
@@ -273,12 +309,6 @@ class CompletionView(QWidget, AbstractCompletionView, metaclass=ABCWithQtMeta):
         self.__orig_settings = settings
 
 
-        self._docs.scrolled.connect(self._on_scroll)
-
-    def _on_scroll(self, start_line):
-        self._docs.start_line = start_line
-        self._docs.full_redraw()
-
     def __reset_settings(self):
         self.__set_settings(self.__orig_settings)
 
@@ -292,8 +322,6 @@ class CompletionView(QWidget, AbstractCompletionView, metaclass=ABCWithQtMeta):
 
         settings.q_bgcolor = settings.q_completion_bgcolor
         scheme = settings.scheme
-
-        self._docs.settings = settings
 
         stylesheet = completion_view_stylesheet.format(
             settings=settings,
@@ -367,12 +395,22 @@ class CompletionView(QWidget, AbstractCompletionView, metaclass=ABCWithQtMeta):
 
     @property
     def doc_lines(self):
-        return self._docs.lines
+        return self._docs.buffer.lines
 
     @doc_lines.setter
     def doc_lines(self, val):
-        self._docs.lines = val
-        self._docs.full_redraw()
+        try:
+            c = Cursor(self._docs.buffer)
+            c.remove_to(c.clone().last_line().end())
+
+            # TODO: allow for adding AttributedStrings here
+            text = '\n'.join(v.text if isinstance(v, AttributedString) else v
+                             for v in val)
+
+            c.insert(text)
+        except:
+            import logging
+            logging.exception('doc_lines')
 
     @property
     def doc_plane_size(self):

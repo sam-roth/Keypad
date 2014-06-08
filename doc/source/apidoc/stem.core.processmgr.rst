@@ -6,6 +6,7 @@ Submodules
 
 .. toctree::
 
+   stem.core.processmgr.bootstrap
    stem.core.processmgr.client
    stem.core.processmgr.server
    stem.core.processmgr.servermain

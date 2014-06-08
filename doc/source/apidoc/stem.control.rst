@@ -7,9 +7,7 @@ Submodules
 .. toctree::
 
    stem.control.behavior
-   stem.control.buffer_commands
    stem.control.buffer_controller
-   stem.control.buffer_set
    stem.control.cmdline_completer
    stem.control.cmdline_history
    stem.control.command_line_interaction

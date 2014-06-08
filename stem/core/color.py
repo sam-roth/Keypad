@@ -38,6 +38,11 @@ class Color(namedtuple('Color', 'red green blue alpha')):
         elif len(hexstring) == 9:
             return num >> 8, num & 0xFF
 
+
+    def brighter(self, value):
+        h,s,v = self.hsv
+        v *= value
+        return self.from_hsv(h,s,v,self.alpha)
         
 
     @classmethod

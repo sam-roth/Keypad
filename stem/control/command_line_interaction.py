@@ -32,7 +32,7 @@ class CommandLineInteractionMode(CUAInteractionMode):
             (Keys.tab,              lambda evt: run('complete'))
         ])
 
-        self.__prompt = ': '
+        self.__prompt = '\u27e9 '
         self.__command_history = []
         self.__history_pos = 0
         self.__current_cmdline = ''
@@ -160,7 +160,6 @@ class CommandLineInteractionMode(CUAInteractionMode):
             if success:
                 self._show_default_modeline()
 
-        plane_height, plane_width = self.controller.view.plane_size
 
     def __set_last_line(self, text):
         home = Cursor(self.controller.buffer).last_line().home()

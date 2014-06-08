@@ -39,7 +39,7 @@ extensions = [
     'sphinx.ext.todo',
     'sphinx.ext.pngmath',
     'sphinx.ext.mathjax',
-    'sphinx.ext.viewcode',
+#     'sphinx.ext.viewcode',
     'sphinx.ext.graphviz',
     'sphinx.ext.inheritance_diagram',
 ]
@@ -55,7 +55,7 @@ templates_path = ['_templates']
 source_suffix = '.rst'
 
 # The encoding of source files.
-#source_encoding = 'utf-8-sig'
+source_encoding = 'utf-8-sig'
 
 # The master toctree document.
 master_doc = 'index'
@@ -89,14 +89,14 @@ exclude_patterns = []
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
-#default_role = None
+default_role = 'py:obj'
 
 # If true, '()' will be appended to :func: etc. cross-reference text.
 #add_function_parentheses = True
 
 # If true, the current module name will be prepended to all description
 # unit titles (such as .. function::).
-#add_module_names = True
+add_module_names = False
 
 # If true, sectionauthor and moduleauthor directives will be shown in the
 # output. They are ignored by default.
@@ -135,10 +135,11 @@ html_theme_options = {
 #     #    (name, "http://example.com", True) # arbitrary absolute url
 #     # Note the "1" or "True" value above as the third argument to indicate
 #     # an arbitrary url.
-#     'navbar_links': [
+    'navbar_links': [
 #         ("Examples", "examples"),
+          ('Module Index', 'py-modindex'),
 #         ("Link", "http://example.com", True),
-#     ],
+    ],
 # 
     # Render the next and previous page links in navbar. (Default: true)
     'navbar_sidebarrel': True,
@@ -148,7 +149,7 @@ html_theme_options = {
 
     # Global TOC depth for "site" navbar tab. (Default: 1)
     # Switching to -1 shows all levels.
-    'globaltoc_depth': 2,
+    'globaltoc_depth': 1,
 
     # Include hidden TOCs in Site navbar?
     #
@@ -161,7 +162,7 @@ html_theme_options = {
 
     # HTML navbar class (Default: "navbar") to attach to <div> element.
     # For black navbar, do "navbar navbar-inverse"
-    'navbar_class': "navbar", # navbar-inverse",
+    'navbar_class': "navbar",
 
     # Fix navigation bar to top of page?
     # Values: "true" (default) or "false"
@@ -175,8 +176,8 @@ html_theme_options = {
     #
     # Options are nothing with "" (default) or the name of a valid theme
     # such as "amelia" or "cosmo".
-    'bootswatch_theme': "flatly",
-
+#     'bootswatch_theme': "flatly",
+    'bootswatch_theme': "",
     # Choose Bootstrap version.
     # Values: "3" (default) or "2" (in quotes)
     'bootstrap_version': "3",
@@ -219,9 +220,9 @@ html_static_path = ['_static']
 #html_use_smartypants = True
 
 # Custom sidebar templates, maps document names to template names.
-html_sidebars = {
-    'sidebar': ['*']
-}
+# html_sidebars = {
+#     'sidebar': ['**']
+# }
 
 # Additional templates that should be rendered to pages, maps page names to
 # template names.
@@ -256,7 +257,7 @@ html_sidebars = {
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'Stemdoc'
 html_sidebars = {
-    '*': [
+    '**': [
         'localtoc.html',
         'sourcelink.html',
         'searchbox.html'
@@ -302,7 +303,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  ('index', 'Stem.tex', 'Stem Documentation',
+  ('apidoc/modules', 'Stem.tex', 'Stem Documentation',
    'Sam Roth', 'manual'),
 ]
 
@@ -321,7 +322,7 @@ latex_documents = [
 #latex_show_urls = False
 
 # Documents to append as an appendix to all manuals.
-#latex_appendices = []
+latex_appendices = ['plugins', 'signal-howto']
 
 # If false, no module index is generated.
 latex_domain_indices = True
@@ -365,4 +366,4 @@ texinfo_documents = [
 
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'http://docs.python.org/': None}
+intersphinx_mapping = {'http://docs.python.org/3.4': None}

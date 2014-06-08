@@ -7,6 +7,7 @@ from ..core.plugin import Plugin, attach_plugin
 import weakref
 import logging
 import enum
+import os.path
 
 class SaveResult(enum.IntEnum):
     cancel = 0
@@ -17,6 +18,19 @@ class MessageBoxKind(enum.IntEnum):
     question = 1
     warning = 2
     error = 3
+
+def _fullpathnorm(p):
+    return os.path.normcase(os.path.normpath(os.path.abspath(p)))
+
+def _same_file(path1, path2):
+    try:
+        return os.path.samefile(path1, path2)
+    except OSError as exc:
+        # For "Incorrect function" error when working on Windows shares.
+        if exc.args and exc.args[0] == 22:
+            return _fullpathnorm(path1) == _fullpathnorm(path2)
+        else:
+            raise
 
 
 class AbstractApplication(Responder, metaclass=abc.ABCMeta):
@@ -64,6 +78,10 @@ class AbstractApplication(Responder, metaclass=abc.ABCMeta):
     def _message_box(self, parent, 
                      text, choices,
                      accept=0, reject=-1, kind=None):
+        pass
+
+    @abc.abstractmethod
+    def beep(self):
         pass
 
     @staticmethod
@@ -141,6 +159,9 @@ class AbstractApplication(Responder, metaclass=abc.ABCMeta):
     def save_prompt(self, editor):
         pass
 
+    @abc.abstractmethod
+    def get_open_path(self, parent):
+        pass
 
     @abc.abstractmethod
     def get_save_path(self, editor):
@@ -186,7 +207,7 @@ class AbstractApplication(Responder, metaclass=abc.ABCMeta):
         path = str(path)
 
         for editor in self._editors:
-            if editor.path is not None and os.path.samefile(path, str(editor.path)):
+            if editor.path is not None and _same_file(path, str(editor.path)):
                 return editor
 
 

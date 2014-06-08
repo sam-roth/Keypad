@@ -114,7 +114,7 @@ def pylexer():
     OctLiteral   = regex(r'\b0o[0-7]+L?', NUMBER)
     BinLiteral   = regex(r'\b0b[01]+L?', NUMBER)
 
-    FuncDef = regex(r'(?:(?<=def)|(?<=class)|(?<=@))\s+\w+', FUNCTION)
+    FuncDef = regex(r'(?:(?<=\bdef)|(?<=\bclass)|(?<=@))\s+\w+', FUNCTION)
     Deco    = regex(r'(?<=@)\s*[\w.]+', FUNCTION)
     CommAt = regex(re.escape('@'), ESCAPE)
     

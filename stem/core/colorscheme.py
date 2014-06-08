@@ -9,6 +9,8 @@ class Colorscheme(object):
     fg = Color.from_hex('#000')
     bg = Color.from_hex('#FFF')
 
+    nontext_bg = Color.from_hex('#333')
+
     cur_line_bg = bg
     
     selection_bg = fg
@@ -27,6 +29,11 @@ class Colorscheme(object):
                 color=Color.from_hsv(random.random(), self.fallback_sat, self.fallback_val))
 
         return self.lexical_categories[lexcat]
+
+
+    @property
+    def extra_line_bg(self):
+        return self.nontext_bg
 
     @deprecated
     def emphasize(self, color, steps):
@@ -126,6 +133,11 @@ class AbstractSolarized(Colorscheme):
         )
 
 
+def extrap_value(color1, color2):
+    _, _, v1 = color1.hsv
+    _, _, v2 = color2.hsv
+    return color2.brighter(v2/v1)
+
 class SolarizedDark(AbstractSolarized):
     
     fg = AbstractSolarized._base0
@@ -135,6 +147,10 @@ class SolarizedDark(AbstractSolarized):
     selection_bg = AbstractSolarized._base01
 
     cur_line_bg = AbstractSolarized._base02
+
+    nontext_bg = extrap_value(AbstractSolarized._base02, 
+                              AbstractSolarized._base03)
+
 
     fallback_val = fg.hsv[2]
 
@@ -154,12 +170,19 @@ class SolarizedLight(AbstractSolarized):
     selection_fg = AbstractSolarized._base3
     selection_bg = AbstractSolarized._base0
 
+    nontext_bg = AbstractSolarized._base3
+
     cur_line_bg = AbstractSolarized._base2
 
     fallback_val = fg.hsv[2]
 
-    def __init__(self):
+    def __init__(self, high_contrast=False):
         super().__init__()
+
+        if high_contrast:
+            self.fg = AbstractSolarized._base01
+            self.bg = AbstractSolarized._base2
+            self.cur_line_bg = AbstractSolarized._base3
 
         bold = ['todo', 'type', 'keyword', 'escape',
                 'function']
@@ -170,7 +193,7 @@ class SolarizedLight(AbstractSolarized):
         for key in bold:
             lc[key].update(bold=True)
 
-            
+
 class TextMateTheme(Colorscheme):
     '''
     Use a TextMate/Sublime Text color scheme.
@@ -218,6 +241,7 @@ class TextMateTheme(Colorscheme):
                 self.selection_bg = Color.from_hex(s.selection)
                 self.selection_fg = self.fg
                 self.cur_line_bg = Color.from_hex(s.lineHighlight).composite(self.bg)
+                self.nontext_bg = self.bg
             else:
 
                 attrs = {}

@@ -2,9 +2,10 @@
 import string
 from concurrent.futures import Future
 
+from stem.api import interactive
 from stem.abstract.code import IndentRetainingCodeModel, AbstractCompletionResults
 from stem.plugins.semantics.syntax import SyntaxHighlighter
-from stem.core.processmgr.client import AsyncServerProxy
+from stem.core.processmgr.client import AsyncServerProxy, RemoteError
 from stem.core.fuzzy import FuzzyMatcher, Filter
 from stem.core.conftree import ConfTree
 from stem.core.executors import SynchronousExecutor
@@ -75,9 +76,15 @@ class CXXCodeModel(IndentRetainingCodeModel):
         self.cxx_config = CXXConfig.from_config(self.conf)
         self.cxx_config.value_changed.connect(self._update_configuration)
         
-        self.prox = AsyncServerProxy()
-        self.prox.start()
-        self.prox.submit(InitWorkerTask(self.cxx_config)).result()
+        try:
+            self.prox = AsyncServerProxy()
+            self.prox.start()
+            self.prox.submit(InitWorkerTask(self.cxx_config)).result()
+        except RemoteError as exc:
+            self.prox.shutdown()
+            cause = exc.__cause__ or exc
+            interactive.run('show_error', cause)
+
 
     
     def submit_task(self, task, transform=None):

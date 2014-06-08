@@ -2,11 +2,13 @@
 from stem.abstract.application import AbstractWindow, app, AbstractApplication
 from stem.abstract import ui
 
+from stem.core.errors import UserError
 from stem.core.responder import Responder
 from stem.core.nconfig import Config, Settings, Field
 from .qt_util import *
 from ..core.notification_queue import in_main_thread
 from ..control import interactive
+import traceback
 import logging
 
 class CommandLineViewSettings(Settings):
@@ -41,7 +43,7 @@ class CommandLineWidget(Responder, QWidget):
 
         self.__settings = CommandLineViewSettings.from_config(config)
 
-        from .view import TextView
+        from .textlayout.widget import CodeView, CodeViewProxy
         from ..control import BufferController
         from ..control.command_line_interaction import CommandLineInteractionMode
         from ..control.command_line_interpreter import CommandLineInterpreter
@@ -50,10 +52,12 @@ class CommandLineWidget(Responder, QWidget):
 
         from ..buffers import Buffer
 
-        self.__view = TextView(self)
+        self.__view = CodeView(self)
+        self.__proxy = CodeViewProxy(self.__view)
+        self.__proxy.modelines_visible = False
 
         self.__controller = BufferController(buffer_set=None, 
-                                             view=self.__view,
+                                             view=self.__proxy,
                                              buff=Buffer(), 
                                              provide_interaction_mode=False,
                                              config=config)
@@ -76,9 +80,6 @@ class CommandLineWidget(Responder, QWidget):
         self.__imode.accepted.connect(self.__run_command)
         self.__imode.text_written.connect(self.__on_text_written)
         
-        # disable modeline for this view
-        self.__view.modelines = []
-
         layout.addWidget(self.__view)
         self.setFocusProxy(self.__view)
 
@@ -166,6 +167,7 @@ class MainWindow(AbstractWindow, QMainWindow, metaclass=ABCWithQtMeta):
         self.__mdi.setDocumentMode(True)
         self.__mdi.setViewMode(QMdiArea.TabbedView)
         self.__mdi.subWindowActivated.connect(self.__on_sub_window_activated)
+        self.__mdi.setTabsMovable(True)
 
         self._menus_by_hier = {}
         self._command_for_action = {}
@@ -301,6 +303,15 @@ def show_error(win: MainWindow, msg):
     sb = win.statusBar()
     app().beep()
     sb.showMessage(str(msg) + ' [' + type(msg).__name__ + ']', 2500)
+
+    if isinstance(msg, BaseException):
+        tb = ''.join(traceback.format_exception(type(msg),
+                                                msg,
+                                                msg.__traceback__))
+        if isinstance(msg, UserError):
+            logging.debug('User error passed to show_error:\n%s', tb)
+        else:
+            logging.error('Exception passed to show_error:\n%s', tb)
 
 @interactive.interactive('activate_cmdline')
 def activate_cmdline(win: MainWindow):

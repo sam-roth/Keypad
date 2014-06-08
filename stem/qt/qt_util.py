@@ -6,6 +6,7 @@ import contextlib
 
 from ..core.key import SimpleKeySequence
 from ..core.color import Color
+from ..abstract.textview import KeyEvent
 
 import abc
 import math
@@ -27,19 +28,6 @@ class CloseEvent(object):
 
     def intercept(self):
         self.is_intercepted = True
-
-class KeyEvent(namedtuple('KeyEvent', 'key text')):
-    
-    def __new__(cls, *args, **kw):
-        self = super().__new__(cls, *args, **kw)
-        self._is_intercepted = False
-        return self
-    
-    @property
-    def is_intercepted(self): return self._is_intercepted
-
-    def intercept(self):
-        self._is_intercepted = True
 
 
 

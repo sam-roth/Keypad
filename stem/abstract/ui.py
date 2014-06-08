@@ -58,6 +58,12 @@ def edit(win: AbstractWindow, path: 'Path', line=None, col=None):
         ed.buffer_controller.selection.move(col=col)
     ed.buffer_controller.refresh_view()
 
+@interactive('ge', 'gedit', 'gui_edit')
+def gui_edit(win: AbstractWindow):
+    res = app().get_open_path(win)
+    if res is not None:
+        edit(win, res)
+
 @interactive('gq', 'gquit', 'gui_quit')
 def gui_quit(ed: AbstractEditor):
     app().close(ed)

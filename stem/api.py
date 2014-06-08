@@ -2,7 +2,7 @@
 
 from .control import keybinding, BufferController
 from .control.interactive import interactive, menu
-from .core import Keys, errors
+from .core import Keys, errors, AttributedString
 from .core.tag import autoextend, autoconnect
 from .core.nconfig import Config, Settings
 from .abstract.application import app
@@ -10,6 +10,8 @@ from .core.plugin import Plugin, register_plugin, command
 from .core.filetype import Filetype
 from .buffers import Span, Region, Buffer, Cursor
 from .core.notification_queue import run_in_main_thread, in_main_thread
+from .abstract.application import AbstractWindow, AbstractApplication
+from .abstract.editor import AbstractEditor
 
 def bind(key, interactive_command_name):
     keybinding.controller.add_binding(key, interactive_command_name)
@@ -33,6 +35,10 @@ def load_plugins(path, prefix):
 
 
 __all__ = '''
+    AbstractWindow
+    AbstractEditor
+    AbstractApplication
+    BufferController
     in_main_thread
     run_in_main_thread
     app
