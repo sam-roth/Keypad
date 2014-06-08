@@ -154,6 +154,13 @@ class Application(AbstractApplication, QApplication, metaclass=ABCWithQtMeta):
         else:
             return None
 
+    def get_open_path(self, parent):
+        open_path = QFileDialog.getOpenFileName(parent, 'Open')
+        if open_path:
+            return open_path
+        else:
+            return None
+
     def _new_window(self):
         from .main_window import MainWindow
         w = MainWindow(Config.root.derive())

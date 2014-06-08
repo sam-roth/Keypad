@@ -185,7 +185,10 @@ class AsyncServerProxy(object):
         if self.is_running:
             self.q.put((False, None, None, None))
             self.thread.join()
-        self.running_instances.remove(self)
+        try:
+            self.running_instances.remove(self)
+        except KeyError:
+            pass
         
     def __enter__(self):
         if not self.thread.is_alive():

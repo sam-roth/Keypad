@@ -6,3 +6,8 @@ venv
 doc/build/*
 .DS_Store
 *.orig
+*.egg
+build
+dist
+*.rej
+test-files
