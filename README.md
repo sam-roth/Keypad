@@ -1,7 +1,9 @@
 # Stem – an editor
 
-**Warning: This program is still very buggy and has many hardcoded options. It
-is not to be used for anything serious at this point.**
+**See the [developer documentation](http://saroth.bitbucket.org/stemdoc/html/).**
+
+**Warning: This program still has many bugs. It is not to be used for anything 
+serious at this point.**
 
 
 Stem is a text editor written in Python with a flexible plugin system. 
