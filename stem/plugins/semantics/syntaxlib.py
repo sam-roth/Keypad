@@ -61,6 +61,16 @@ class Lexer(metaclass=abc.ABCMeta):
 
     def __repr__(self):
         return 'Lexer({!r})'.format(self.attrs)
+
+    def enter(self):
+        '''
+        If this lexer matches, put the resulting lexer on the stack. By default
+        this method returns self; however, you may override it in case the
+        correct close token depends on what the open token was.
+        '''
+        return self
+
+
 class AnyLexer(Lexer):
     def guard_match(self, string, start, stop):
         return start, start
@@ -157,7 +167,7 @@ class Tokenizer(object):
                     yield 'token_end', lexer_stack[-1], fg_stop
                     lexer_stack.pop()
                 else:
-                    lexer_stack.append(fg_lexer)
+                    lexer_stack.append(fg_lexer.enter())
                     yield 'token_start', lexer_stack[-1], fg_start
                                         
                 start = fg_stop
