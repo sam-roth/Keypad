@@ -98,9 +98,8 @@ class TextViewport(QWidget):
 
     @property
     def plane_size(self):
-        fm = QFontMetricsF(self.settings.q_font)
-        height = (self.height() - self.origin.y()) / fm.lineSpacing()
-        width = (self.width() - self.origin.x()) / fm.width('x')
+        height = (self.height() - self.origin.y()) / self.settings.line_spacing
+        width = (self.width() - self.origin.x()) / self.settings.char_width
 
         return int(height), int(width)
 

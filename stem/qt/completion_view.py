@@ -130,13 +130,21 @@ class CompletionListItemDelegate(QItemDelegate):
         
         metrics = QFontMetricsF(self._settings.q_font)
 
-        size = metrics.size(0, display.expandtabs(self._settings.tab_stop))
+        display_exp = self._settings.expand_tabs(display)
+
+        width = self._settings.char_width * len(display_exp) + 5
+        height = self._settings.line_spacing
+
+        return QSize(width, height)
+
+
+#         size = metrics.size(0, display.expandtabs(self._settings.tab_stop))
 
 #         if not isinstance(display, AttributedString):
 #             display = AttributedString(display)
 #         size = text_size(display, settings)
-        size.setWidth(size.width() + 5)
-        return size.toSize()
+#         size.setWidth(size.width() + 5)
+#         return size.toSize()
         
 
 class CompletionListModel(QAbstractTableModel):

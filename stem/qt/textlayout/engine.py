@@ -75,7 +75,8 @@ class TextLayoutEngine:
 
         '''
         tstop = self._settings.tab_stop
-        line_spacing = Qt.QFontMetricsF(self._settings.q_font).lineSpacing()
+        line_spacing = self._settings.line_spacing
+#         line_spacing = Qt.QFontMetricsF(self._settings.q_font).lineSpacing()
         fm = Qt.QFontMetricsF(self._settings.q_font)
 
 
@@ -252,6 +253,8 @@ class TextLayoutEngine:
 
         cache = line.caches.setdefault(id(self), {})
 
+        line_spacing = self._settings.line_spacing
+        
         if cache.get(params_key) != params:
             cache[params_key] = params
             lines = self.transform_line_for_display(line=line,
@@ -259,7 +262,7 @@ class TextLayoutEngine:
                                                     overlays=overlays,
                                                     wrap=wrap)
             pm = Qt.QPixmap(Qt.QSize(width,
-                                     len(lines) * fm.lineSpacing()))
+                                     len(lines) * line_spacing))
 
 
             painter = Qt.QPainter(pm)
@@ -276,10 +279,10 @@ class TextLayoutEngine:
             line_offsets = []
 
             for i, phys_line in enumerate(lines):
-                line_plane_pos = Qt.QPointF(plane_pos.x(), plane_pos.y() + i * fm.lineSpacing())
+                line_plane_pos = Qt.QPointF(plane_pos.x(), plane_pos.y() + i * line_spacing)
 
                 offsets = self.render_line_to_device(plane_pos=line_plane_pos,
-                                                     device_pos=Qt.QPointF(0, i * fm.lineSpacing()),
+                                                     device_pos=Qt.QPointF(0, i * line_spacing),
                                                      device=pm,
                                                      text=phys_line,
                                                      line_id=line_id,
@@ -287,7 +290,7 @@ class TextLayoutEngine:
                                                      bgcolor=bgcolor,
                                                      carets=carets)
 
-                line_offsets.append(((i+1) * fm.lineSpacing(), offsets))
+                line_offsets.append(((i+1) * line_spacing, offsets))
                 
                 offset += len(phys_line)
 

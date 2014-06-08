@@ -103,6 +103,9 @@ class CodeView(TextView):
 
         p = self._viewport.map_to_point(*cursor_pos)
 
+        if p is None:
+            return
+            
         x = p.x()
         y = p.y()
         

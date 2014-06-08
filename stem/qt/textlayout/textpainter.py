@@ -152,12 +152,15 @@ class TextPainter:
         '''
 
         ep = self.paint_background(pos, len(text), bgcolor=bgcolor)
-        p = Qt.QPointF(pos.x(), self._metrics.ascent() + pos.y())
+        p = Qt.QPointF(pos.x(), self._metrics.ascent() + pos.y() - 1)
         if color is not None:
             oldpen = self._painter.pen()
             self._painter.setPen(to_q_color(color))
 
         self._painter.drawText(p, text)
+
+        if self.settings.double_strike:
+            self._painter.drawText(p, text)
 
         if self._attrs.get('error'):
             with restoring(self._painter):

@@ -45,10 +45,28 @@ class TextViewSettings(object):
 
         font = QFont(fontname)
         font.setPointSizeF(fontsize)
+
         if s.integer_metrics:
             font.setStyleStrategy(QFont.ForceIntegerMetrics | font.styleStrategy())
         if not s.antialias:
             font.setStyleStrategy(QFont.NoAntialias|font.styleStrategy())
+
+        font.setHintingPreference(s.hinting_level)
+
+
+        stretch = int(100 * s.font_xstretch)
+        if stretch != 100:
+            font.setStretch(stretch)
+
+        spacing = int(100 * s.letter_spacing)
+        if spacing != 100:
+            font.setLetterSpacing(QFont.PercentageSpacing, spacing)
+
+        weight = int(100 * s.weight)
+        if weight != 100:
+            font.setWeight(weight)
+
+        self._line_spacing_factor = s.line_spacing
 
         self.q_font = font
 
@@ -79,8 +97,17 @@ class TextViewSettings(object):
     def q_font(self, value):
         self._q_font = value
         # assume monospace
-        fm = QFontMetricsF(value)
+        self.font_metrics = fm = QFontMetricsF(value)
         self.char_width = fm.width('X')
+
+
+    @property
+    def line_spacing(self):
+        return self.font_metrics.lineSpacing() * self._line_spacing_factor
+
+    @property
+    def baseline(self):
+        return self.font_metrics.ascent() + 1 + self.font_yoffset
 
     def expand_tabs(self, text):
         return text.expandtabs(self.tab_stop)
