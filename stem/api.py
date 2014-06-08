@@ -2,7 +2,7 @@
 
 from .control import keybinding, BufferController
 from .control.interactive import interactive, menu
-from .core import Keys, errors
+from .core import Keys, errors, AttributedString
 from .core.tag import autoextend, autoconnect
 from .core.nconfig import Config, Settings
 from .abstract.application import app
