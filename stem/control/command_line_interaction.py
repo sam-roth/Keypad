@@ -50,7 +50,7 @@ class CommandLineInteractionMode(CUAInteractionMode):
     def intercept_app_shortcut(self, event):
         if Keys.tab.matches(event.key):
             event.intercept()
-            run('complete')
+#             run('complete')
 
 
 

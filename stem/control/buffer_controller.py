@@ -55,6 +55,7 @@ class BufferController(Tagged, Responder):
         gs = GeneralConfig.from_config(self.config)
         
         self.selection          = gs.selection(self.manipulator, self.config)
+        self.completion_controller = CompletionController(self)
         self._code_model = None
         
 #         self.view.scrolled                  += self._on_view_scrolled      
@@ -87,7 +88,7 @@ class BufferController(Tagged, Responder):
         
         self.__last_autoindent_curs = None
 
-        self.completion_controller = CompletionController(self)
+
 
     
         self._last_path = None

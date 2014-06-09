@@ -46,7 +46,9 @@ class Filetype(object):
     @classmethod
     def default(cls):
         if cls._default is None:
-            cls._default = Filetype('<default>')
+            from .default_code_model import DefaultCodeModel
+            cls._default = Filetype('<default>',
+                                    code_model=DefaultCodeModel)
         
         return cls._default
 

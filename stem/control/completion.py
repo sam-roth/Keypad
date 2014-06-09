@@ -188,8 +188,15 @@ class CompletionController(Responder):
         
 @interactive('complete')
 def complete(cc: CompletionController):
-    cc.complete()
+    try:
+        cc.complete()
+    except NotImplementedError:
+        return interactive.call_next
 
 @interactive('calltip')
 def calltip(cc: CompletionController):
-    cc.show_call_tip()
+    try:
+        cc.show_call_tip()
+    except NotImplementedError:
+        return interactive.call_next
+
