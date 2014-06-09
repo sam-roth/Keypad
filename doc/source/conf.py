@@ -16,7 +16,7 @@
 import sys
 import os
 import sphinx_bootstrap_theme
-        
+import sphinx.ext.viewcode
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -40,6 +40,7 @@ extensions = [
     'sphinx.ext.pngmath',
     'sphinx.ext.mathjax',
 #     'sphinx.ext.viewcode',
+    'viewcode_monkeypatch',
     'sphinx.ext.graphviz',
     'sphinx.ext.inheritance_diagram',
 ]

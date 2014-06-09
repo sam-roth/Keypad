@@ -1,3 +1,7 @@
+'''
+Support for signals, settings, and enums in Sphinx.
+'''
+
 from sphinx.application import Sphinx
 from sphinx.domains.python import (PyClassmember, 
                                    PyClasslike,
@@ -205,9 +209,12 @@ class SettingsDocumenter(autodoc.ClassDocumenter):
             self.add_line('   Config Namespace: ``{}``'.format(self.object._ns_), '<autodoc>')
 
 def skip_member_predicate(app, what, name, obj, skip, opts):
-    if getattr(obj, '_sphinx_omit', False):
-        return True
-        
+    try:
+        if getattr(obj, '_sphinx_omit', False):
+            return True
+    except:
+        pass
+
 
 def setup(app):
     global sphinxapp

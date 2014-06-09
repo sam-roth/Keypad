@@ -17,10 +17,11 @@ Submodules
    stem.qt.completion_view
    stem.qt.driver
    stem.qt.editor
-   stem.qt.main_window
    stem.qt.options
    stem.qt.qt_util
-   stem.qt.widget
+
+..   stem.qt.widget
+..   stem.qt.main_window
 
 Module contents
 ---------------
