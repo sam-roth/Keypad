@@ -1,5 +1,6 @@
 from sphinx.application import Sphinx
 from sphinx.domains.python import (PyClassmember, 
+                                   PyClasslike,
                                    PythonDomain,
                                    ObjType,
                                    PyXRefRole,
@@ -7,7 +8,7 @@ from sphinx.domains.python import (PyClassmember,
 from sphinx.ext import autodoc
 from stem.core.nconfig import Settings, Field
 from stem.core.signal import Signal, InstanceSignal
-
+import enum
 
 
 class PatchedClassDocumenter(autodoc.ClassDocumenter):
@@ -45,6 +46,26 @@ class FieldDocumenter(autodoc.AttributeDocumenter):
         return res
 
 
+class EnumDocumenter(autodoc.ClassDocumenter):
+    objtype = 'enum'
+    member_order = 19
+
+    @classmethod
+    def can_document_member(cls, member, membername, isattr, parent):
+        return isinstance(member, type) and issubclass(member, enum.Enum)
+
+    def get_object_members(self, want_all):
+        return False, [(k, v.value) 
+                       for (k, v) in
+                       self.object.__members__.items()]
+
+    def filter_members(self, members, want_all):
+        return [(name, member, True) for (name, member) in members]
+
+#     @staticmethod
+#     def get_attr(obj, name, *defargs):
+#         """getattr() override for types such as Zope interfaces."""
+#         return obj[name].value
 
 class SignalDirective(PyClassmember):
     signal_prefix = 'signal '
@@ -69,6 +90,8 @@ class SignalDirective(PyClassmember):
                                                      clsname)
         else:
             return ('%s() (%s signal)') % (methname, clsname)
+# class FancyClassDirective(PyClasslike):
+#     pass
 
 class ClassSignalDirective(SignalDirective):
     signal_prefix = 'class-signal '
@@ -95,14 +118,18 @@ class ClassSignalDirective(SignalDirective):
             return ('%s() (%s signal)') % (methname, clsname)
 
 PythonDomain.directives['signal'] = SignalDirective
-PythonDomain.directives['classsignal'] = ClassSignalDirective
+# PythonDomain.directives['classsignal'] = ClassSignalDirective
+PythonDomain.directives['enum'] = PyClasslike
+# PythonDomain.directives['settings'] = PyClasslike
 
 PythonDomain.object_types['signal'] = ObjType('signal', 'sig', 'obj')
 PythonDomain.object_types['classsignal'] = ObjType('classsignal', 'csig', 'obj')
-
+PythonDomain.object_types['enum'] = ObjType('enum', 'enm', 'obj')
+# PythonDomain.object_types['settings'] = ObjType('settings', 'stg', 'obj')
 
 PythonDomain.roles['csig'] = PyXRefRole()
 PythonDomain.roles['sig'] = PyXRefRole()
+PythonDomain.roles['enm'] = PyXRefRole()
 
 class SignalDocumenter(autodoc.MethodDocumenter):
     priority = 100
@@ -113,7 +140,7 @@ class SignalDocumenter(autodoc.MethodDocumenter):
     def can_document_member(cls, member, membername,
                             isattr, parent):
 
-        return (isinstance(member, (Signal, InstanceSignal))
+        return (isinstance(member, (Signal))
                 and not isinstance(parent, autodoc.ModuleDocumenter))
 
     def import_object(self):
@@ -176,6 +203,12 @@ class SettingsDocumenter(autodoc.ClassDocumenter):
         if hasattr(self.object, '_ns_'):
             self.add_line('', '<autodoc>')
             self.add_line('   Config Namespace: ``{}``'.format(self.object._ns_), '<autodoc>')
+
+def skip_member_predicate(app, what, name, obj, skip, opts):
+    if getattr(obj, '_sphinx_omit', False):
+        return True
+        
+
 def setup(app):
     global sphinxapp
     sphinxapp = app
@@ -183,4 +216,6 @@ def setup(app):
     autodoc.add_documenter(FieldDocumenter)
     autodoc.add_documenter(SettingsDocumenter)
     autodoc.add_documenter(SignalDocumenter)
+    autodoc.add_documenter(EnumDocumenter)
+    app.connect('autodoc-skip-member', skip_member_predicate)
 

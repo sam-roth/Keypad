@@ -24,5 +24,6 @@ Indices and tables
 HOWTOs
 ======
 
+* :ref:`settings-howto`
 * :ref:`plugin-creation-howto`
 * :ref:`signal-howto`

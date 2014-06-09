@@ -322,7 +322,7 @@ latex_documents = [
 #latex_show_urls = False
 
 # Documents to append as an appendix to all manuals.
-latex_appendices = ['plugins', 'signal-howto']
+latex_appendices = ['plugins', 'signal-howto', 'settings-howto']
 
 # If false, no module index is generated.
 latex_domain_indices = True
