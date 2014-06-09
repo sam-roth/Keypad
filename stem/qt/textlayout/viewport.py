@@ -3,7 +3,23 @@ import functools
 import collections
 import itertools
 
-from ..qt_util import *
+from ..qt_util import (QApplication,
+                       QColor,
+                       QEvent,
+                       QPainter,
+                       QPointF,
+                       QRect,
+                       QRectF,
+                       QSizeF,
+                       QTimer,
+                       QWidget,
+                       ending,
+                       to_q_key_sequence,
+                       to_q_color,
+                       KeyEvent,
+                       Qt,
+                       marshal_key_event)
+
 from ..options import TextViewSettings
 
 import enum

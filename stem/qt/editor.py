@@ -27,6 +27,7 @@ class Editor(AbstractEditor, Responder, QWidget, metaclass=ABCWithQtMeta):
         self.next_responder = self.buffer_controller
 
         self.__view.installEventFilter(self)
+        self.__view.viewport().installEventFilter(self)
         
     @Signal
     def window_should_kill_editor(self, editor):
@@ -55,7 +56,7 @@ class Editor(AbstractEditor, Responder, QWidget, metaclass=ABCWithQtMeta):
         self.__view.setFocus()
 
     def eventFilter(self, obj, ev):
-        if obj is self.__view and ev.type() == QEvent.FocusIn:
+        if (obj is self.__view or obj is self.__view.viewport()) and ev.type() == QEvent.FocusIn:
             self.editor_activated()
         return super().eventFilter(obj, ev)
 

@@ -1,6 +1,15 @@
 
 
-from ..qt_util import *
+from ..qt_util import (Qt, 
+                       QAbstractScrollArea,
+                       QApplication,
+                       QEvent,
+                       QFontMetricsF,
+                       QFrame,
+                       QPoint,
+                       QPointF,
+                       QRect)
+
 from .viewport import TextViewport
 from stem.api import interactive, BufferController
 from stem.buffers import Span

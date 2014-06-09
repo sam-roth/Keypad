@@ -61,7 +61,6 @@ class CommandLineWidget(Responder, QWidget):
                                              buff=Buffer(), 
                                              provide_interaction_mode=False,
                                              config=config)
-        
 
         
         self.__imode = CommandLineInteractionMode(self.__controller)
@@ -239,11 +238,14 @@ class MainWindow(AbstractWindow, QMainWindow, metaclass=ABCWithQtMeta):
 
     def __update_window_path(self):
         asw = self.__mdi.activeSubWindow()
+
         if asw is None:
+            self.clear_next_responders()
             return
 
         editor = asw.widget()
         self.next_responder = editor
+
         self.setWindowModified(editor.is_modified)
         if editor.path is not None:
             self.setWindowFilePath(str(editor.path.absolute()))
