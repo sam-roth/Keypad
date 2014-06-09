@@ -7,7 +7,18 @@ from stem.core import Signal
 
 
 class KeyEvent(collections.namedtuple('KeyEvent', 'key text')):
-    
+    '''
+    KeyEvent(key, text)
+
+    :param key: The key pressed.
+    :param text: The text that should inserted due to the keypress.
+
+    :type key: stem.core.key.SimpleKeySequence
+    :type text: str
+
+    .. autoattribute:: key
+    .. autoattribute:: text
+    '''
     def __new__(cls, *args, **kw):
         self = super().__new__(cls, *args, **kw)
         self._is_intercepted = False
@@ -17,6 +28,9 @@ class KeyEvent(collections.namedtuple('KeyEvent', 'key text')):
     def is_intercepted(self): return self._is_intercepted
 
     def intercept(self):
+        '''
+        Do not allow this event to propagate to containing views.
+        '''
         self._is_intercepted = True
 
 
@@ -29,10 +43,17 @@ class MouseButton(enum.IntEnum):
     x_button_2 = 0x10
 
 class AbstractTextView(metaclass=abc.ABCMeta):
+    '''
+    The abstract base class for text views.
+    '''
 
     @abc.abstractproperty
     def buffer(self):
-        pass
+        '''
+        The buffer shown.
+
+        :rtype: `~stem.buffers.buffer.Buffer`
+        '''
 
     @buffer.setter
     def buffer(self, value):
@@ -50,7 +71,10 @@ class AbstractTextView(metaclass=abc.ABCMeta):
 
     @abc.abstractproperty
     def modelines_visible(self):
-        pass
+        '''
+        A boolean value indicating whether the modelines (e.g., ``... [CUAInteractionMode]``)
+        should be visible.
+        '''
 
     @modelines_visible.setter
     def modelines_visible(self, value):
@@ -58,15 +82,25 @@ class AbstractTextView(metaclass=abc.ABCMeta):
 
     @abc.abstractproperty
     def cursor_pos(self):
-        pass
+        '''
+        The **text** cursor position.
+
+        :returns: A tuple of (y, x).
+        '''
 
     @cursor_pos.setter
     def cursor_pos(self, value):
-        pass
+        '''
+        The **text** cursor position.
+
+        :param value: A tuple of (y, x) indicating the new cursor position.
+        '''
 
     @abc.abstractproperty
     def first_line(self):
-        pass
+        '''
+        The first visible line.
+        '''
 
     @first_line.setter
     def first_line(self, value):
@@ -75,7 +109,9 @@ class AbstractTextView(metaclass=abc.ABCMeta):
 
     @abc.abstractproperty
     def last_line(self):
-        pass
+        '''
+        The last visible line (read-only).
+        '''
 
 
     @abc.abstractproperty
@@ -83,6 +119,15 @@ class AbstractTextView(metaclass=abc.ABCMeta):
         pass
 
     def scroll_to_line(self, line, *, center=False):
+        '''
+        Scroll the view so that the line is visible.
+
+        :param line: The line number to scroll to.
+        :param center: 
+            If True, center the line in the display;
+            otherwise, scroll only as far as necessary.
+
+        '''
         if not (self.first_line <= line < self.last_line):
             height = self.last_line - self.first_line
             if center:
@@ -95,23 +140,65 @@ class AbstractTextView(metaclass=abc.ABCMeta):
 
     @abc.abstractmethod
     def set_overlays(self, token, overlays):
-        pass
+        '''
+        Give the text specified the requested attributes without modifying the buffer.
+
+        :param token: 
+            A unique identifier (of your choosing) that may be used to later
+            erase or modify the attributes.
+
+        :param overlays:
+            A list of tuples of ``(span, key, value)`` indicating the attributes
+            to apply.
+
+        :type token: `object`
+        :type overlays: [(`~stem.buffers.span.Span`, `object`, `object`)]
+
+        '''
 
     @abc.abstractmethod
     def update(self):
-        pass
+        '''
+        Force redrawing of the entire view.
+        '''
         
     @Signal
-    def mouse_down_char(self, line, col): pass
+    def mouse_down_char(self, line, col): 
+        '''
+        Emitted when the left mouse button is pressed.
+
+        :param line: the line number under the mouse cursor
+        :param col: the column number under the mouse cursor
+        '''
 
     @Signal
-    def mouse_move_char(self, buttons, line, col): pass
+    def mouse_move_char(self, buttons, line, col):
+        '''
+        Emitted when the mouse moves.
+
+        .. note::
+            This signal may be emitted only while a button is pressed, depending
+            on implementation.
+
+        :param buttons: The bitwise OR of the mouse buttons pressed.
+        :param line: The line number.
+        :param col: The column number.
+
+        :type buttons: bitwise OR of `~MouseButton`
+        '''
 
     @Signal
-    def key_press(self, event: KeyEvent): pass
+    def key_press(self, event: KeyEvent):
+        '''
+        The user pressed a key while the view was focused.
+        '''
 
     @Signal
-    def should_override_app_shortcut(self, event: KeyEvent): pass
+    def should_override_app_shortcut(self, event: KeyEvent):
+        '''
+        Emitted before an event is interpreted as an application shortcut.
+        To intercept, use the :py:meth:`~KeyEvent.intercept` method.
+        '''
 
 
 class AbstractCodeView(AbstractTextView):
