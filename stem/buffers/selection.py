@@ -39,11 +39,12 @@ class Flag(object):
 class SelectionSettings(Settings):
     _ns_ = 'selection'
 
-    #: Maximum number of previous cursor positions to retain.
-    max_history_entries = Field(int, 10)
+    max_history_entries = Field(int, 10,
+                                docs='The maximum number of previous cursor positions to retain')
 
-    #: The number of lines the cursor needs to move in order to add a new history entry.
-    history_fuzz_lines = Field(int, 10)
+    history_fuzz_lines = Field(int, 10,
+                               docs='The number of lines the cursor needs to move in order to '
+                                    'add a new history entry.')
 
 class Selection(object):
     def __init__(self, manip, config):
@@ -279,13 +280,21 @@ class Selection(object):
                     break
 
                 c.home()
-                if n > 0:
-                    c.insert(self.indent * n)
+
+                span = c.line_span_matching(r'^\s*$')
+                if span:
+                    # if the line is just whitespace, remove its contents
+                    span.remove()
                 else:
-                    m = c.searchline(r'^\s+')
-                    if m:
-                        remove_count = min(m.end(), -len(self.indent) * n)
-                        c.delete(remove_count)
+                    # otherwise perform the indentation
+                    if n > 0:
+                        c.insert(self.indent * n)
+                    else:
+                        m = c.searchline(r'^\s+')
+                        if m:
+                            remove_count = min(m.end(), -len(self.indent) * n)
+                            c.delete(remove_count)
+
         else:
             c = self._insert_cursor
             c.insert(self.indent * n)
