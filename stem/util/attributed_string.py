@@ -59,10 +59,21 @@ class AttributedString:
     def text(self):
         return self._text
 
+    def _copy_attrs(self, source, dest_index):
+        attrs = {}
+
+        if isinstance(source, str):
+            return
+
+        for chunk, deltas in source.iterchunks():
+            attrs.update(deltas)
+            self.set_attributes(dest_index, dest_index + len(chunk),
+                                **attrs)
+            dest_index += len(chunk)
+
 
     @classmethod
     def join(cls, *args):
-            
         if len(args) == 1:
             delim = ''
             strings, = args
@@ -71,13 +82,23 @@ class AttributedString:
         else:
             raise TypeError('join() takes one or two arguments')
 
-        # TODO: make this more efficient
-        result = AttributedString()
+        strings = tuple(strings)
 
+        result = AttributedString(str(delim).join(map(str, strings)))
+
+        pos = 0
         for i, string in enumerate(strings):
             if i != 0:
-                result.append(delim)
-            result.append(string)
+                result._copy_attrs(delim, pos)
+                pos += len(delim)
+            result._copy_attrs(string, pos)
+            pos += len(string)
+#                 updates = {attr: None for (attr, _) in result._attrs.items()}
+#                 result.set_attributes(start=len(result), end=None, **updates)
+#                 result.append(delim)
+#             updates = {attr: None for (attr, _) in result._attrs.items()}
+#             result.set_attributes(start=len(result), end=None, **updates)
+#             result.append(string)
         return result
 
     def __add__(self, other):

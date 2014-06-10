@@ -1,6 +1,7 @@
 
 import re
 import enum
+import itertools
 
 from collections import ChainMap
 
@@ -149,6 +150,7 @@ class TextLayoutEngine:
 
     def transform_line_for_display(self, *, line, width,
                                    overlays=frozenset(),
+                                   prefix=(),
                                    wrap=False):
         '''
         Return a tuple of AttributedString objects containing the physical lines
@@ -156,7 +158,7 @@ class TextLayoutEngine:
         '''
 
         overlays = frozenset(overlays)
-        params = width, overlays, wrap
+        params = width, overlays, prefix, wrap
 
         cache = line.caches.setdefault(id(self), {})
 
@@ -166,6 +168,13 @@ class TextLayoutEngine:
                 overlaid = apply_overlay(line, overlays)
             else:
                 overlaid = line
+
+            if prefix:
+                for item in prefix:
+                    item.set_attributes(__prefix=True)
+
+                overlaid = AttributedString.join(itertools.chain(prefix, [overlaid]))
+
 
             if wrap:
                 fm = Qt.QFontMetricsF(self._settings.q_font)
@@ -203,8 +212,9 @@ class TextLayoutEngine:
             return cache['transform_result']
 
     def check_pixmap_clean(self, *, plane_pos, line, width,
-                        overlays=frozenset(), wrap=False, 
-                        line_id=0, bgcolor=None, carets=None):
+                           overlays=frozenset(), wrap=False,
+                           line_id=0, bgcolor=None, carets=None,
+                           prefix=(), prefix_width=None):
         '''
         Return true if the line has not changed since the last time it was drawn.
 
@@ -218,7 +228,7 @@ class TextLayoutEngine:
 
         overlays = frozenset(overlays)
 
-        params = width, overlays, wrap, bgcolor, line_id, carets
+        params = width, overlays, wrap, bgcolor, line_id, carets, prefix, prefix_width
 
         cache = line.caches.setdefault(id(self), {})
 
@@ -226,7 +236,8 @@ class TextLayoutEngine:
             
     def get_line_pixmap(self, *, plane_pos, line, width, 
                         overlays=frozenset(), wrap=False, 
-                        line_id=0, bgcolor=None, carets=None):
+                        line_id=0, bgcolor=None, carets=None,
+                        prefix=(), prefix_width=None):
         '''
         Return a tuple of ``(QPixmap, [(y, [(x, col)])])`` containing the rendered line
         and the offsets of each line and of each evenly spaced region of characters
@@ -249,18 +260,19 @@ class TextLayoutEngine:
 
         overlays = frozenset(overlays)
 
-        params = width, overlays, wrap, bgcolor, line_id, carets
+        params = width, overlays, wrap, bgcolor, line_id, carets, prefix, prefix_width
 
         cache = line.caches.setdefault(id(self), {})
 
         line_spacing = self._settings.line_spacing
         
-        if cache.get(params_key) != params:
+        if cache.get(params_key) != params: # cache invalid -> rerender
             cache[params_key] = params
             lines = self.transform_line_for_display(line=line,
                                                     width=width,
                                                     overlays=overlays,
-                                                    wrap=wrap)
+                                                    wrap=wrap,
+                                                    prefix=())
             pm = Qt.QPixmap(Qt.QSize(width,
                                      len(lines) * line_spacing))
 
