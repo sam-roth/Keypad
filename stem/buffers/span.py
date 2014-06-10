@@ -28,6 +28,8 @@ class BasicSpan(object):
     def buffer(self):
         return self.start_curs.buffer
 
+
+
     def __contains__(self, pos):
         if isinstance(pos, Cursor):
             pos = pos.pos
@@ -84,6 +86,8 @@ class BasicSpan(object):
         self.start_curs.insert(value)
         self.start_curs.pos = p
 
+
+
     def remove(self):
         self.text = ''
 class Span(BasicSpan):
@@ -114,6 +118,25 @@ class Span(BasicSpan):
             c2 = c1.clone().move(end)
             return cls(c1, c2)
 
+    def append(self, text):
+        self.end_curs.insert(text)
+
+    def prepend(self, text):
+        p = self.start_curs.pos
+        self.start_curs.insert(text)
+        self.start_curs.move(p)
+
+    def __getitem__(self, key):
+        if not isinstance(key, slice):
+            key = slice(key, key + 1)
+
+        start, stop, step = key.indices(len(self.text))
+
+        if step != 1:
+            raise TypeError('step is unsupported')
+
+        return Span(self.start_curs.clone().advance(start),
+                    self.start_curs.clone().advance(stop))
         
 
 import logging
@@ -138,6 +161,7 @@ class Region(object):
     def contains_inclusive(self, pos):
         return any(x.contains_inclusive(pos) for x in self.spans)
 
+
     def __repr__(self):
         return 'Region{!r}'.format(self.spans)
 
@@ -150,6 +174,15 @@ class Region(object):
     @property
     def region(self):
         return self
+
+
+    @property
+    def buffer(self):
+        if self.spans:
+            return self.spans[0].buffer
+        else:
+            return None
+
 
     @property
     def text(self):

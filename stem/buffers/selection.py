@@ -6,6 +6,7 @@ import re
 from ..core import Signal
 from ..options import GeneralSettings
 from ..core.nconfig import Settings, Field
+from .span import Span
 
 _AdvanceWordRegex = re.compile(
     r'''
@@ -109,6 +110,13 @@ class Selection(object):
             top = self._future.pop()
             self._history.append(self.insert_cursor.clone())
             self.move(top.pos)
+    
+    @property
+    def region(self):
+        if self.anchor_cursor is not None:
+            return Span(self.insert_cursor, self.anchor_cursor).region
+        else:
+            return Span(self.insert_cursor, self.insert_cursor).region
 
     @property
     def history(self):
