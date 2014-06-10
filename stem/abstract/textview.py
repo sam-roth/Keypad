@@ -2,6 +2,7 @@
 import abc
 import collections
 import enum
+import functools
 
 from stem.core import Signal
 
@@ -41,6 +42,45 @@ class MouseButton(enum.IntEnum):
     middle_button = 0x4
     x_button_1 = 0x8
     x_button_2 = 0x10
+
+
+
+class AbstractColumnDelegate(metaclass=abc.ABCMeta):
+    '''
+    Provides additional linewise text, such as folding information
+    or line numbers.
+    '''
+
+    Row = collections.namedtuple('Row', 'text bgcolor')
+
+
+    def __init__(self, max_cache_size=256):
+        self.__row_cache = functools.lru_cache(maxsize=max_cache_size)(self._row)
+
+    @abc.abstractproperty
+    def enabled(self):
+        pass
+
+    @abc.abstractmethod
+    def _row(self, line):
+        pass
+
+    def row(self, line):
+        return self.__row_cache(line)
+
+    @Signal
+    def invalidated(self):
+        pass
+
+    def _invalidate(self):
+        self.invalidated()
+        self.__row_cache.cache_clear()
+
+
+
+
+
+
 
 class AbstractTextView(metaclass=abc.ABCMeta):
     '''
