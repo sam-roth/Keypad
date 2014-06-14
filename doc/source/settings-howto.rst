@@ -37,14 +37,14 @@ Terminology
 ===========
 
 settings
-    Settings classes are the schema for the settings system. Many different settings
-    objects can load data from the same configuration. **Settings classes interpret
-    configuration data.**
+    Settings classes are the schema for the settings system. Many different
+    settings objects can load data from the same configuration. **Settings
+    classes control the interpretation of configuration data.**
 
 configuration
-    The configuration is the specific data from which settings are loaded. This could be 
-    a YAML or JSON file, for instance. It can also be an in-memory space that is implicitly
-    created when assigning to settings fields.
+    The configuration is the specific data from which settings are loaded.
+    Configuration can be loaded from a YAML file or modified by using a
+    settings class.
 
 contextual configuration
     The contextual configuration is the configuration data loaded automatically
@@ -127,12 +127,15 @@ Settings subclasses consist of:
 * One or more class attributes of type `~stem.core.nconfig.Field`, as detailed
   below.
 
+.. autoclass:: Field
+    :noindex:
 
-.. py:class:: Field(type, default=None, safe=False, docs=None)
-    
-    Mark a field as having the given type, default value, and
-    docstring, as well as marking whether it is safe to load
-    from an untrusted contextual configuration file.
+
+.. Field(type, default=None, safe=False, docs=None)
+..  
+..  Mark a field as having the given type, default value, and
+..  docstring, as well as marking whether it is safe to load
+..  from an untrusted contextual configuration file.
 
 .. warning:: 
     It is generally speaking unwise to use a mutable type as a field.
@@ -148,8 +151,6 @@ You may observe the fields of a settings object by using its
 `~stem.core.nconfig.Settings.value_changed` signal. This signal is emitted
 whenever the value of a field changes, even if it was changed by reading a
 configuration file or by modifying an ancestor configuration.
-
-
 
 Further Reading
 ===============

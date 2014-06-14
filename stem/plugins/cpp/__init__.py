@@ -9,7 +9,7 @@ def make_cxx_code_model(*args):
 @register_plugin
 class CPPCodeModelPlugin(Plugin):
     name = 'C/C++ Code Model'
-    author = 'Sam Roth <sam.roth1@gmail.com>'
+    author = 'Sam Roth'
 
     def attach(self):
         Filetype('c++', 

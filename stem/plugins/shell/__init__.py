@@ -6,7 +6,7 @@ from stem.api import (Plugin,
 @register_plugin
 class ShellCodeModelPlugin(Plugin):
     name = 'Shell Code Model'
-    author = 'Sam Roth <sam.roth1@gmail.com>'
+    author = 'Sam Roth'
 
     @staticmethod
     def __make_bourne_code_model(*args, **kw):

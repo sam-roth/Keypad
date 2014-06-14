@@ -55,7 +55,7 @@ def make_server_proxy():
 @register_plugin
 class ServerPlugin(Plugin):
     name = 'Local Command Server'
-    author = 'Sam Roth <sam.roth1@gmail.com>'
+    author = 'Sam Roth'
 
     @command('rewrite_server_address')
     def rewrite_server_address(self, _: object):

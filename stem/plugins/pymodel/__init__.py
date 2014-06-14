@@ -9,7 +9,7 @@ def make_python_code_model(*args):
 @register_plugin
 class PythonCodeModelPlugin(Plugin):
     name = 'Python code model'
-    author = 'Sam Roth <sam.roth1@gmail.com>'
+    author = 'Sam Roth'
 
     def attach(self):
         Filetype('python', 

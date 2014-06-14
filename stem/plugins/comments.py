@@ -35,7 +35,7 @@ def uncomment(span, comment_char):
 @register_plugin
 class CommentTogglePlugin(Plugin):
     name = 'Comment Toggle'
-    author = 'Sam Roth <sam.roth1@gmail.com>'
+    author = 'Sam Roth'
 
     def attach(self):
         pass

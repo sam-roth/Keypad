@@ -1,37 +1,39 @@
 
 '''
-Simple lexer combinator library for syntax highlighting.
+Simple lexer "combinator" library for syntax highlighting.
 
 
-Let's say we want to highlight the LLVM project's toy example language, "Kaleidoscope" 
+Let's say we want to highlight the LLVM project's toy example language, Kaleidoscope
 (http://llvm.org/docs/tutorial/OCamlLangImpl1.html).
 
-The language has a few keywords, namely:
-    def
-    if 
-    then 
-    else
-    extern
+The language has a few keywords, namely
 
-Thus, our first lexer is Keyword:
+.. productionlist::
+    Keyword: "def" | "if" | "then" | "else" | "extern"
 
->>> Keyword = keyword('def if then else extern'.split())
->>> Keyword.attrs['lexcat'] = 'keyword'
+Thus, our first lexer is Keyword::
 
-Kaleidoscope has only one literal, a floating point literal.
-    Number      ::= [0-9.]+
+    Keyword = keyword('def if then else extern'.split())
+    Keyword.attrs['lexcat'] = 'keyword'
 
->>> Number = regex('[0-9.]+')
->>> Number.attrs['lexcat'] = 'literal'
+Kaleidoscope has only one literal, a floating point literal:
+
+.. productionlist::
+    Number: [0-9.]+
+
+This can be translated using the `regex` lexer::
+
+    Number = regex('[0-9.]+')
+    Number.attrs['lexcat'] = 'literal'
 
 
-Putting these together, we have:
+Putting these together, we have::
 
->>> Kaleidoscope = region(
-...     guard=None,     # Always enter this lexer if it is reached.
-...     exit=None,      # Leave this lexer only at the end of file.
-...     contains=[Keyword, Number]
-... )
+    Kaleidoscope = region(
+        guard=None,     # Always enter this lexer if it is reached.
+        exit=None,      # Leave this lexer only at the end of file.
+        contains=[Keyword, Number]
+    )
 
 '''
 import abc

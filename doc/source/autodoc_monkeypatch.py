@@ -94,8 +94,8 @@ class SignalDirective(PyClassmember):
                                                      clsname)
         else:
             return ('%s() (%s signal)') % (methname, clsname)
-# class FancyClassDirective(PyClasslike):
-#     pass
+
+
 
 class ClassSignalDirective(SignalDirective):
     signal_prefix = 'class-signal '
@@ -129,6 +129,7 @@ PythonDomain.directives['enum'] = PyClasslike
 PythonDomain.object_types['signal'] = ObjType('signal', 'sig', 'obj')
 PythonDomain.object_types['classsignal'] = ObjType('classsignal', 'csig', 'obj')
 PythonDomain.object_types['enum'] = ObjType('enum', 'enm', 'obj')
+
 # PythonDomain.object_types['settings'] = ObjType('settings', 'stg', 'obj')
 
 PythonDomain.roles['csig'] = PyXRefRole()
@@ -137,8 +138,8 @@ PythonDomain.roles['enm'] = PyXRefRole()
 
 class SignalDocumenter(autodoc.MethodDocumenter):
     priority = 100
-#     objtype = 'signal'
-#     directivetype = 'signal'
+    objtype = 'signal'
+    directivetype = 'signal'
 
     @classmethod
     def can_document_member(cls, member, membername,

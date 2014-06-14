@@ -59,7 +59,7 @@ def editor_created(editor):
 @register_plugin
 class FileChangePlugin(Plugin):
     name = 'File Change Monitor'
-    author = 'Sam Roth <sam.roth1@gmail.com>'
+    author = 'Sam Roth'
 
     def attach(self):
         self.app.editor_created.connect(editor_created)
