@@ -1,25 +1,14 @@
-from stem.core.tag import autoextend
-from stem.control import BufferController
+import re, textwrap, pathlib, shlex, inspect
+import logging, itertools, os.path, collections
+
+from stem.util import time_limited
+from stem.control.buffer_controller import BufferController
 from stem.abstract.completion import AbstractCompletionView
-from stem.api import interactive
-from stem.core.responder import Responder
-from stem.core import notification_queue, AttributedString
+from stem.api import interactive, app, Span, Cursor
+from stem.plugins.semantics.completer import AbstractCompleter
 from stem.control.interactive import dispatcher
 
-from stem.buffers import Span, Cursor
-from stem.plugins.semantics.completer import AbstractCompleter
-from stem.abstract.application import app
-import multiprocessing
-import re
-import textwrap
 
-import pathlib
-import shlex
-import inspect
-import logging
-import itertools
-import os.path
-import collections
 def _expand_user(p):
     return pathlib.Path(os.path.expanduser(str(p)))
 
@@ -37,10 +26,13 @@ def _get_directory_contents_rec(path):
     queue.appendleft(path)    
     while queue:
         item = queue.pop()
-        for subitem in item.iterdir():
-            if subitem.is_dir():
-                queue.appendleft(subitem)
-            yield subitem
+        try:
+            for subitem in item.iterdir():
+                if subitem.is_dir():
+                    queue.appendleft(subitem)
+                yield subitem
+        except PermissionError:
+            pass
 
     
 class CmdlineCompleter(AbstractCompleter):
@@ -94,12 +86,14 @@ class CmdlineCompleter(AbstractCompleter):
                         rootpath = rootpath.parent
                         typed_rootpath = os.path.join(*(os.path.split(typed_rootpath)[:-1]))
                     
-                    limited_glob = itertools.islice(((os.path.join(typed_rootpath, 
-                                                                   str(p.relative_to(rootpath))),)
-                                                     for p in _get_directory_contents_rec(rootpath)),
-                                                    1024)
-                    
-                    limited_glob = list(limited_glob)
-                    self.show_completions(list(limited_glob))
+
+                    def completion_generator():
+                        for p in _get_directory_contents_rec(rootpath):
+                            yield (os.path.join(typed_rootpath,
+                                                str(p.relative_to(rootpath))),)
+
+
+                    limited_glob = list(time_limited(completion_generator(), ms=250))
+                    self.show_completions(limited_glob)
                 elif category == 'Interactive':
                     self.show_completions([(iname, ) for iname in dispatcher.keys()])
