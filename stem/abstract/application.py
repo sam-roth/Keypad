@@ -144,6 +144,16 @@ class AbstractApplication(Responder, metaclass=abc.ABCMeta):
         :rtype: stem.abstract.editor.AbstractEditor
         '''
 
+    def _unregister_editor(self, editor):
+        '''
+        Remove the editor from the set of editors.
+        '''
+
+        try:
+            self._editors.remove(editor)
+        except KeyError:
+            pass
+
     def new_editor(self):
         '''
         Create and return a new editor.

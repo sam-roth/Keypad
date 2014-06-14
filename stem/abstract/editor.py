@@ -20,6 +20,7 @@ class AbstractEditor(metaclass=abc.ABCMeta):
 
         self.buffer_controller.modified_was_changed.connect(self.__modified_changed)
         self.buffer_controller.path_changed.connect(self.path_changed)
+        self.config = config
         
     @Signal
     def editor_activated(self):

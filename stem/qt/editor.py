@@ -41,6 +41,7 @@ class Editor(AbstractEditor, Responder, QWidget, metaclass=ABCWithQtMeta):
         self.__view.close()
         self.buffer_controller.dispose()
         self.window_should_kill_editor(self)
+        app()._unregister_editor(self)
 
 
     def closeEvent(self, event):
