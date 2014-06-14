@@ -11,13 +11,14 @@ from stem.core.signal import Signal
 class Editor(AbstractEditor, Responder, QWidget, metaclass=ABCWithQtMeta):
 
     def __init__(self, config):
+        QWidget.__init__(self)
         self.__view = CodeView()
         self.__prox = CodeViewProxy(self.__view)
         self.__config = config.derive()
 
         AbstractEditor.__init__(self, self.__prox, self.__config)
         Responder.__init__(self)
-        QWidget.__init__(self)
+
 
         self.__view.setParent(self)
         self.__layout = QVBoxLayout(self)
@@ -28,6 +29,8 @@ class Editor(AbstractEditor, Responder, QWidget, metaclass=ABCWithQtMeta):
 
         self.__view.installEventFilter(self)
         self.__view.viewport().installEventFilter(self)
+
+        self.setFocusProxy(self.__view)
         
     @Signal
     def window_should_kill_editor(self, editor):
