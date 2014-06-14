@@ -181,8 +181,8 @@ class SolarizedLight(AbstractSolarized):
 
         if high_contrast:
             self.fg = AbstractSolarized._base01
-            self.bg = AbstractSolarized._base2
-            self.cur_line_bg = AbstractSolarized._base3
+#             self.bg = AbstractSolarized._base3
+#             self.cur_line_bg = AbstractSolarized._base3
 
         bold = ['todo', 'type', 'keyword', 'escape',
                 'function']
@@ -215,8 +215,9 @@ class TextMateTheme(Colorscheme):
         'storage.type': 'type',
         'storage.modifier': 'type',
         
-        'meta': 'preprocessor',
-        'keyword.other': 'preprocessor',
+#         'meta': 'preprocessor',
+#         'keyword.other': 'preprocessor',
+        'variable.parameter': 'preprocessor',
 
         'keyword': 'keyword',
         
@@ -236,32 +237,50 @@ class TextMateTheme(Colorscheme):
 
             s = group.settings
             if 'scope' not in group:
-                self.bg = Color.from_hex(s.background)
-                self.fg = Color.from_hex(s.foreground)
-                self.selection_bg = Color.from_hex(s.selection)
+                try:
+                    self.bg = Color.from_hex(s.background)
+                except AttributeError:
+                    pass
+
+                try:
+                    self.fg = Color.from_hex(s.foreground)
+                except AttributeError:
+                    pass
+
+                try:
+                    self.selection_bg = Color.from_hex(s.selection)
+                except AttributeError:
+                    pass
+
                 self.selection_fg = self.fg
-                self.cur_line_bg = Color.from_hex(s.lineHighlight).composite(self.bg)
+                try:
+                    self.cur_line_bg = Color.from_hex(s.lineHighlight).composite(self.bg)
+                except AttributeError:
+                    pass
                 self.nontext_bg = self.bg
             else:
 
                 attrs = {}
+                try:
 
-                if 'background' in s:
-                    attrs['bgcolor'] = Color.from_hex(s.background)
-                if 'foreground' in s:
-                    attrs['color'] = Color.from_hex(s.foreground)
-                if s.get('fontStyle') == 'bold':
-                    attrs['bold'] = True
+                    if 'background' in s:
+                        attrs['bgcolor'] = Color.from_hex(s.background)
+                    if 'foreground' in s:
+                        attrs['color'] = Color.from_hex(s.foreground)
+                    if s.get('fontStyle') == 'bold':
+                        attrs['bold'] = True
+                except ValueError:
+                    pass
+                else:
+                    assigned = False
+                    for scope in group.scope.split(','):
+                        lcname = scopedict.most_specific(self.scopes, scope.strip(), default=None)
+                        if lcname not in lc:
+                            lc[lcname] = attrs
+                            assigned = True
 
-                assigned = False
-                for scope in group.scope.split(','):
-                    lcname = scopedict.most_specific(self.scopes, scope.strip(), default=None)
-                    if lcname not in lc:
-                        lc[lcname] = attrs
-                        assigned = True
-
-                if not assigned:
-                    self.unassigned.append(attrs)
+                    if not assigned:
+                        self.unassigned.append(attrs)
 
 
 
