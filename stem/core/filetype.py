@@ -23,11 +23,6 @@ class Filetype(object):
             del Filetype._by_suffix[suffix]
         self._suffixes = val
         for suffix in self._suffixes:
-            if suffix in Filetype._by_suffix:
-                raise KeyError('Suffix {!r} is already associated with {!r}'.format(
-                    suffix,
-                    Filetype._by_suffix[suffix].name
-                ))
             Filetype._by_suffix[suffix] = self
             
     
