@@ -4,6 +4,7 @@ import traceback
 from .cua_interaction import CUAInteractionMode, isprint
 from ..core import Signal, Keys, errors
 from ..buffers import Cursor, Span
+from ..buffers.selection import Selection
 from ..buffers.buffer_protector import BufferProtector
 import logging
 import types
@@ -19,6 +20,25 @@ class PromptWriter(object):
         pass
 
 writer = PromptWriter()
+
+
+class CommandLineSelection(Selection):
+    
+    def __init__(self, buff, config, prompt_width=2):
+        super().__init__(buff, config)
+        self.__prompt_width = 2
+        self.move(col=prompt_width)
+
+    def _post_move(self):
+
+        invalid = (self.pos[0] != len(self.buffer.lines) - 1
+                   or self.pos[1] <= self.__prompt_width)
+
+        if invalid and not self.select:
+            self.insert_cursor.last_line().move(col=self.__prompt_width)
+        super()._post_move()
+
+
 
 class CommandLineInteractionMode(CUAInteractionMode):
     def __init__(self, controller):
@@ -45,7 +65,9 @@ class CommandLineInteractionMode(CUAInteractionMode):
             self.__next_line(add_newline=False)
 
         writer.text_written.connect(self.__on_write_text)
-        
+        controller.selection = CommandLineSelection(controller.manipulator,
+                                                    controller.config)
+        controller.selection.moved.connect(controller.selection_moved)
 
     def intercept_app_shortcut(self, event):
         if Keys.tab.matches(event.key):
@@ -121,13 +143,14 @@ class CommandLineInteractionMode(CUAInteractionMode):
 
         self.__wrote_newline = False
         self.push_history_item(self.__current_cmdline)
-        self.accepted()
+        self.accepted(preserve_errors=True)
 
         if not self.__wrote_newline:
             self.__next_line()
 
-        if self.accepted.errors:
-            error = self.accepted.errors[0]
+        errors = self.accepted.errors()
+        if errors:
+            error = errors[0]
             from ..core import notification_queue
             def error_shower():
                 self.show_error('{} [{}]'.format(str(error), type(error).__name__))

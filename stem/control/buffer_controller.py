@@ -65,7 +65,7 @@ class BufferController(Tagged, Responder):
         buff.text_modified                  += self._after_buffer_modification
         self.history.transaction_committed  += self._after_history_transaction_committed
 #         self.view.closing                   += self.closing
-        self.selection.moved                += self.scroll_to_cursor
+        self.selection_moved                += self.scroll_to_cursor
         self.selection.moved                += self.selection_moved
         self.loaded_from_path               += self.__path_change
         self.wrote_to_path                  += self.__path_change
