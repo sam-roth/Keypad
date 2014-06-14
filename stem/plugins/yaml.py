@@ -4,7 +4,8 @@ import logging
 
 from concurrent import futures
 
-from stem.api import BufferController, autoconnect
+from stem.api import BufferController, autoconnect, Plugin, register_plugin, command
+from stem.options import GeneralSettings
 from stem.plugins.semantics.syntax import SyntaxHighlighter, lazy
 from stem.abstract.code import IndentRetainingCodeModel, AbstractCompletionResults
 from stem.core import AttributedString
@@ -215,8 +216,32 @@ class YAMLCodeModel(IndentRetainingCodeModel):
         return YAMLCompletionResults(pos, compls)
 
 
+@register_plugin
+class YAMLPlugin(Plugin):
+    name = 'YAML Plugin'
+    author = 'Sam Roth'
+
+    def attach(self):
+        filetype.Filetype('yaml',
+                          suffixes=('.yaml', ),
+                          code_model=YAMLCodeModel,
+                          tags={'parmatch': True})
+
+        self.app.editor_created.connect(self.on_editor_creation)
+
+    def detach(self):
+        self.app.editor_created.disconnect(self.on_editor_creation)
+
+
+    def on_editor_path_change(self, ed):
+        if ed.path is not None and ed.path.suffix == '.yaml':
+            settings = GeneralSettings.from_config(ed.config)
+            if '\t' in settings.indent_text:
+                settings.indent_text = settings.tab_stop * ' '
     
-filetype.Filetype('yaml',
-                  suffixes=('.yaml', ),
-                  code_model=YAMLCodeModel,
-                  tags={'parmatch': True})
+
+    def on_editor_creation(self, ed):
+        ed.path_changed.connect(self.on_editor_path_change, add_sender=True)
+        
+
+
