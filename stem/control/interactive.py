@@ -3,7 +3,7 @@ import inspect
 
 
 from collections import defaultdict, namedtuple
-from ..core import responder, errors
+from ..core import responder, errors, Signal
 from ..abstract.application import app
 import threading
 import contextlib
@@ -144,15 +144,23 @@ class Menu(object):
         self._items = {}
         self.inline = inline
 
+
+    @Signal
+    def changed(self):
+        pass
+
     def add_item(self, name, priority, item):
         self._items[name] = priority, item
+        self.changed()
     
     def remove_item(self, name):
         del self._items[name]
+        self.changed()
 
     def set_item_priority(self, name, priority):
         item = self.get_item(name, insert=True)
         self._items[name] = priority, item
+        self.changed()
 
     def get_item(self, name, insert=False):
         try:
@@ -162,6 +170,7 @@ class Menu(object):
                 raise
             
             result = Menu()
+            result.changed.connect(self.changed)
             self.add_item(name, priority=100000, item=result)
             return result
 
@@ -179,28 +188,27 @@ class MenuItem(object):
         self.interactive_name = interactive_name
         self.interactive_args = args
 
-
 MenuPath = namedtuple('MenuPath', 'hier priority')
 
 def _add_menu_by_hier(menu, item, hier_parts, priority):
     if len(hier_parts) == 1:
         menu.add_item(hier_parts[0], priority, item)
     else:
-        _add_menu_by_hier(menu.get_item(hier_parts[0]), item, hier_parts[1:], priority)
+        _add_menu_by_hier(menu.get_item(hier_parts[0], insert=True), item, hier_parts[1:], priority)
 
 
 def _set_priority_by_path(menu, path_parts, priority):
     if len(path_parts) == 1:
         menu.set_item_priority(path_parts[0], priority)
     else:
-        _set_priority_by_path(menu.get_item(hier_parts[0]), path_parts[1:], priority)
+        _set_priority_by_path(menu.get_item(hier_parts[0], insert=True), path_parts[1:], priority)
         
 
 def _get_item_by_path(menu, path_parts):
     if len(path_parts) == 1:
         return menu.get_item(path_parts[0], insert=True)
     else:
-        return _get_item_by_path(menu.get_item(path_parts[0]), path_parts[1:], priority)
+        return _get_item_by_path(menu.get_item(path_parts[0], insert=True), path_parts[1:], priority)
 
 
 dispatcher = InteractiveDispatcher()

@@ -34,10 +34,12 @@ def _same_file(path1, path2):
 
 
 class AbstractApplication(Responder, metaclass=abc.ABCMeta):
-
+    MessageBoxKind = MessageBoxKind
+    
     def __init__(self, *args, **kw):
         super().__init__(*args, **kw)
         self._editors = weakref.WeakSet()
+        self._windows = weakref.WeakSet()
         try:
             AbstractApplication._instance
         except AttributeError:
@@ -53,6 +55,7 @@ class AbstractApplication(Responder, metaclass=abc.ABCMeta):
             attach_plugin(p)
 
     def remove_plugin(self, cls):
+        logging.debug('detaching plugin: %r', cls)
         to_remove = [p for p in self.plugins
                      if isinstance(p, cls)]
 
@@ -66,6 +69,7 @@ class AbstractApplication(Responder, metaclass=abc.ABCMeta):
         new_plugins = all_plugins - cur_plugins
 
         for plugin in new_plugins:
+            logging.debug('attaching plugin: %r', plugin)
             p = plugin(self)
             self.plugins.append(p)
             attach_plugin(p)
@@ -144,7 +148,9 @@ class AbstractApplication(Responder, metaclass=abc.ABCMeta):
         :rtype: AbstractWindow
         '''
         w = self._new_window()
+        self._windows.add(w)
         self.window_created(w)
+
         return w
 
     @abc.abstractmethod
@@ -240,7 +246,13 @@ class AbstractApplication(Responder, metaclass=abc.ABCMeta):
                 return editor
 
 
+    @property
+    def editors(self):
+        return tuple(self._editors)
         
+    @property
+    def windows(self):
+        return tuple(self._windows)
 
 def app():
     return AbstractApplication.instance()
@@ -260,3 +272,13 @@ class AbstractWindow(Responder, metaclass=abc.ABCMeta):
         '''
         Close the window, prompting the user to save changes.
         '''
+
+    @abc.abstractproperty
+    def active_editor(self):
+        pass
+
+
+    @Signal
+    def editor_activated(self, editor):
+        pass
+        

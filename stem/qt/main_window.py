@@ -5,6 +5,7 @@ from stem.abstract import ui
 from stem.core.errors import UserError
 from stem.core.responder import Responder
 from stem.core.nconfig import Config, Settings, Field
+
 from .qt_util import *
 from ..core.notification_queue import in_main_thread
 from ..control import interactive
@@ -87,6 +88,8 @@ class CommandLineWidget(Responder, QWidget):
         # prevent flickering when first showing view
         self.setWindowOpacity(0)
         self.__view.disable_partial_update = True
+
+
         
     def __on_text_written(self):
         if not self.isVisible():
@@ -98,7 +101,8 @@ class CommandLineWidget(Responder, QWidget):
         app().next_responder = self.prev_responder
         try:
             self.__interpreter.exec(app(), self.__imode.current_cmdline)
-        except RuntimeError as exc:
+        except BaseException as exc:
+#             interactive.dispatcher.dispatch(app(), 'show_error', exc)
             interactive.run('show_error', exc)
 
     def set_cmdline(self, text):
@@ -151,6 +155,14 @@ class CommandLineWidget(Responder, QWidget):
         event.accept()
         self.setWindowOpacity(0)
 
+import weakref
+
+def testref(p):
+    def callback():
+        val = p()
+        logging.debug('testref: %r', val)
+    return callback
+
 class MainWindow(AbstractWindow, QMainWindow, metaclass=ABCWithQtMeta):
     def __init__(self, config):
         super().__init__()
@@ -168,9 +180,9 @@ class MainWindow(AbstractWindow, QMainWindow, metaclass=ABCWithQtMeta):
         self.__mdi.subWindowActivated.connect(self.__on_sub_window_activated)
         self.__mdi.setTabsMovable(True)
 
-        self._menus_by_hier = {}
         self._command_for_action = {}
         self._item_for_action = {}
+        self._menus = []
         self.rebuild_menus()
 
         self.setStyleSheet('''
@@ -179,6 +191,17 @@ class MainWindow(AbstractWindow, QMainWindow, metaclass=ABCWithQtMeta):
                                font-size: 12pt;
                            }
                            ''')
+
+        interactive.root_menu.changed.connect(self.rebuild_menus)
+
+    @property
+    def active_editor(self):
+        asw = self.__mdi.activeSubWindow()
+        if asw is not None:
+            return asw.widget()
+        else:
+            return None
+
 
     @property
     def editors(self):
@@ -192,6 +215,7 @@ class MainWindow(AbstractWindow, QMainWindow, metaclass=ABCWithQtMeta):
                 break
         else:
             event.accept()
+            self.deleteLater()
 
     def next_tab(self):
         self.__mdi.activateNextSubWindow()
@@ -213,8 +237,7 @@ class MainWindow(AbstractWindow, QMainWindow, metaclass=ABCWithQtMeta):
     def __kill_editor(self, editor):
         for sw in self.__mdi.subWindowList():
             if sw.widget() is editor:
-                editor.deleteLater()
-                sw.deleteLater()
+                sw.close()
                 return
 
     def add_editor(self, editor):
@@ -241,10 +264,13 @@ class MainWindow(AbstractWindow, QMainWindow, metaclass=ABCWithQtMeta):
 
         if asw is None:
             self.clear_next_responders()
+            self.editor_activated(None)
             return
+
 
         editor = asw.widget()
         self.next_responder = editor
+
 
         self.setWindowModified(editor.is_modified)
         if editor.path is not None:
@@ -256,6 +282,8 @@ class MainWindow(AbstractWindow, QMainWindow, metaclass=ABCWithQtMeta):
             self.setWindowTitle('Untitled [*]')
             asw.setWindowTitle('Untitled')
 
+        self.editor_activated(editor)
+        
     def __on_sub_window_activated(self, win):
         self.__update_window_path()
         asw = self.__mdi.activeSubWindow()
@@ -263,23 +291,30 @@ class MainWindow(AbstractWindow, QMainWindow, metaclass=ABCWithQtMeta):
     def rebuild_menus(self):
         logging.debug('rebuilding menus')
 
-        for menu in self._menus_by_hier.values():
-            menu.setParent(None)
+        for menu in self._menus:
+            self.menuBar().removeAction(menu.menuAction())
+        self._item_for_action.clear()
+        self._command_for_action.clear()
+        self._menus.clear()
 
-        self._menus_by_hier.clear()
+#         self._menus_by_hier.clear()
 
         from ..control import interactive
         
-        def create_menu(qt_menu, ce_menu):
+        def create_menu(qt_menu, ce_menu, depth=0):
+            if depth == 1:
+                self._menus.append(qt_menu)
+                
             for name, item in ce_menu:
                 if isinstance(item, interactive.MenuItem):
                     action = qt_menu.addAction(name)
-                    action.setShortcut(to_q_key_sequence(item.keybinding))
+                    if item.keybinding is not None:
+                        action.setShortcut(to_q_key_sequence(item.keybinding))
                     self._item_for_action[action] = item
                     action.triggered.connect(self._on_action_triggered)
                 else:
                     submenu = qt_menu.addMenu(name)
-                    create_menu(submenu, item)
+                    create_menu(submenu, item, depth+1)
             
         create_menu(self.menuBar(), interactive.root_menu)
     
