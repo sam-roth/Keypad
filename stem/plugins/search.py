@@ -54,7 +54,7 @@ class RegexSearcher(object):
         if pattern is None:
             pattern = self.pattern
         else:
-            pattern = self.pattern = re.compile(pattern)
+            pattern = self.pattern = re.compile(pattern, re.MULTILINE)
 
         yield from map(self._translate_match, pattern.finditer(self.buffer_text))
 
