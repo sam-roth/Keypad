@@ -3,7 +3,7 @@
 import abc
 from ..core.responder import Responder
 from ..core.signal import Signal, ClassSignal
-from ..core.plugin import Plugin, attach_plugin
+from ..core.plugin import Plugin, attach_plugin, detach_plugin
 import weakref
 import logging
 import enum
@@ -51,6 +51,25 @@ class AbstractApplication(Responder, metaclass=abc.ABCMeta):
         for p in self.plugins:
             logging.debug('attaching plugin: %r', p)
             attach_plugin(p)
+
+    def remove_plugin(self, cls):
+        to_remove = [p for p in self.plugins
+                     if isinstance(p, cls)]
+
+        for plugin in to_remove:
+            detach_plugin(plugin)
+            self.plugins.remove(plugin)
+
+    def update_plugins(self):
+        all_plugins = frozenset(Plugin.plugins())
+        cur_plugins = frozenset(type(p) for p in self.plugins)
+        new_plugins = all_plugins - cur_plugins
+
+        for plugin in new_plugins:
+            p = plugin(self)
+            self.plugins.append(p)
+            attach_plugin(p)
+
 
     @ClassSignal
     def application_created(cls, self):
