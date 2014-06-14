@@ -11,7 +11,7 @@ from stem.core.conftree import ConfTree
 from stem.core.executors import SynchronousExecutor
 from stem.buffers import Cursor
 
-from .syntax import cpplexer
+
 from .modelworker import (InitWorkerTask, 
                           CompletionTask, 
                           FindRelatedTask, 
@@ -163,6 +163,8 @@ class CXXCodeModel(IndentRetainingCodeModel):
         it involves mutation of the buffer, and it may be better to make
         the code model a factory for a "Highlighter" object.        
         '''
+
+        from .syntax import cpplexer
         
         highlighter = SyntaxHighlighter(
             'stem.plugins.cpp.syntax',

@@ -82,4 +82,10 @@ def register_plugin(P):
     _plugins.add(P)
     return P
 
+def unregister_plugin(P):
+    try:
+        _plugins.remove(P)
+    except TypeError:
+        pass
+    
     
