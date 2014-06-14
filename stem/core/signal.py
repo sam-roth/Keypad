@@ -7,9 +7,15 @@ import types
 import functools
 import logging
 
-
+import warnings
 import threading
 
+try:
+    from PyQt4 import Qt as _qt
+    import sip as _sip
+except ImportError:
+    _qt = None
+    _sip = None
 
 class SignalBase(object): pass
 
@@ -30,7 +36,7 @@ class InstanceSignal(SignalBase):
         self._chain = chain
         self._sender = weakref.ref(sender)
         self._name = proto_func.__name__
-        self.errors = []
+        self._errors = None
 
     def __iadd__(self, observer):
         self.connect(observer)
@@ -65,19 +71,40 @@ class InstanceSignal(SignalBase):
         else:
             del self._observer_objects[observer]
 
+    def errors(self):
+        if self._errors is None:
+            raise RuntimeError('you forgot to use preserve_errors')
+        result = self._errors
+        self._errors = None
+        return result
 
-#     @functools.wraps(proto_func)
+
     def __call__(self, *args, **kw):
+        preserve_errors = kw.pop('preserve_errors', False)
         if self._chain is not None:
             self._chain(*args, **kw)
 
-        self.errors = []
+        if preserve_errors:
+            self._errors = []
         def handle_exception(exc):
             logging.exception("Error in signal handler %r", self._name)
-            self.errors.append(exc)
+            if preserve_errors:
+                self._errors.append(exc)
 
         # use list(...) to strengthen refs prior to iteration
         for observer_self, observer_funcs in list(self._observer_methods.items()):
+            # remove references to "deleted" QObjects that aren't really gone
+            if (_qt is not None
+                 and isinstance(observer_self, _qt.QObject)
+                 and _sip.isdeleted(observer_self)):
+                
+                try:
+                    del self._observer_methods[observer_self]
+                except KeyError:
+                    pass
+                    
+                continue
+
             for add_sender, observer_func in list(observer_funcs):
                 try:
                     if add_sender:
