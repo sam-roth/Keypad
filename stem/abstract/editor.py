@@ -1,7 +1,7 @@
 import abc
 from ..control import BufferController
 from ..buffers import Buffer
-
+from .application import app, AbstractApplication
 from ..control.interactive import interactive
 from ..core import Signal
 import logging
@@ -83,21 +83,44 @@ class AbstractEditor(metaclass=abc.ABCMeta):
         self.__buffer_controller.add_tags(path=value)
 
 
-    def save(self, path):
+    def save(self, path, *, codec_errors='strict', prompt_on_error=True):
         '''
         Save the file to the path given.
         '''
-        self.__buffer_controller.write_to_path(path)
+        try:
+            self.__buffer_controller.write_to_path(path, codec_errors=codec_errors)
+        except UnicodeEncodeError as exc:
+            if not prompt_on_error:
+                raise
+            res = app().message_box(self,
+                                    'This buffer contains non-plaintext characters: ' + str(exc),
+                                    ['Write As-Is', 'DELETE Unknown Characters', 'Cancel'],
+                                    kind=AbstractApplication.MessageBoxKind.warning)
+            if res == 'Write As-Is':
+                self.__buffer_controller.write_to_path(ed.path, codec_errors='surrogateescape')
+            elif res == 'DELETE Unknown Characters':
+                self.__buffer_controller.write_to_path(ed.path, codec_errors='ignore')
+            else:
+                raise
+        except OSError as exc:
+            if not prompt_on_error:
+                raise
+            res = app().message_box(self,
+                                    'An error occurred while trying to save the file: ' + str(exc),
+                                    ['Cancel (the file will remain open)'],
+                                    kind=AbstractApplication.MessageBoxKind.warning)
+            raise
+
         self.saved()
 
-    def load(self, path):
+    def load(self, path, *, codec_errors='strict'):
         '''
         Load the file from the path given.
         '''
         from ..core.notification_queue import run_in_main_thread
 
         with self.__buffer_controller.history.transaction():
-            self.__buffer_controller.replace_from_path(path, create_new=True)
+            self.__buffer_controller.replace_from_path(path, create_new=True, codec_errors=codec_errors)
             self.__buffer_controller.history.clear()
 
         self.__buffer_controller.is_modified = False

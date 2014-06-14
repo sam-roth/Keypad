@@ -268,7 +268,7 @@ class BufferController(Tagged, Responder):
         end = Cursor(self.buffer).move(*self.buffer.end_pos)
         start.remove_to(end)
 
-    def append_from_path(self, path):
+    def append_from_path(self, path, *, codec_errors='strict'):
         '''
         Append the contents of `self.buffer` with the contents of the file
         located at `path` decoded using UTF-8.
@@ -276,9 +276,11 @@ class BufferController(Tagged, Responder):
         Requires an active history transaction.
         '''
         with path.open('rb') as f:
-            Cursor(self.buffer).move(*self.buffer.end_pos).insert(f.read().decode())
+            (Cursor(self.buffer)
+             .move(*self.buffer.end_pos)
+             .insert(f.read().decode(errors=codec_errors)))
 
-    def replace_from_path(self, path, create_new=False):
+    def replace_from_path(self, path, create_new=False, *, codec_errors='strict'):
         '''
         Replace the contents of `self.buffer` with the contents of the
         file located at `path` decoded using UTF-8. 
@@ -288,7 +290,7 @@ class BufferController(Tagged, Responder):
 
         self.clear()
         try:
-            self.append_from_path(path)
+            self.append_from_path(path, codec_errors=codec_errors)
         except FileNotFoundError:
             if not create_new:
                 raise
@@ -300,7 +302,7 @@ class BufferController(Tagged, Responder):
 
         self.loaded_from_path(path)
 
-    def write_to_path(self, path):
+    def write_to_path(self, path, *, codec_errors='strict'):
         '''
         Atomically write the contents of `self.buffer` to the file located
         at `path` encoded with UTF-8.
@@ -308,7 +310,7 @@ class BufferController(Tagged, Responder):
         
         self.will_write_to_path(path)
         with write_atomically(path) as f:
-            f.write(self.buffer.text.encode())
+            f.write(self.buffer.text.encode(errors=codec_errors))
             
         self.wrote_to_path(path)
         self.is_modified = False

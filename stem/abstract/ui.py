@@ -49,7 +49,19 @@ def edit(win: AbstractWindow, path: 'Path', line=None, col=None):
         ed.activate()
     else:
         ed = app().new_editor()
-        ed.load(path)
+        try:
+            ed.load(path)
+        except UnicodeDecodeError as exc:
+            res = app().message_box(win,
+                                    "This file appears to be non-plaintext: " + str(exc)
+                                    + '.\n\nIf you continue, the unknown characters will be ' 
+                                    'interpreted using unicode surrogates.',
+                                    ['Load Anyway', 'Cancel'],
+                                    kind=AbstractApplication.MessageBoxKind.warning)
+            if res == 'Load Anyway':
+                ed.load(path, codec_errors='surrogateescape')
+            else:
+                raise
         win.add_editor(ed)
         
     if line is not None:
