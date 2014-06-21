@@ -15,15 +15,17 @@ from ..core.attributed_string   import lower_bound
 from ..core.key                 import *
 from ..core.responder           import Responder
 from ..util.path                import search_upwards
+from ..util                     import bifilter
 from ..core.notification_queue  import in_main_thread
 from ..core                     import timer, filetype
-from ..core.nconfig             import Config
+from ..core.nconfig             import Config, KeyWarning
 from ..options                  import GeneralConfig
 
 from .completion import CompletionController
 import configparser
 import fnmatch
 import ast
+import warnings
 
 class SelectionImpl(BacktabMixin, Selection):
     pass
@@ -608,16 +610,30 @@ def dumptags(buff: BufferController):
     writer.write(fmt)
 
 
+def set_specific_config(target, key, value):
+    from stem.util import dotted_pairs_to_dict
+    d = dotted_pairs_to_dict([(key, ast.literal_eval(value))])
+    with warnings.catch_warnings(record=True) as warns:
+        target.update(d, safe=False)
+
+    key_warnings, other_warnings = bifilter(lambda x: isinstance(x.message, KeyWarning), warns)
+
+    for warn in other_warnings:
+        warnings.warn(w.message)
+
+    if key_warnings:
+        raise errors.UserError('The following config keys were not found: ' +
+                               ', '.join(str(w.message.args[0]) for w in key_warnings))
+        
+
 @interactive('setg')
 def setg_config(_: object, key, *val):
-    Config.root.update({key: ast.literal_eval(' '.join(val))}, safe=False)
-#     bufctl.config.set_property(key, ast.literal_eval(' '.join(val)))
+    set_specific_config(Config.root, key, ' '.join(val))
 
 
 @interactive('set')
 def set_config(bufctl: BufferController, key, *val):
-    bufctl.config.update({key: ast.literal_eval(' '.join(val))}, safe=False)
-#     bufctl.config.set_property(key, ast.literal_eval(' '.join(val)))
+    set_specific_config(bufctl.config, key, ' '.join(val))
 
 @interactive('get')
 def get_config(bufctl: BufferController, namespace, key):

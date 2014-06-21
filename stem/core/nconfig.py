@@ -407,8 +407,8 @@ class Config(object):
 
 Config.root = Config()
         
+class KeyWarning(UserWarning): pass
 
-        
     
 class Settings(metaclass=_ConfigMeta): 
     '''
@@ -527,7 +527,7 @@ class Settings(metaclass=_ConfigMeta):
                 try:
                     field = self._fields_[k]
                 except KeyError:
-                    warnings.warn(UserWarning('Unknown configuration key {!r}.'.format(k)))
+                    warnings.warn(KeyWarning(k))
                 else:
                     field.set(self, v, safe)
                     
@@ -536,7 +536,7 @@ class Settings(metaclass=_ConfigMeta):
                 try:
                     field = self._fields_[k]
                 except KeyError:
-                    warnings.warn(UserWarning('Unknown configuration key {!r}.'.format(k)))
+                    warnings.warn(KeyWarning(k))
                 else:
                     if m == 'add':
                         field.append(self, v, safe)
