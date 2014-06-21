@@ -114,7 +114,7 @@ class Application(AbstractApplication, QApplication, metaclass=ABCWithQtMeta):
         if isinstance(exc, errors.UserError):
             interactive.run('show_error', exc)
         else:
-            logging.error('exception occurred while processing notification queue')
+            logging.exception('exception occurred while processing notification queue')
     
     def event(self, evt):
         if evt.type() == _ProcessPosted.ProcessPostedType:
