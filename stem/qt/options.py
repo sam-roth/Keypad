@@ -6,7 +6,7 @@ import importlib
 
 from PyQt4.Qt import QFont, QFontMetricsF
 
-from ..options import GeneralConfig
+from ..options import GeneralSettings
 from ..core import (Signal, 
                     Color,
                     Colorscheme,
@@ -23,14 +23,14 @@ class TextViewSettings(object):
             warnings.warn(DeprecationWarning('The settings parameter must now receive an argument of '
                 'type Config'))
             settings = None
-
+        self.tab_glyph = '\N{MATHEMATICAL RIGHT ANGLE BRACKET}'
         self.config = config = settings or Config.root
 
-        settings = GeneralConfig.from_config(config)
+        settings = GeneralSettings.from_config(config)
         settings.value_changed += self.reload_settings
         self.settings = settings   
         self.reload_settings()
-        self.tab_glyph = '⟩'
+
         self.font_yoffset = settings.font_yoffset
 
 
@@ -77,6 +77,7 @@ class TextViewSettings(object):
         self.q_fgcolor = to_q_color(self.scheme.fg)
         self.tab_stop = s.tab_stop
         self.q_tab_color = to_q_color(self.scheme.bg.mean(self.scheme.fg))
+        self.tab_glyph = s.tab_glyph
         self.word_wrap = False
         self.reloaded()
 

@@ -113,7 +113,8 @@ class GeneralSettings(Settings):
     letter_spacing = Field(float, 1.0)
     line_spacing = Field(float, 1.0)
     weight = Field(float, 0.5)
-    
+    tab_glyph = Field(str, '\N{MATHEMATICAL RIGHT ANGLE BRACKET}')
+
     selection = Field(Factory, 'stem.buffers.selection.BacktabSelection')
     
 class CallTipSettings(Settings):
