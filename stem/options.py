@@ -116,6 +116,8 @@ class GeneralSettings(Settings):
     tab_glyph = Field(str, '\N{MATHEMATICAL RIGHT ANGLE BRACKET}')
 
     selection = Field(Factory, 'stem.buffers.selection.BacktabSelection')
+
+    elide_cmdline_history = Field(bool, True, docs='combine consecutive identical history items')
     
 class CallTipSettings(Settings):
     _ns_ = 'call_tip'

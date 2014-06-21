@@ -49,7 +49,6 @@ class CommandLineWidget(Responder, QWidget):
         from ..control.command_line_interaction import CommandLineInteractionMode
         from ..control.command_line_interpreter import CommandLineInterpreter
         from ..control.cmdline_completer import CmdlineCompleter
-        from ..control.cmdline_history import HistoryWatcher
 
         from ..buffers import Buffer
 

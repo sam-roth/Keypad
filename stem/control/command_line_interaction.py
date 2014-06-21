@@ -3,9 +3,12 @@ import traceback
 
 from .cua_interaction import CUAInteractionMode, isprint
 from ..core import Signal, Keys, errors
+from ..core.notification_queue import run_in_main_thread
+from ..core.signal import ClassSignal
 from ..buffers import Cursor, Span
 from ..buffers.selection import Selection
 from ..buffers.buffer_protector import BufferProtector
+from ..options import GeneralSettings
 import logging
 import types
 from ..util import ImmutableListView
@@ -68,7 +71,12 @@ class CommandLineInteractionMode(CUAInteractionMode):
         controller.selection = CommandLineSelection(controller.manipulator,
                                                     controller.config)
         controller.selection.moved.connect(controller.selection_moved)
+        
+        run_in_main_thread(lambda: self.created(self))
 
+    @ClassSignal
+    def created(cls, self):
+        pass
     def intercept_app_shortcut(self, event):
         if Keys.tab.matches(event.key):
             event.intercept()
@@ -101,7 +109,9 @@ class CommandLineInteractionMode(CUAInteractionMode):
             sel.replace(value)
     
     def push_history_item(self, text):
-        self.__command_history.append(text)
+        gs = GeneralSettings.from_config(self.controller.config)
+        if not (gs.elide_cmdline_history and self.__command_history and self.__command_history[-1] == text):
+            self.__command_history.append(text)
         self.__history_pos = 0
 
     def __on_write_text(self, text):
