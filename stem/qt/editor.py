@@ -7,14 +7,16 @@ from stem.abstract.application import app
 from .textlayout.widget import CodeView, CodeViewProxy
 from .qt_util import *
 from stem.core.signal import Signal
+from stem.api import run_in_main_thread
 
 class Editor(AbstractEditor, Responder, QWidget, metaclass=ABCWithQtMeta):
 
     def __init__(self, config):
         QWidget.__init__(self)
-        self.__view = CodeView()
-        self.__prox = CodeViewProxy(self.__view)
         self.__config = config.derive()
+        self.__view = CodeView(config=self.__config)
+        self.__prox = CodeViewProxy(self.__view)
+
 
         AbstractEditor.__init__(self, self.__prox, self.__config)
         Responder.__init__(self)
@@ -50,7 +52,8 @@ class Editor(AbstractEditor, Responder, QWidget, metaclass=ABCWithQtMeta):
     def closeEvent(self, event):
         if self.__guard:
             event.ignore()
-            app().close(self)
+            # Have to return from function before calling again.
+            run_in_main_thread(lambda: app().close(self))
         else:
             event.accept()
 

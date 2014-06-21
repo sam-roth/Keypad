@@ -234,6 +234,7 @@ class MainWindow(AbstractWindow, QMainWindow, metaclass=ABCWithQtMeta):
         self.activate_cmdline()
         self.__cmdline.set_cmdline(text)
 
+
     def __kill_editor(self, editor):
         for sw in self.__mdi.subWindowList():
             if sw.widget() is editor:
@@ -246,6 +247,7 @@ class MainWindow(AbstractWindow, QMainWindow, metaclass=ABCWithQtMeta):
         '''
 
         sw = self.__mdi.addSubWindow(editor)
+        editor.destroyed.connect(sw.close)
         editor.show()
         editor.window_should_kill_editor.connect(self.__kill_editor)
         editor.is_modified_changed.connect(self.__child_modified_changed, add_sender=True)
