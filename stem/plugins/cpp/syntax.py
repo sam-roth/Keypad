@@ -4,37 +4,84 @@ import logging
 
 from stem.api import BufferController, autoconnect
 from stem.plugins.semantics.syntax import SyntaxHighlighter, lazy
+from stem.plugins.semantics.syntaxlib import Lexer
+
+
+keywords = '''
+    and and_eq asm bitand bitor break case catch
+    compl continue
+    default delete do  else enum explicit export extern 
+    for goto if inline namespace new noexcept not
+    not_eq operator or or_eq private protected public
+    return switch  throw try  typeid 
+    using virtual while xor xor_eq
+'''.split()
+
+
+context_keywords = 'final override'.split()
+
+builtin_names = 'true false NULL nullptr this'.split()
+
+# not all of these are types, but I was tired of seeing so much green.
+cpp_types = '''
+union 
+template thread_local static  static_assert static_cast alignas alignof const_cast reinterpret_cast
+sizeof typename double dynamic_cast typedef class struct typename friend
+int long bool auto char16_t char32_t char const register mutable void volatile wchar_t
+float short signed unsigned decltype size_t ssize_t constexpr
+'''.split()
+cpp_types += ['{}int{}_t'.format(u, 2**n) for u in ('u', '') for n in range(3, 7)]
+
+
+class RawStringEndLexer(Lexer):
+    def __init__(self, text, attrs):
+        super().__init__(attrs)
+        self.text = text
+
+    def guard_match(self, string, start, stop):
+        return None
+
+    def exit_match(self, string, start, stop):
+        index = string.text[start:].find(self.text)
+        if index >= 0:
+            return index + start, index + len(self.text) + start
+        else:
+            return None
+
+class RawStringStartLexer(Lexer):
+    rgx = re.compile(r'R"(.*?)\(')
+
+    def guard_match(self, string, start, stop):
+        match = self.rgx.search(
+            string.text,
+            start, 
+            stop
+        )
+
+        if match is None:
+            return None
+        else:
+            self.eof_pat = match.group(1)
+            try:
+                return match.start('body'), match.end('body')
+            except LookupError:
+                return match.start(), match.end()
+
+    def exit_match(self, string, start, stop):
+        return None
+
+
+    def enter(self):
+        return RawStringEndLexer(')' + self.eof_pat + '"', self.attrs)
+
 
 @lazy
 def cpplexer():
     from stem.plugins.semantics.syntaxlib import keyword, regex, region
     import re
+    
+    
 
-    keywords = '''
-        and and_eq asm bitand bitor break case catch
-        compl continue
-        default delete do  else enum explicit export extern 
-        for goto if inline namespace new noexcept not
-        not_eq operator or or_eq private protected public
-        return switch  throw try  typeid 
-        using virtual while xor xor_eq
-    '''.split()
-    
-    context_keywords = 'final override'.split()
-    
-    builtin_names = 'true false NULL nullptr this'.split()
-
-    # not all of these are types, but I was tired of seeing so much green.
-    cpp_types = '''
-    union 
-    template thread_local static  static_assert static_cast alignas alignof const_cast reinterpret_cast
-    sizeof typename double dynamic_cast typedef class struct typename friend
-    int long bool auto char16_t char32_t char const register mutable void volatile wchar_t
-    float short signed unsigned decltype size_t ssize_t constexpr
-    '''.split()
-    
-    
-    cpp_types += ['{}int{}_t'.format(u, 2**n) for u in ('u', '') for n in range(3, 7)]
 
     CONTEXT_KW  = dict(lexcat='function')    
     NAME        = dict(lexcat='function')
@@ -64,7 +111,7 @@ def cpplexer():
     Type    = keyword(cpp_types, TYPE)
 
 
-    QualName = regex(r'\w\s*(::|\.|->)\s*(?P<body>\w+)(?!\s*(::|\.|->))', NAME)
+    QualName = regex(r'(::|\.|->)\s*(?P<body>\b\w+\b)', NAME)
 
 
 
@@ -83,6 +130,8 @@ def cpplexer():
                     contains=Escs,
                     attrs=STRING
                 )
+    RawString   = RawStringStartLexer()
+    RawString.attrs = STRING
     CharLit     = region(guard=regex(r"'(?!'')"),
                          exit=regex(r"'"),
                          contains=Escs,
@@ -121,7 +170,7 @@ def cpplexer():
     CPP = region(
             guard=None,
             exit=None,
-            contains=[DQString, Keyword, CPPComment, BuiltinNames, QualName,
+            contains=[RawString, DQString, Keyword, CPPComment, BuiltinNames, QualName,
                       CComment, DoxyCPPComment, DoxyCComment,
                       Preproc, Type, HexLit, DecLit, FloatLit, CharLit,
                       CtxKeywords]
