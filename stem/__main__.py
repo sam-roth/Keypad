@@ -11,7 +11,7 @@ def main():
     _setup_logging() # needs to be done before using the logger
 
     import sys, sip, os.path
-    from . import config, options
+    
     from .qt import driver
 
 
@@ -27,6 +27,8 @@ def main():
                                               'third-party'))
     sys.path.insert(0, thirdparty)
 
+    from . import config, options
+    
     # Allow for sending a commandline command at startup.
     if len(sys.argv) > 2 and sys.argv[1] == '-c':
         from .core.notification_queue import run_in_main_thread
