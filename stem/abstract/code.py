@@ -123,6 +123,7 @@ class AbstractCodeModel(metaclass=ABCMeta):
     call_tip_triggers = []
     open_braces = '([{'
     close_braces = ')]}'
+    statement_start = '{'
     reindent_triggers = '}'
     line_comment = '#'
     
@@ -180,7 +181,7 @@ class AbstractCodeModel(metaclass=ABCMeta):
         c = Cursor(self.buffer).move(pos)
         try:
             c.opening_brace(timeout_ms=timeout_ms)
-            if c.rchar == '{':
+            if c.rchar in self.statement_start:
                 return None # curly braces are for blocks (maybe)
                 # TODO: make this handle initializer lists correctly
             else:
@@ -204,7 +205,7 @@ class AbstractCodeModel(metaclass=ABCMeta):
             while True:
                 p = c.pos
                 c.opening_brace(timeout_ms=brace_search_timeout_ms)
-                if c.rchar == '{':
+                if c.rchar in self.statement_start:
                     c.pos = p
                     break # the indent level is determined by curly braces in many languages
         except RuntimeError: # got to the outermost level
