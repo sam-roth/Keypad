@@ -74,12 +74,12 @@ class Cursor(object):
     def searchline(self, regex, flags=0):
         return re.search(regex, self.line.text, flags)
 
-    def line_span_matching(self, regex, flags=0):
+    def line_span_matching(self, regex, flags=0, group=0):
         match = self.searchline(regex, flags)
         if match:
             from . import span
-            return span.Span(self.clone().move(col=match.start()),
-                             self.clone().move(col=match.end()))
+            return span.Span(self.clone().move(col=match.start(group)),
+                             self.clone().move(col=match.end(group)))
 
     def walk(self, stride):
         '''

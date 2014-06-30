@@ -33,6 +33,16 @@ class SelectionImpl(BacktabMixin, Selection):
 
 from .interactive import interactive
 
+def _selection_code_completion_hint(s):
+    '''
+    Hint to Jedi that the object is a Selection (without actually 
+    asserting that it is). It's inelegant, but it works and makes
+    the API a bit more friendly.
+
+    :rtype: stem.buffers.selection.Selection
+    '''
+    return s
+
 class BufferController(Tagged, Responder):
     def __init__(self, buffer_set, view, buff, provide_interaction_mode=True, config=None):
         '''
@@ -53,10 +63,12 @@ class BufferController(Tagged, Responder):
         self.manipulator        = BufferManipulator(buff)
         self.config             = config or Config.root
         self.view.config        = self.config
-        
+
         gs = GeneralConfig.from_config(self.config)
 
-        self.selection          = gs.selection(self.manipulator, self.config)
+        selection = _selection_code_completion_hint(gs.selection(self.manipulator, self.config))
+        self.selection = selection
+
         self.completion_controller = CompletionController(self)
         self._code_model = None
 
@@ -126,10 +138,16 @@ class BufferController(Tagged, Responder):
                 GeneralConfig.from_config(self.config).indent_text)
                 
         self.path_changed()
+        
     @property
     def code_model(self):
+        '''
+        Return the code model associated with the buffer
+
+        :rtype: stem.abstract.code.AbstractCodeModel
+        '''
         return self._code_model
-        
+
     @code_model.setter
     def code_model(self, value):
         if self._code_model is not None:
@@ -142,7 +160,7 @@ class BufferController(Tagged, Responder):
 
             self._diagnostics_controller = None
             self._code_model.dispose()
-            
+
         self._code_model = value
         self.buffer.code_model = value
         
