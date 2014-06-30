@@ -50,6 +50,10 @@ class BufferHistory(object):
         self._changesets_reversed = []
         self._clear_at_end_of_transaction = False
         self._coalesce_policy = HistoryCoalescencePolicy()
+
+        self._scratchpad = []
+        self._scratchpad_active = False
+
         self.buff = buff
 
         self.buff.text_modified.connect(self._on_buffer_text_modified)
@@ -63,7 +67,23 @@ class BufferHistory(object):
         
         self._transaction_changes = []
 
-    
+
+    @contextmanager
+    def scratchpad(self):
+        '''
+        Use the scratchpad for things like automatic indentation adjustments. It is combined with the next or current
+        transaction, so that indentation adjustments don't create undo history or erase redo history.
+
+        The scratchpad is also temporarily rolled back upon saving the buffer, preventing saving of unused indentation.
+        '''
+        was_active = self._scratchpad_active
+        self._scratchpad_active = True
+        try:
+            yield
+        finally:
+            self._scratchpad_active = was_active
+
+
     def _on_buffer_text_modified(self, change):
         '''
         :type change: stem.buffer.TextModification
@@ -71,30 +91,46 @@ class BufferHistory(object):
 
         if self._ignore_changes: return
 
-        if self._transaction_changes is None:
-            warnings.warn('Buffer modified outside of transaction.')
-
-            with self.transaction():
-                self._transaction_changes.append(change)
+        if self._scratchpad_active and (self._transaction_changes is None 
+                                        or not self._transaction_changes):
+            self._scratchpad.append(change)
         else:
-            self._transaction_changes.append(change)
+            if self._transaction_changes is None:
+                warnings.warn('Buffer modified outside of transaction.')
+
+                with self.transaction():
+                    self._transaction_changes.append(change)
+            else:
+                self._transaction_changes.append(change)
 
     
     def _commit_transaction(self):
+        did_anything = False
         if self._clear_at_end_of_transaction:
             self._clear_at_end_of_transaction = False
             self._changesets.clear()
             self._changesets_reversed.clear()
+            self._scratchpad = []
+            did_anything = True
         elif self._transaction_changes:
-            self._changesets.append(self._transaction_changes)
+            # flush the scratchpad changes with the user-created changes
+            self._changesets.append(self._scratchpad + self._transaction_changes)
+            self._scratchpad = []
             self._changesets_reversed.clear()
+            did_anything = True
 
         self._transaction_changes = None
         self._changesets = self._coalesce_policy.coalesce(self._changesets)
         self.transaction_committed()
+        if did_anything:
+            self.changes_committed()
 
     @Signal
     def transaction_committed(self):
+        pass
+
+    @Signal
+    def changes_committed(self):
         pass
     
     @contextmanager
@@ -107,8 +143,39 @@ class BufferHistory(object):
         self.transaction_committed()
 
 
-    
+    def _rollback_scratchpad(self):
+        with self.ignoring():
+            scratch = self._scratchpad
+            self._scratchpad = []
+            self._scratchpad_active = False
+            for item in reversed(scratch):
+                self.buff.reverse(item)
+            return scratch
+
+    @contextmanager
+    def suppress_scratchpad(self):
+        '''
+        Context manager that temporarily undoes all changes on the scratchpad.
+        Use this when saving a file to avoid saving "scratch" changes that are just
+        there to keep the cursor in the right place.
+        '''
+        scratch_active = self._scratchpad_active
+        scratch = self._rollback_scratchpad()
+        try:
+            yield
+        finally:
+            # replay the scratchpad
+            self._scratchpad_active = scratch_active
+            with self.scratchpad():
+                for chg in scratch:
+                    self.buff.execute(chg)
+
+
+
     def undo(self):
+        # rollback scratchpad changes, since they may interfere with undo
+        self._rollback_scratchpad()
+
         if not self._changesets:
             raise errors.CantUndoError("Can't undo.")
 
@@ -125,6 +192,9 @@ class BufferHistory(object):
         return cs
 
     def redo(self):
+        # rollback scratchpad changes, since they will interfere with redo
+        self._rollback_scratchpad()
+
         if not self._changesets_reversed:
             raise errors.CantRedoError("Can't redo.")
 

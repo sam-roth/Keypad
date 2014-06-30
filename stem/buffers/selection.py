@@ -57,7 +57,7 @@ class Selection(object):
         from .cursor import Cursor
         from .buffer_manipulator import BufferManipulator
         from .buffer import Buffer
-        
+
         self.manip = manip
         if isinstance(manip, BufferManipulator):
             self.buffer = manip.buffer
@@ -65,11 +65,13 @@ class Selection(object):
             self.buffer = manip
         else:
             raise TypeError('Must use Buffer or Manipulator for this constructor')
-        
+
         self._insert_cursor = Cursor(manip)
         self._anchor_cursor = None
         self._history = []
         self._future = []
+        self.__prev_pos = None
+        self.__edited = False
 
         self.select = Flag()
         self.sel_settings = SelectionSettings.from_config(config)
@@ -89,7 +91,7 @@ class Selection(object):
 
             if abs(y0 - y) >= self.sel_settings.history_fuzz_lines:
                 add_entry = True
-        
+
         if add_entry:
             self._future.clear()
             self._history.append(self.insert_cursor.clone())
@@ -111,7 +113,7 @@ class Selection(object):
             top = self._future.pop()
             self._history.append(self.insert_cursor.clone())
             self.move(top.pos)
-    
+
     @property
     def region(self):
         if self.anchor_cursor is not None:
@@ -126,7 +128,7 @@ class Selection(object):
     @property
     def indent(self):
         return GeneralSettings.from_config(self.config).indent_text
-    
+
     @property
     def pos(self):
         return self.insert_cursor.pos
@@ -135,7 +137,7 @@ class Selection(object):
     def pos(self, value):
         y, x = value
         self.move(y, x)
-        
+
     @property
     def insert_cursor(self): 
         return self._insert_cursor
@@ -143,12 +145,16 @@ class Selection(object):
     @property
     def anchor_cursor(self): 
         return self._anchor_cursor
-        
+
     @Signal
     def moved(self):
         pass
 
+    def _on_move(self, prev_pos, was_edited):
+        pass
+
     def _pre_move(self):
+        self.__prev_pos = self.pos
         if self.select and not self._anchor_cursor:
             self._anchor_cursor = self._insert_cursor.clone()
             self._anchor_cursor.chirality = self._anchor_cursor.Chirality.Left
@@ -156,7 +162,10 @@ class Selection(object):
             self._anchor_cursor = None
 
     def _post_move(self):
+        self._on_move(self.__prev_pos, self.__edited)
+        self.__edited = False
         self.moved()
+
 
     @contextlib.contextmanager
     def moving(self):
@@ -175,7 +184,7 @@ class Selection(object):
                  _AdvanceWordRegex.finditer(curs.line.text)]
         idx = lower_bound(posns, col)
         idx += n
-        
+
         with self.moving():
             if 0 <= idx < len(posns):
                 new_col = posns[idx]
@@ -233,6 +242,7 @@ class Selection(object):
         if self._anchor_cursor:
             self._anchor_cursor.remove_to(self._insert_cursor)
 
+        self.__edited = True
         with self.moving():
             self._insert_cursor.insert(value)
 
@@ -307,7 +317,7 @@ class Selection(object):
         else:
             c = self._insert_cursor
             c.insert(self.indent * n)
-        
+
         return self
 
     def backspace(self):
@@ -316,7 +326,7 @@ class Selection(object):
 
 
 class BacktabMixin(object):
-    
+
     def backspace(self):
         ts = len(self.indent)
         if self.anchor_cursor or \
@@ -379,14 +389,20 @@ class AutoindentSettings(Settings):
     ``indent``
         Indent by one level, rather than aligning.
 
-    ``none``                   
+    ``disable``                   
         Don't perform any automatic alignment. This does not affect whether
         automatic indentation is performed.
 
     '''
     AlignPolicy = AlignPolicy
 
-    enable = Field(bool, True)
+    trigger_on_newline = Field(bool, True)
+    trigger_on_move    = Field(bool, True)
+
+    move_trigger_phase_timeout_ms = Field(int, 10,
+                                          docs='Timeout for each phase of the automatic indent algorithm, in ms, '
+                                               'when it is triggered by moving the cursor.')
+
     strip  = Field(bool, True, 
                    docs='Strip trailing whitespace from the previously indented line when indenting '
                         'a new line.')
@@ -409,47 +425,70 @@ class IndentingSelectionMixin:
         # track previous indentation positions, so that superfluous indentation is removed
         self.__last_autoindent_curs = None
 
+    def _on_move(self, prev_pos, was_edited):
+        super()._on_move(prev_pos, was_edited)
+        py, px = prev_pos
+        cy, cx = self.pos
+        if (self.__ai_settings.trigger_on_move 
+                and not was_edited
+                and not self.select
+                and py != cy
+                and self.insert_cursor.searchline(r'^\s*$')):
+            self.reindent(phase_timeout_ms=self.__ai_settings.move_trigger_phase_timeout_ms)
+
     def set_text(self, text):
         super().set_text(text)
 
         cm = self.buffer.code_model
-        if cm is not None and text.endswith(('\n', ) + tuple(self.buffer.code_model.reindent_triggers)):
+        if (self.__ai_settings.trigger_on_newline 
+                and cm is not None
+                and text.endswith(('\n', ) + tuple(self.buffer.code_model.reindent_triggers))):
             self.reindent()
 
-    def reindent(self):
+    def reindent(self, *, phase_timeout_ms=50):
         cm = self.buffer.code_model
-        if cm is None or not self.__ai_settings.enable:
+        if cm is None:
             return
-            
-        curs = self.insert_cursor.clone()
-        indentation = cm.indentation(curs.pos)
-        indent_level = indentation.level
 
-        # strip existing indent
-        curs.line_span_matching(r'^\s*').remove()
+        # Using the scratchpad for these changes prevents creation of spurious undo history,
+        # as well as keeping indentation from being saved.
 
-        # add new indent
-        curs.home().insert(self.__gen_settings.indent_text * indentation.level)
+        with self.manip.history.scratchpad():
+            curs = self.insert_cursor.clone()
 
-        # align if needed
-        if indentation.align is not None:
-            spaces_to_align = indentation.align - curs.x
-            if spaces_to_align > 0:
-                curs.insert(self.__ai_settings.align_policy.align_text(spaces_to_align,
-                                                                       self.__gen_settings.indent_text,
-                                                                       self.__gen_settings.tab_stop))
+            indentation = cm.indentation(curs.pos, 
+                                         brace_search_timeout_ms=phase_timeout_ms,
+                                         indent_level_timeout_ms=phase_timeout_ms)
+            indent_level = indentation.level
+
+            # strip existing indent
+            curs.line_span_matching(r'^\s*').remove()
+
+            # add new indent
+            curs.home().insert(self.__gen_settings.indent_text * indentation.level)
+
+            # align if needed
+            if indentation.align is not None:
+                spaces_to_align = indentation.align - curs.x
+                if spaces_to_align > 0:
+                    curs.insert(self.__ai_settings.align_policy.align_text(spaces_to_align,
+                                                                           self.__gen_settings.indent_text,
+                                                                           self.__gen_settings.tab_stop))
 
 
-        # strip previously auto-indented line if it contains trailing spaces
-        # (or is blank)
-        if self.__last_autoindent_curs is not None:
-            lc = self.__last_autoindent_curs.clone()
-            lc.line_span_matching(r'\s*$').remove()
+            # strip previously auto-indented line if it contains trailing spaces
+            # (or is blank)
+            if self.__last_autoindent_curs is not None:
+                lc = self.__last_autoindent_curs.clone()
+                # This can happen when moving the cursor up after inserting a new line.
+                # If we don't check, our indent could get wiped out.
+                if lc.y != curs.y:
+                    lc.line_span_matching(r'\s*$').remove()
 
-        # update the last autoindent position
-        lc = curs.clone()
-        lc.chirality = lc.Chirality.Left # keep left of indented text
-        self.__last_autoindent_curs = lc
+            # update the last autoindent position
+            lc = curs.clone()
+            lc.chirality = lc.Chirality.Left # keep left of indented text
+            self.__last_autoindent_curs = lc
 
 class IndentingBacktabSelection(IndentingSelectionMixin, BacktabMixin, Selection):
     pass

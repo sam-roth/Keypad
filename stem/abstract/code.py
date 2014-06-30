@@ -135,7 +135,7 @@ class AbstractCodeModel(metaclass=ABCMeta):
         self.conf = conf
     
     @abstractmethod
-    def indent_level(self, line, cur_line=None):
+    def indent_level(self, line, cur_line=None, *, timeout_ms=50):
         '''
         Return the indentation level as a multiple of the tab stop for a given line.
         '''
@@ -176,10 +176,10 @@ class AbstractCodeModel(metaclass=ABCMeta):
             return None
         
             
-    def alignment_column(self, pos):
+    def alignment_column(self, pos, *, timeout_ms=50):
         c = Cursor(self.buffer).move(pos)
         try:
-            c.opening_brace()
+            c.opening_brace(timeout_ms=timeout_ms)
             if c.rchar == '{':
                 return None # curly braces are for blocks (maybe)
                 # TODO: make this handle initializer lists correctly
@@ -189,7 +189,7 @@ class AbstractCodeModel(metaclass=ABCMeta):
             return None
             
                 
-    def indentation(self, pos):
+    def indentation(self, pos, *, brace_search_timeout_ms=50, indent_level_timeout_ms=50):
         c = Cursor(self.buffer).move(pos)
         cur_line = c.y
 
@@ -203,7 +203,7 @@ class AbstractCodeModel(metaclass=ABCMeta):
         try:
             while True:
                 p = c.pos
-                c.opening_brace()
+                c.opening_brace(timeout_ms=brace_search_timeout_ms)
                 if c.rchar == '{':
                     c.pos = p
                     break # the indent level is determined by curly braces in many languages
@@ -211,9 +211,9 @@ class AbstractCodeModel(metaclass=ABCMeta):
             pass
 
 
-        level = self.indent_level(c.y, cur_line=cur_line)
-        col = self.alignment_column(pos)
-        
+        level = self.indent_level(c.y, cur_line=cur_line, timeout_ms=indent_level_timeout_ms)
+        col = self.alignment_column(pos, timeout_ms=brace_search_timeout_ms)
+
         return Indent(level, col)
         
     @abstractmethod
@@ -280,9 +280,9 @@ class IndentRetainingCodeModel(AbstractCodeModel):
     def completions_async(self, pos):
         raise NotImplementedError
     
-    def indent_level(self, line, cur_line=None):
+    def indent_level(self, line, cur_line=None, *, timeout_ms=50):
         c = Cursor(self.buffer).move(line, 0)
-        for _ in c.walklines(-1):
+        for _ in time_limited(c.walklines(-1), ms=timeout_ms):
             m = c.searchline(r'^\s*\S')
             if m:
                 tv_settings = GeneralConfig.from_config(self.conf)

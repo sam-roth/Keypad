@@ -55,18 +55,16 @@ class BufferController(Tagged, Responder):
         self.view.config        = self.config
         
         gs = GeneralConfig.from_config(self.config)
-        
+
         self.selection          = gs.selection(self.manipulator, self.config)
         self.completion_controller = CompletionController(self)
         self._code_model = None
-        
-#         self.view.scrolled                  += self._on_view_scrolled      
+
         self.manipulator.executed_change    += self.user_changed_buffer
         self.manipulator.executed_change    += self.__on_user_changed_buffer
         buff.text_modified                  += self.buffer_was_changed 
-        buff.text_modified                  += self._after_buffer_modification
         self.history.transaction_committed  += self._after_history_transaction_committed
-#         self.view.closing                   += self.closing
+        self.history.changes_committed      += self._after_history_changes_committed
         self.selection_moved                += self.scroll_to_cursor
         self.selection.moved                += self.selection_moved
         self.loaded_from_path               += self.__path_change
@@ -190,12 +188,13 @@ class BufferController(Tagged, Responder):
     def view(self): 
         return self._view
 
-    def _after_buffer_modification(self, chg):
-        self.is_modified = True
-
     def _after_history_transaction_committed(self):
         self.refresh_view()
-        
+
+    def _after_history_changes_committed(self):
+        self.is_modified = True
+
+
     @property
     def is_modified(self):
         return self._is_modified
@@ -269,11 +268,18 @@ class BufferController(Tagged, Responder):
         Atomically write the contents of `self.buffer` to the file located
         at `path` encoded with UTF-8.
         '''
-        
-        self.will_write_to_path(path)
-        with write_atomically(path) as f:
-            f.write(self.buffer.text.encode(errors=codec_errors))
-            
+        # save the selection position, since it will be moved if it's on top of a scratchpad
+        # change
+        # TODO: disable screen updates when suppressing the scratchpad
+        sel = self.selection.pos
+        try:
+            self.will_write_to_path(path)
+            with write_atomically(path) as f:
+                with self.history.suppress_scratchpad():
+                    f.write(self.buffer.text.encode(errors=codec_errors))
+
+        finally:
+            self.selection.pos = sel
         self.wrote_to_path(path)
         self.is_modified = False
     
@@ -398,6 +404,7 @@ class BufferController(Tagged, Responder):
     # position is hysteretic (path dependent)
     def scroll_to_cursor(self, *, center=False):
         curs = self.selection.insert_cursor
+        self.refresh_view()
         self.view.scroll_to_line(curs.pos[0], center=center)
 
 #

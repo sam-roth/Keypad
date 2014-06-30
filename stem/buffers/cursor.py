@@ -114,24 +114,24 @@ class Cursor(object):
                 break
             self.down(stride)
 
-    def opening_brace(self):
+    def opening_brace(self, *, timeout_ms=50):
         if self.buffer.code_model is None:
             raise RuntimeError("Can't find opening brace without code model.")
-        
-        new_pos = self.buffer.code_model.open_brace_pos(self.pos)
-        
+
+        new_pos = self.buffer.code_model.open_brace_pos(self.pos, time_limit_ms=timeout_ms)
+
         if new_pos is None:
             raise RuntimeError("Already at outermost brace.")
-        
+
         self.move(new_pos)
-            
+
         return self
         
-    def closing_brace(self):
+    def closing_brace(self, *, timeout_ms=50):
         if self.buffer.code_model is None:
             raise RuntimeError("Can't find closing brace without code model.")
         
-        new_pos = self.buffer.code_model.close_brace_pos(self.pos)
+        new_pos = self.buffer.code_model.close_brace_pos(self.pos, time_limit_ms=timeout_ms)
         
         if new_pos is None:
             raise RuntimeError("Already at outermost brace.")
