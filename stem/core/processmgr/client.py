@@ -79,6 +79,13 @@ class ServerProxy(object):
         else:
             return res.result
 
+    def interrupt(self):
+        import signal
+        self.proc.send_signal(signal.SIGINT)
+
+    def kill(self):
+        self.proc.kill()
+
     @property
     def is_running(self):
         return self.proc.poll() is None
@@ -103,70 +110,90 @@ class ServerProxy(object):
     def __exit__(self, *args):
         self.shutdown()
         return False
-        
-def server_proxy_thread(q, startup_message=None):
-    if startup_message is not None:
-        extra_messages = [(True, startup_message, None, None)]
-    else:
-        extra_messages = []
-        
-    error_count = 0
-    try:
-        with ServerProxy() as sp:
-            while True:
-                if extra_messages:
-                    m = extra_messages.pop()
-                else:
-                    m = q.get()
-                keep_running, task, future, transform = m
-                if not keep_running:
-                    return
-                try:
-                    if future is None or future.set_running_or_notify_cancel():
-                        result = sp.send(task)
+
+
+class _ServerProxyThread:
+    def __init__(self):
+        self._sp = None
+        self._interrupted = False
+    def interrupt(self):
+        if self._sp is not None:
+            self._interrupted = True
+            self._sp.interrupt()
+
+    def kill(self):
+        if self._sp is not None:
+            self._interrupted = True
+            self._sp.kill()
+
+    def run(self, q, startup_message=None):
+        if startup_message is not None:
+            extra_messages = [(True, startup_message, None, None)]
+        else:
+            extra_messages = []
+
+        error_count = 0
+        try:
+            with ServerProxy() as sp:
+                self._sp = sp
+
+                while True:
+                    if extra_messages:
+                        m = extra_messages.pop()
                     else:
-                        continue
-                except RemoteError as exc:
-                    if future is not None:
-                        future.set_exception(exc)
-                except UnexpectedWorkerTerminationError as exc:
-                    if future is not None:
-                        future.set_exception(exc)
-                    if error_count >= 4:
-                        logging.error('Too many external process crashes. Will not restart.')
+                        m = q.get()
+                    keep_running, task, future, transform = m
+                    if not keep_running:
                         return
+                    try:
+                        if future is None or future.set_running_or_notify_cancel():
+                            result = sp.send(task)
+                        else:
+                            continue
+                    except RemoteError as exc:
+                        if future is not None:
+                            future.set_exception(exc)
+                    except UnexpectedWorkerTerminationError as exc:
+                        if self._interrupted:
+                            return
+                        if future is not None:
+                            future.set_exception(exc)
+                        if error_count >= 4:
+                            logging.error('Too many external process crashes. Will not restart.')
+                            return
+                        else:
+                            logging.error('External process crash. Restarting.')
+                        error_count += 1
+                        sp.restart()
+        #                 extra_messages.append((keep_running, task, future, transform))
+                        if startup_message is not None:
+                            extra_messages.append((True, startup_message, None, None))
                     else:
-                        logging.error('External process crash. Restarting.')
-                    error_count += 1
-                    sp.restart()
-    #                 extra_messages.append((keep_running, task, future, transform))
-                    if startup_message is not None:
-                        extra_messages.append((True, startup_message, None, None))
-                else:
-                    error_count = 0
-                    if future is not None:
-                        if transform is not None:
-                            try:
-                                result = transform(result)
-                            except Exception as exc:
-                                future.set_exception(exc)
+                        error_count = 0
+                        if future is not None:
+                            if transform is not None:
+                                try:
+                                    result = transform(result)
+                                except Exception as exc:
+                                    future.set_exception(exc)
+                                else:
+                                    future.set_result(result)
                             else:
                                 future.set_result(result)
-                        else:
-                            future.set_result(result)
-    finally:
-        try:
-            while True:
-                _, _, future, _ = q.get_nowait()
-                if future is not None:
-                    future.set_exception(UnexpectedWorkerTerminationError())
-        except queue.Empty:
-            pass
+        finally:
+            try:
+                while True:
+                    _, _, future, _ = q.get_nowait()
+                    if future is not None:
+                        future.set_exception(UnexpectedWorkerTerminationError())
+            except queue.Empty:
+                pass
 class AsyncServerProxy(object):
     running_instances = set()
     def __init__(self, startup_message=None):
         self.q = queue.Queue()
-        self.thread = threading.Thread(target=server_proxy_thread, args=(self.q, startup_message))
+        self._spthread = _ServerProxyThread()
+        self.thread = threading.Thread(target=self._spthread.run, args=(self.q, startup_message))
 #         self.thread.daemon = True
     @property
     def is_running(self):
@@ -176,20 +203,37 @@ class AsyncServerProxy(object):
     def shutdown_all(cls):
         for p in list(cls.running_instances):
             p.shutdown()
-        
+
     def start(self):
         self.thread.start()
         self.running_instances.add(self)        
-        
+
     def shutdown(self):
         if self.is_running:
             self.q.put((False, None, None, None))
-            self.thread.join()
+
+            def shutdown_thread():
+                self.thread.join(timeout=1)
+                if self.thread.is_alive():
+                    logging.warning('Worker process failed to terminate. Sending SIGINT. Brace yourselves for '
+                                    'tracebacks galore!')
+                    self._spthread.interrupt()
+                    self.thread.join(timeout=1)
+                    if self.thread.is_alive():
+                        logging.warning('Worker process failed to respond to SIGINT. Sending SIGKILL.')
+                        self._spthread.kill()
+                        self.thread.join(timeout=1)
+                        if self.thread.is_alive():
+                            logging.warning('Worker process did not respond to SIGKILL. Leaving it running. '
+                                            'I guess the OS has better things to do...')
+            th = threading.Thread(target=shutdown_thread)
+            th.daemon = True
+            th.start()
         try:
             self.running_instances.remove(self)
         except KeyError:
             pass
-        
+
     def __enter__(self):
         if not self.thread.is_alive():
             self.start()
