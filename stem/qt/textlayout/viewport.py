@@ -51,14 +51,14 @@ class _OverlayManager:
     def line(self, i, length):
         for overlay_span, attr_key, attr_val in self.overlays:
             start_pos, end_pos = overlay_span.start_curs.pos, overlay_span.end_curs.pos
-    
+
             start_y, start_x = start_pos
             end_y, end_x = end_pos
-            
+
             if start_y <= i <= end_y:
                 line_start_x = 0 if i != start_y else start_x
                 line_end_x = max(length, 1) if i != end_y else end_x
-    
+
                 yield line_start_x, line_end_x, attr_key, attr_val
 
     def carets(self, i):
@@ -69,6 +69,7 @@ class TextViewport(QWidget):
 
     def __init__(self, parent=None, *, config=None):
         super().__init__(parent)
+
 
         self._settings = TextViewSettings(settings=config)
 
@@ -86,6 +87,7 @@ class TextViewport(QWidget):
         self._extra_lines = ()
         self._prev_paint_range = (0, 0)
 
+        self.setAttribute(Qt.WA_InputMethodEnabled)
         self.setAttribute(Qt.WA_OpaquePaintEvent)
         self._general_settings = GeneralSettings.from_config(config)
         self._general_settings.value_changed.connect(self._reload_settings)
@@ -170,6 +172,16 @@ class TextViewport(QWidget):
             return True
 
         else:
+            if event.type() == QEvent.InputMethod:
+                if event.commitString():
+                    self.input_method_commit(event.preeditString(),
+                                             event.replacementStart(),
+                                             event.replacementLength()
+                                             + event.replacementStart(),
+                                             event.commitString())
+                else:
+                    self.input_method_preedit(event.preeditString())
+
             if event.type() == QEvent.Resize:
                 first, last = self._prev_paint_range
                 for line in self.buffer.lines[first:last]:
@@ -181,6 +193,27 @@ class TextViewport(QWidget):
 
             return super().event(event)
 
+
+    @Signal
+    def input_method_preedit(self, text):
+        '''
+        Optionally emitted by a TextView on receiving a preedit event from
+        the OS's input method.
+
+        This is used for implementing compose/dead-key support.
+        '''
+
+    @Signal
+    def input_method_commit(self, 
+                            preedit_text,
+                            replace_start, replace_stop,
+                            replace_text):
+        '''
+        Optionally emitted by a TextView on receiving a commit event from
+        the OS's input method.
+
+        This is used for implementing compose/dead-key support.
+        '''
 
 
 

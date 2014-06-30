@@ -7,7 +7,9 @@ from ..core.key                 import KeySequenceDict, Keys, Ctrl, Alt, Shift, 
 from ..core.attributed_string   import lower_bound
 from ..core.responder           import Responder
 from .interactive               import interactive
-from ..buffers                  import Cursor
+from ..buffers                  import Cursor, Span
+from ..options                  import GeneralSettings
+
 
 from ..abstract.application import app
 from ..abstract.textview import MouseButton
@@ -42,7 +44,7 @@ class CUAInteractionMode(Responder):
 
         return result
 
-    
+
     def make_page_move(self, n):
         def result():
             height, width = self.view.plane_size
@@ -78,7 +80,7 @@ class CUAInteractionMode(Responder):
                      rgx.finditer(self.curs.line.text)]
             idx = lower_bound(posns, col)
             idx += n
-            
+
             if 0 <= idx < len(posns):
                 new_col = posns[idx]
                 self.curs.right(new_col - col)
@@ -100,8 +102,8 @@ class CUAInteractionMode(Responder):
                 else:
                     skip = False
         return result
-    
-    
+
+
     def make_delete_word(self, n):
         advance = self.make_advance_word(n)
         def result(evt):
@@ -115,6 +117,8 @@ class CUAInteractionMode(Responder):
     def __init__(self, controller):
         super().__init__()
 
+        self.settings = GeneralSettings.from_config(controller.config)
+
         self.controller = controller
         self.controller.add_next_responders(self)
 
@@ -122,7 +126,7 @@ class CUAInteractionMode(Responder):
 
         self.modeline = AttributedString()
         self.view.modelines = (self.modeline,)
-        
+
 
         def mov(func, *args, ignore_shift=False):
             def result(evt):
@@ -132,12 +136,12 @@ class CUAInteractionMode(Responder):
                 else:
                     func(self.controller.selection, *args)
             return result
-        
+
         def method(name):
             def result(instance, *args, **kw):
                 return getattr(instance, name)(*args, **kw)
             return result
-        
+
         def movm(func, *args, ignore_shift=False):
             return mov(method(func), *args, ignore_shift=ignore_shift)
 
@@ -148,25 +152,25 @@ class CUAInteractionMode(Responder):
             with sel.select():
                 sel.last_line().end()
 
-        
+
         def delete_word(n, evt):
             sel =  self.controller.selection
             sel.clear_selection()
             with sel.select():
                 sel.advance_word(n)
             sel.text = ''
-            
-            
+
+
         def page_down(sel, n):
             height, width = self.view.plane_size
             sel.down(height * n)            
-            
+
         
 
 
         manip = self.curs.manip
 
-        
+
         self.keybindings = KeySequenceDict(
             (Keys.left      .optional(Shift),   movm('right', -1)),
             (Keys.right     .optional(Shift),   movm('right', 1)),
@@ -204,14 +208,20 @@ class CUAInteractionMode(Responder):
         self.controller.view.key_press.connect(self._on_key_press)
         self.controller.view.mouse_down_char.connect(self._on_mouse_down)
         self.controller.view.mouse_move_char.connect(self._on_mouse_move)
+        self.controller.view.input_method_preedit.connect(self._on_input_method_preedit)
+        self.controller.view.input_method_commit.connect(self._on_input_method_commit)
+
 
         self._show_default_modeline()
         self.controller.refresh_view(full=True)
 
+
+        self._preedit_span = None
+
     def detach(self):
         self.controller.remove_next_responders(self)
         self.controller.view.key_press.disconnect(self._on_key_press)
-        self.controller.view.scrolled.disconnect(self._on_view_scrolled)
+#         self.controller.view.scrolled.disconnect(self._on_view_scrolled)
         self.controller.view.mouse_down_char.disconnect(self._on_mouse_down)
         self.controller.view.mouse_move_char.disconnect(self._on_mouse_move)
         self.view.modelines = ()
@@ -231,7 +241,7 @@ class CUAInteractionMode(Responder):
             sel = self.controller.selection
             with sel.select():
                 sel.move(0,0).down(line).right(col)
-                
+
             self._show_default_modeline()
             self.controller.refresh_view()
 
@@ -246,7 +256,8 @@ class CUAInteractionMode(Responder):
         self.modeline.remove(0, None)
         self.modeline.append(text)
         if isinstance(text, str):
-            self.modeline.set_attribute('color', '#268bd2')
+            self.modeline.set_attributes(**dict(self.settings.modeline_attrs))
+#             self.modeline.set_attribute('color', '#268bd2')
 
         self.view.modelines = [self.modeline]
 
@@ -260,10 +271,10 @@ class CUAInteractionMode(Responder):
             path = str(path)
             if len(path) > 20:
                 path = '…' + path[-19:]
-            
+
         loc_hint = '{0}:{1}:{2}'.format(path, self.curs.y+1, self.curs.x+1)
         self.modeline.append('{:<50} [{}]'.format(loc_hint, type(self).__name__))
-        self.modeline.set_attributes(0, None, color='#268bd2')
+        self.modeline.set_attributes(**dict(self.settings.modeline_attrs))
 
         self.view.modelines = [self.modeline]
 
@@ -277,7 +288,32 @@ class CUAInteractionMode(Responder):
         ))
         self.controller.refresh_view()
 
-    
+
+    def _on_input_method_preedit(self, text):
+
+        c = self.curs
+        with c.manip.history.scratchpad():
+            sc = self.curs.clone()
+            sc.chirality = Cursor.Chirality.Left
+            c.insert(text)
+            self._preedit_span = Span(sc, c)
+            self._preedit_span.set_attributes(lexcat='search')
+
+
+    def _on_input_method_commit(self, 
+                                preedit_text,
+                                replace_start, replace_stop,
+                                replace_text):
+
+        with self.curs.manip.history.transaction():
+            if self._preedit_span is not None:
+                self._preedit_span.text = replace_text
+                self._preedit_span.set_attributes(lexcat=None)
+                self._preedit_span = None
+            else:
+                self.curs.insert(replace_text)
+
+
     def _on_key_press(self, evt):
         success = True
         with self.curs.manip.history.transaction():

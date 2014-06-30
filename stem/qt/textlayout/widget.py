@@ -159,6 +159,8 @@ class TextViewProxyMixin:
         view._viewport.mouse_down_char.connect(self.mouse_down_char)
         view._viewport.key_press.connect(self.key_press)
         view._viewport.should_override_app_shortcut.connect(self.should_override_app_shortcut)
+        view._viewport.input_method_preedit.connect(self.input_method_preedit)
+        view._viewport.input_method_commit.connect(self.input_method_commit)
 
     @property
     def modelines(self):

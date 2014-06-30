@@ -201,7 +201,7 @@ class AbstractTextView(metaclass=abc.ABCMeta):
         '''
         Force redrawing of the entire view.
         '''
-        
+
     @Signal
     def mouse_down_char(self, line, col): 
         '''
@@ -238,6 +238,27 @@ class AbstractTextView(metaclass=abc.ABCMeta):
         '''
         Emitted before an event is interpreted as an application shortcut.
         To intercept, use the :py:meth:`~KeyEvent.intercept` method.
+        '''
+
+    @Signal
+    def input_method_preedit(self, text):
+        '''
+        Optionally emitted by a TextView on receiving a preedit event from
+        the OS's input method.
+
+        This is used for implementing compose/dead-key support.
+        '''
+
+    @Signal
+    def input_method_commit(self, 
+                            preedit_text,
+                            replace_start, replace_stop,
+                            replace_text):
+        '''
+        Optionally emitted by a TextView on receiving a commit event from
+        the OS's input method.
+
+        This is used for implementing compose/dead-key support.
         '''
 
 
@@ -284,7 +305,7 @@ class AbstractCodeView(AbstractTextView):
     @property
     def completions(self):
         return self.completion_view.model.completions
-    
+
     @completions.setter
     def completions(self, val):
         self.completion_view.model.completions = val
