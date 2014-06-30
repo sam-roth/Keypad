@@ -23,6 +23,9 @@ class Colorscheme(object):
         self.lexical_categories = {
         }
 
+    def lexcat_attrs(self, lexcat):
+        return self.lexical_category_attrs(lexcat)
+
     def lexical_category_attrs(self, lexcat):
         if lexcat not in self.lexical_categories:
             self.lexical_categories[lexcat] = dict(
@@ -90,6 +93,14 @@ class Colorscheme(object):
         return self.fg
 
 
+    @property
+    def lexcats(self):
+        return self.lexical_categories
+
+    @lexcats.setter
+    def lexcats(self, value):
+        self.lexical_categories = value
+
 class AbstractSolarized(Colorscheme):
     '''
     Abstract colorscheme based on
@@ -118,10 +129,10 @@ class AbstractSolarized(Colorscheme):
 
 
     fallback_sat = _blue.hsv[1]
-    
+
     def __init__(self):
         super().__init__()
-        self.lexical_categories.update(
+        self.lexcats.update(
             preprocessor=dict(color=self._orange),
             keyword=dict(color=self._green),
             function=dict(color=self._blue),
@@ -139,7 +150,7 @@ def extrap_value(color1, color2):
     return color2.brighter(v2/v1)
 
 class SolarizedDark(AbstractSolarized):
-    
+
     fg = AbstractSolarized._base0
     bg = AbstractSolarized._base03
 
@@ -170,30 +181,64 @@ class SolarizedLight(AbstractSolarized):
     selection_fg = AbstractSolarized._base3
     selection_bg = AbstractSolarized._base0
 
-    nontext_bg = AbstractSolarized._base3
+    nontext_bg = AbstractSolarized._base2
 
     cur_line_bg = AbstractSolarized._base2
 
     fallback_val = fg.hsv[2]
 
-    def __init__(self, high_contrast=False):
+    def __init__(self, high_contrast=False, enable_bold=True):
         super().__init__()
 
         if high_contrast:
             self.fg = AbstractSolarized._base01
-#             self.bg = AbstractSolarized._base3
-#             self.cur_line_bg = AbstractSolarized._base3
 
-        bold = ['todo', 'type', 'keyword', 'escape',
-                'function']
+        if enable_bold:
+            bold = ['keyword']
+        else:
+            bold = []
 
-        lc = self.lexical_categories
+        lc = self.lexcats
+
         lc.update(comment=dict(color=self._base1),
                   search=dict(bgcolor=self._yellow, color=self._base01))
         for key in bold:
             lc[key].update(bold=True)
 
+class SolarizedLightHighContrast(SolarizedLight):
+    '''
+    This is the high contrast version of the Solarized light theme, based on
+    the high contrast mode provided in the Vim implementation of Solarized.
+    '''
 
+    def __init__(self, *args, **kw):
+        kw.update(high_contrast=True)
+        super().__init__(*args, **kw)
+
+class EnhancedContrastMixin:
+
+    def __init__(self, *args, **kw):
+        super().__init__(*args, **kw)
+        min_contrast = kw.pop('min_contrast', 0.4)
+
+        bg_lightness, _, _ = Color.from_hex(self.bg).lab
+
+        for k, v in self.lexcats.items():
+            if 'bgcolor' in v:
+                continue # skip entries with explicit background color
+
+            if 'color' in v:
+                color = Color.from_hex(v['color'])
+                l, a, b = color.lab
+
+                if abs(l - bg_lightness) < min_contrast: 
+                    if l > bg_lightness:
+                        # light foreground color too dark
+                        v['color'] = Color.from_lab(l - abs(l - bg_lightness) + min_contrast, a, b)
+                    else:
+                        # dark foreground color too light
+                        v['color'] = Color.from_lab(l + abs(l - bg_lightness) - min_contrast, a, b)
+                        
 class TextMateTheme(Colorscheme):
     '''
     Use a TextMate/Sublime Text color scheme.
@@ -214,13 +259,11 @@ class TextMateTheme(Colorscheme):
         'support.class': 'type',
         'storage.type': 'type',
         'storage.modifier': 'type',
-        
-#         'meta': 'preprocessor',
-#         'keyword.other': 'preprocessor',
+
         'variable.parameter': 'preprocessor',
 
         'keyword': 'keyword',
-        
+
         'invalid': 'error',
     })
 
