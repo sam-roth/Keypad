@@ -115,7 +115,7 @@ class GeneralSettings(Settings):
     weight = Field(float, 0.5)
     tab_glyph = Field(str, '\N{MATHEMATICAL RIGHT ANGLE BRACKET}')
 
-    selection = Field(Factory, 'stem.buffers.selection.BacktabSelection')
+    selection = Field(Factory, 'stem.buffers.selection.IndentingBacktabSelection')
 
     elide_cmdline_history = Field(bool, True, docs='combine consecutive identical history items')
     

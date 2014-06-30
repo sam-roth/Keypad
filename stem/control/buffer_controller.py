@@ -87,12 +87,6 @@ class BufferController(Tagged, Responder):
             self.interaction_mode = None
             
 
-        
-        self.__last_autoindent_curs = None
-
-
-
-    
         self._last_path = None
 
     def dispose(self):
@@ -169,41 +163,7 @@ class BufferController(Tagged, Responder):
     def __on_user_changed_buffer(self, chg):
         if self.code_model is None:
             return
-        if chg.insert.endswith(('\n', ) + tuple(self.code_model.reindent_triggers)):
-            curs = self.selection.insert_cursor.clone().home()
-            # the user opened a new line
-            indentation = self.code_model.indentation(curs.pos)
-            indent_level = indentation.level
-            
-#             indent_level = self.code_model.indent_level(curs.y)
-            # strip existing indent
-            m = curs.searchline(r'^\s*')
-            if m:            
-                curs.home().remove_to(curs.clone().right(m.end()))
-            # indent the new line
-            
-            curs.insert(
-                GeneralConfig.from_config(self.config).indent_text
-                * indent_level
-            )
-            
-            if indentation.align is not None:
-                spaces_to_align = indentation.align - curs.x
-                if spaces_to_align > 0:
-                    curs.insert(' ' * spaces_to_align)
-            
-                
-            
-            # remove trailing spaces from the previous line
-            if self.__last_autoindent_curs is not None:
-                lc = self.__last_autoindent_curs.clone()
-                m = lc.searchline(r'\s+$')
-                if m:
-                    lc.move(col=m.start()).remove_to(lc.clone().end())
-            
-            lc = self.__last_autoindent_curs = curs.clone()
-            lc.chirality = Cursor.Chirality.Left
-            
+
     @property
     def canonical_cursor(self):
         return self.selection.insert_cursor

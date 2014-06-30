@@ -2,10 +2,11 @@
 import abc
 import contextlib
 import re
+import enum
 
 from ..core import Signal
 from ..options import GeneralSettings
-from ..core.nconfig import Settings, Field
+from ..core.nconfig import Settings, Field, Conversions
 from .span import Span
 
 _AdvanceWordRegex = re.compile(
@@ -312,6 +313,8 @@ class Selection(object):
     def backspace(self):
         return self.delete(-1)
 
+
+
 class BacktabMixin(object):
     
     def backspace(self):
@@ -327,3 +330,127 @@ class BacktabMixin(object):
 
 class BacktabSelection(BacktabMixin, Selection):
     pass
+
+
+class AlignPolicy(enum.Enum):
+    align_with_spaces = (True, False, True)
+    align_with_indent_text = (True, True, True)
+    indent = (False, None, True)
+    disable = (False, None, False)
+
+    def __init__(self, align, use_indent_text, enable):
+        self.align = align
+        self.use_indent_text = use_indent_text
+        self.enable = enable
+
+    def align_text(self, space_count, indent_text, tab_width):
+        if not self.enable:
+            return ''
+
+        if self.align:
+            if self.use_indent_text:
+                width = len(indent_text.expandtabs(tab_width))
+                return indent_text * (space_count // width)
+            else:
+                return ' ' * space_count
+        else:
+            if space_count > 0:
+                return indent_text
+
+Conversions.register(AlignPolicy, lambda x: AlignPolicy[x])
+
+class AutoindentSettings(Settings):
+    _ns_ = 'autoindent'
+
+    __align_policy_doc = '''
+    Determines how alignment should be performed. Possible values are:
+
+    ``align_with_spaces``
+        (Default) Use spaces for alignment, regardless of whether tabs are  used
+        for indentation. This is the recommended strategy, sometimes called "Smart
+        Tabs" or "Semantic Tabs". See http://www.emacswiki.org/SmartTabs . It
+        allows users select an arbitrary tab width, while preserving alignment.
+        This is also what you want if you're using spaces for indentation. 
+
+    ``align_with_indent_text``
+        Use the indent text (such as tabs) for alignment. This usually won't
+        provide consistent alignment, since the indent level will be rounded down.
+
+    ``indent``
+        Indent by one level, rather than aligning.
+
+    ``none``                   
+        Don't perform any automatic alignment. This does not affect whether
+        automatic indentation is performed.
+
+    '''
+    AlignPolicy = AlignPolicy
+
+    enable = Field(bool, True)
+    strip  = Field(bool, True, 
+                   docs='Strip trailing whitespace from the previously indented line when indenting '
+                        'a new line.')
+
+    align_policy = Field(AlignPolicy, 
+                         AlignPolicy.align_with_spaces,
+                         safe=True,
+                         docs=__align_policy_doc)
+
+
+
+
+class IndentingSelectionMixin:
+    def __init__(self, *args, **kw):
+        super().__init__(*args, **kw)
+
+        self.__ai_settings = AutoindentSettings.from_config(self.config)
+        self.__gen_settings = GeneralSettings.from_config(self.config)
+
+        # track previous indentation positions, so that superfluous indentation is removed
+        self.__last_autoindent_curs = None
+
+    def set_text(self, text):
+        super().set_text(text)
+
+        cm = self.buffer.code_model
+        if cm is not None and text.endswith(('\n', ) + tuple(self.buffer.code_model.reindent_triggers)):
+            self.reindent()
+
+    def reindent(self):
+        cm = self.buffer.code_model
+        if cm is None or not self.__ai_settings.enable:
+            return
+            
+        curs = self.insert_cursor.clone()
+        indentation = cm.indentation(curs.pos)
+        indent_level = indentation.level
+
+        # strip existing indent
+        curs.line_span_matching(r'^\s*').remove()
+
+        # add new indent
+        curs.home().insert(self.__gen_settings.indent_text * indentation.level)
+
+        # align if needed
+        if indentation.align is not None:
+            spaces_to_align = indentation.align - curs.x
+            if spaces_to_align > 0:
+                curs.insert(self.__ai_settings.align_policy.align_text(spaces_to_align,
+                                                                       self.__gen_settings.indent_text,
+                                                                       self.__gen_settings.tab_stop))
+
+
+        # strip previously auto-indented line if it contains trailing spaces
+        # (or is blank)
+        if self.__last_autoindent_curs is not None:
+            lc = self.__last_autoindent_curs.clone()
+            lc.line_span_matching(r'\s*$').remove()
+
+        # update the last autoindent position
+        lc = curs.clone()
+        lc.chirality = lc.Chirality.Left # keep left of indented text
+        self.__last_autoindent_curs = lc
+
+class IndentingBacktabSelection(IndentingSelectionMixin, BacktabMixin, Selection):
+    pass
+
