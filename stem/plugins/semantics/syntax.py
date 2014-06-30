@@ -1,7 +1,7 @@
 import logging
 
 from .syntaxlib import Tokenizer
-
+from stem.util import time_limited
 class SyntaxHighlighter(object):
     
     def __init__(self, name, lexer, base_attrs):
@@ -19,7 +19,8 @@ class SyntaxHighlighter(object):
         self._tokenizer.reset()
         state = self._tokenizer.save()
         token_stack = []
-        for i, line in enumerate(buff.lines):
+        # TODO: start on modified line
+        for i, line in time_limited(enumerate(buff.lines), ms=100):
             line_start_state = line.caches.get(self._start_state_key) 
             
             if line_start_state != state:
