@@ -67,7 +67,9 @@ Conversions.register(HintingLevel, HintingLevel.from_literal)
 
 class GeneralSettings(Settings):
     _ns_ = 'general'
-    
+
+    modeline_attrs = Field(tuple, (('lexcat', 'function'), ))
+
     integer_metrics = Field(bool, TextViewIntegerMetrics,
                             docs='You may wish to set this to False if spacing looks strange.')
     double_strike = Field(bool, TextViewDoubleStrike,
@@ -78,7 +80,7 @@ class GeneralSettings(Settings):
                                'performs appropriate gamma adjustment automatically; '
                                'however, it should work if you wish to use it.')
     antialias = Field(bool, True)
-    
+
     cursor_blink_rate = Field(float, CursorBlinkRate_Hz,
                               docs='Controls the number of blink cycles per second')
     cursor_duty_cycle = Field(float, CursorDutyCycle,
@@ -89,11 +91,11 @@ class GeneralSettings(Settings):
                                    'of research on this topic, and my intuition might be wrong '
                                    'about it, so YMMV, but I did find this: '
                                    'https://twitter.com/ID_AA_Carmack/status/266267089596198912 .')
-    
+
     tab_stop = Field(int, 4, safe=True)
     indent_text = Field(str, '    ', safe=True)
     expand_tabs = Field(bool, True, safe=True)
-    
+
     driver_mod = Field(str, 'stem.qt.driver')
     colorscheme = Field(Factory, 'stem.core.colorscheme.SolarizedDark')
     user_config_home = Field(pathlib.Path, pathlib.Path(os.path.expanduser('~/.stem')))

@@ -12,6 +12,7 @@ from .buffers import Span, Region, Buffer, Cursor
 from .core.notification_queue import run_in_main_thread, in_main_thread
 from .abstract.application import AbstractWindow, AbstractApplication
 from .abstract.editor import AbstractEditor
+from .abstract.code import AbstractCodeModel, IndentRetainingCodeModel
 
 def bind(key, interactive_command_name):
     keybinding.controller.add_binding(key, interactive_command_name)
@@ -38,6 +39,7 @@ __all__ = '''
     AbstractWindow
     AbstractEditor
     AbstractApplication
+    AbstractCodeModel
     BufferController
     in_main_thread
     run_in_main_thread
