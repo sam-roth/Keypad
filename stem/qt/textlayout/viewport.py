@@ -117,6 +117,7 @@ class TextViewport(QWidget):
         self._extra_lines_visible = True
         self._column_delegates = {}
         self._clean_cache_key = str(id(self)) + '.clean'
+        self._full_repaint = False
 
     def set_column_delegate(self, token, value, *, priority=None):
         if value is None:
@@ -283,6 +284,10 @@ class TextViewport(QWidget):
         self.update()
         self.buffer_text_modified()
 
+    def _on_line_count_change(self, index, count):
+        self._full_repaint = True
+        self.update()
+
     @Signal
     def buffer_text_modified(self):
         pass
@@ -295,8 +300,10 @@ class TextViewport(QWidget):
     def buffer(self, value):
         if hasattr(self, '_buffer'):
             self._buffer.text_modified.disconnect(self._on_text_modified)
+            self._buffer.lines_added_or_removed.disconnect(self._on_line_count_change)
         self._buffer = value
         self._buffer.text_modified.connect(self._on_text_modified)
+        self._buffer.lines_added_or_removed.connect(self._on_line_count_change)
         self.update()
 
     @property
@@ -443,6 +450,7 @@ class TextViewport(QWidget):
                       prefix=(test_prefix, ))
 
         line_clean = ((prev_first_line <= doc_line_num < prev_last_line)
+                      and not self._full_repaint
                       and not flashlast
                       and clean_rect is not None
                       and clean_rect.top() == int(plane_pos.y())
@@ -533,6 +541,7 @@ class TextViewport(QWidget):
 
             del self._line_number_for_y[int(plane_pos.y() + self._origin.y()):]
 
+            self._full_repaint = False
             self._prev_paint_range = self.first_line, self.last_line
 
             if plane_pos.y() + self._origin.y() < self.height():
