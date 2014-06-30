@@ -99,7 +99,7 @@ class GeneralSettings(Settings):
     driver_mod = Field(str, 'stem.qt.driver')
     colorscheme = Field(Factory, 'stem.core.colorscheme.SolarizedDark')
     user_config_home = Field(pathlib.Path, pathlib.Path(os.path.expanduser('~/.stem')))
-    
+
     font_family = Field(str, TextViewFont[0],
                         docs='The font for text views. If you\'re looking at the Sphinx docs, '
                              'the default value you\'ll see applies only to the platform on which '
@@ -120,15 +120,17 @@ class GeneralSettings(Settings):
     selection = Field(Factory, 'stem.buffers.selection.IndentingBacktabSelection')
 
     elide_cmdline_history = Field(bool, True, docs='combine consecutive identical history items')
-    
+
+    brace_match_timeout_ms = Field(int, 50)
+
 class CallTipSettings(Settings):
     _ns_ = 'call_tip'
-    
+
     auto = Field(bool, True) # TODO: implement
     enable = Field(bool, True) # TODO: implement
-    
+
     view_opacity = Field(float, 0.7)
-    
+
 
 
 GeneralConfig = GeneralSettings # deprecated alias

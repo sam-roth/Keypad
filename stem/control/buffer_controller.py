@@ -66,6 +66,8 @@ class BufferController(Tagged, Responder):
 
         gs = GeneralConfig.from_config(self.config)
 
+        self.general_settings = gs
+
         selection = _selection_code_completion_hint(gs.selection(self.manipulator, self.config))
         self.selection = selection
 
@@ -341,7 +343,7 @@ class BufferController(Tagged, Responder):
     def _on_view_scrolled(self, start_line):
         self.view.start_line = start_line
         self.refresh_view(full=True)
-
+        
     def refresh_view(self, full=False):
         self.view.lines = self.buffer.lines
 
@@ -374,28 +376,32 @@ class BufferController(Tagged, Responder):
                 (span, 'sel_color', 'auto'),
                 (span, 'sel_bgcolor', 'auto')
             ])
-        
+
 
         self.view.set_overlays('selection', overlay_spans)
         self.view.set_overlays('matched_brace', [])
+
+
+
         # update matched braces
         if self.code_model is not None:
+            timeout = self.general_settings.brace_match_timeout_ms
             try:
                 lchar = curs.lchar
                 rchar = curs.rchar
                 open_cursor, close_cursor = None, None
                 if rchar in self.code_model.close_braces:
                     close_cursor = curs.clone()
-                    open_cursor = curs.clone().opening_brace()
+                    open_cursor = curs.clone().opening_brace(timeout_ms=timeout)
                 elif lchar in self.code_model.close_braces:
                     close_cursor = curs.clone().left()
-                    open_cursor = close_cursor.clone().opening_brace()
+                    open_cursor = close_cursor.clone().opening_brace(timeout_ms=timeout)
                 elif rchar in self.code_model.open_braces:
                     open_cursor = curs.clone()
-                    close_cursor = curs.clone().closing_brace()
+                    close_cursor = curs.clone().closing_brace(timeout_ms=timeout)
                 elif lchar in self.code_model.open_braces:
                     open_cursor = curs.clone().left()
-                    close_cursor = open_cursor.clone().closing_brace()
+                    close_cursor = open_cursor.clone().closing_brace(timeout_ms=timeout)
                 if open_cursor is not None:
                     spans = []
                     spans.append(Span(open_cursor.clone(), open_cursor.clone().right()))
@@ -422,8 +428,9 @@ class BufferController(Tagged, Responder):
     # position is hysteretic (path dependent)
     def scroll_to_cursor(self, *, center=False):
         curs = self.selection.insert_cursor
-        self.refresh_view()
-        self.view.scroll_to_line(curs.pos[0], center=center)
+
+        if self.view.scroll_to_line(curs.pos[0], center=center):
+            self.refresh_view()
 
 #
 #         curs = self.selection.insert_cursor
@@ -455,15 +462,15 @@ def goto_line(bc: BufferController, line):
 @interactive('open_brace')
 def open_brace(bctl: BufferController):
     with bctl.selection.moving():
-        bctl.selection.insert_cursor.opening_brace()
+        bctl.selection.insert_cursor.opening_brace(timeout_ms=1000)
     bctl.refresh_view()
-    
+
 @interactive('close_brace')
 def close_brace(bctl: BufferController):
     with bctl.selection.moving():
-        bctl.selection.insert_cursor.closing_brace()
+        bctl.selection.insert_cursor.closing_brace(timeout_ms=1000)
     bctl.refresh_view()
-
+    
 @interactive('show_error')
 def show_error(buff: BufferController, error):
     buff.view.beep()
@@ -499,7 +506,12 @@ def clipboard_paste(buff: BufferController):
 def undo(buff: BufferController):
     cs = buff.history.undo()
     if cs:
-        buff.selection.move(cs[-1].pos)
+        y, x = cs[-1].pos
+        try:
+            buff.selection.move(line=y)
+            buff.selection.home().right(x)
+        except IndexError:
+            pass
         buff.refresh_view()
 
 

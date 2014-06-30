@@ -21,4 +21,4 @@ Vivamus laoreet. Nullam tincidunt adipiscing enim. Phasellus tempus. Proin viver
 
 
 
-text_wrapped = '\n'.join(textwrap.wrap(text))
+text_wrapped = '\n\n'.join('\n'.join(textwrap.wrap(line)) for line in text.splitlines())

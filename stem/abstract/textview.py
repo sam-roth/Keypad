@@ -167,6 +167,8 @@ class AbstractTextView(metaclass=abc.ABCMeta):
             If True, center the line in the display;
             otherwise, scroll only as far as necessary.
 
+        Returns a boolean indicating whether the view was
+        actually scrolled.
         '''
         if not (self.first_line <= line < self.last_line):
             height = self.last_line - self.first_line
@@ -174,8 +176,12 @@ class AbstractTextView(metaclass=abc.ABCMeta):
                 line = max(line - height / 2, 0)
             elif line >= self.last_line:
                 line = max(line - height + 1, 0)
-    
+
             self.first_line = line
+
+            return True
+        else:
+            return False
 
 
     @abc.abstractmethod

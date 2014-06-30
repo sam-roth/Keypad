@@ -35,6 +35,9 @@ class AbstractInteractionMode(metaclass=abc.ABCMeta):
             text = AttributedString(text, **dict(self.__settings.modeline_attrs))
         self._view.modelines = [text]
 
+    @property
+    def display_name(self):
+        return type(self).__name__
 
     def _show_default_modeline(self):
         path = self.buffer_controller.path
@@ -49,8 +52,8 @@ class AbstractInteractionMode(metaclass=abc.ABCMeta):
         y, x = self._selection.pos
         loc_hint = '{0}:{1}:{2}'.format(path, y+1, x+1)
 
-        self._show_modeline('{:<50} [{}]'.format(loc_hint, type(self).__name__))
-
+        self._show_modeline('{:<50} [{}]'.format(loc_hint, self.display_name))
+        
     def show_error(self, text):
         from .application import app
 

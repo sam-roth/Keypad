@@ -134,53 +134,67 @@ class AbstractCodeModel(metaclass=ABCMeta):
         self.buffer = buff
         self.path = None
         self.conf = conf
-    
+
     @abstractmethod
     def indent_level(self, line, cur_line=None, *, timeout_ms=50):
         '''
         Return the indentation level as a multiple of the tab stop for a given line.
         '''
-    
+
     def open_brace_pos(self, pos, exclude=('literal',), time_limit_ms=50):
         '''
         Return the location of the closing brace for a given location in the text.
         '''
-        
+
         c = Cursor(self.buffer).move(pos).advance(-1)
-        
+
+        open_braces = self.open_braces
+        close_braces = self.close_braces
+
+        def is_included():
+            for k, v in c.rchar_attrs:
+                if k == 'lexcat':
+                    return v not in exclude
+            else:
+                return False
+
         level = 1
         for ch in time_limited(c.walk(-1), ms=time_limit_ms):
-            if ch in self.open_braces and dict(c.rchar_attrs).get('lexcat') not in exclude:
-                level -= 1
-            elif ch in self.close_braces and dict(c.rchar_attrs).get('lexcat') not in exclude:
-                level += 1
-            
+            if ch in open_braces:
+                if is_included():
+                    level -= 1
+            elif ch in close_braces:
+                if is_included():
+                    level += 1
+
             if level == 0:
                 return c.pos
         else:
             return None
-        
+
     def close_brace_pos(self, pos, exclude=('literal',), time_limit_ms=50):
-        
+
         c = Cursor(self.buffer).move(pos).advance(1)
-        
+
         level = 1
         for ch in time_limited(c.walk(1), ms=time_limit_ms):
             if ch in self.close_braces and dict(c.rchar_attrs).get('lexcat') not in exclude:
                 level -= 1
             elif ch in self.open_braces and dict(c.rchar_attrs).get('lexcat') not in exclude:
                 level += 1
-            
+
             if level == 0:
                 return c.pos
         else:
             return None
-        
-            
+
+
     def alignment_column(self, pos, *, timeout_ms=50):
         c = Cursor(self.buffer).move(pos)
+        start_line = c.y
         try:
-            c.opening_brace(timeout_ms=timeout_ms)
+            while c.y == start_line:
+                c.opening_brace(timeout_ms=timeout_ms)
             if c.rchar in self.statement_start:
                 return None # curly braces are for blocks (maybe)
                 # TODO: make this handle initializer lists correctly
@@ -188,13 +202,13 @@ class AbstractCodeModel(metaclass=ABCMeta):
                 return c.x + 1
         except RuntimeError:
             return None
-            
-                
+
+
     def indentation(self, pos, *, brace_search_timeout_ms=50, indent_level_timeout_ms=50):
         c = Cursor(self.buffer).move(pos)
         cur_line = c.y
 
-        
+
         for _ in c.walklines(-1):
             if c.searchline(r'^\s*$') is None:
                 c.home()
@@ -216,58 +230,58 @@ class AbstractCodeModel(metaclass=ABCMeta):
         col = self.alignment_column(pos, timeout_ms=brace_search_timeout_ms)
 
         return Indent(level, col)
-        
+
     @abstractmethod
     def completions_async(self, pos):
         '''
         Return a future to the completions available at the given position in the document.
-        
+
         Raise NotImplementedError if not implemented.
         '''
-    
+
     def find_related_async(self, pos, types):
         '''
         Find related names for the token at the given position.
-        
+
         decl       - find declarations
         defn       - find definitions
         assign     - find assignments
-        
-        
+
+
         Raises NotImplementedError by default.
-        
+
         :rtype: concurrent.futures.Future of list of RelatedName
         '''
         raise NotImplementedError
 
-    
+
     @abstractmethod
     def highlight(self):
         '''
         Rehighlight the buffer.        
-        
+
         Note: This is different than other methods in the code model in that
         it involves mutation of the buffer, and it may be better to make
         the code model a factory for a "Highlighter" object.        
         '''
-        
+
     @abstractmethod
     def dispose(self):
         '''
         Release system resources held by the model.
         '''
-        
+
     @property
     def can_provide_call_tips(self):
         return False
-    
+
     def call_tip_async(self, pos):
         raise NotImplementedError
-    
+
     @property
     def can_provide_diagnostics(self):
         return False
-        
+
     def diagnostics_async(self):
         raise NotImplementedError
 
@@ -277,10 +291,10 @@ class IndentRetainingCodeModel(AbstractCodeModel):
 
     def highlight(self):
         pass
-                
+
     def completions_async(self, pos):
         raise NotImplementedError
-    
+
     def indent_level(self, line, cur_line=None, *, timeout_ms=50):
         c = Cursor(self.buffer).move(line, 0)
         for _ in time_limited(c.walklines(-1), ms=timeout_ms):
@@ -289,7 +303,7 @@ class IndentRetainingCodeModel(AbstractCodeModel):
                 tv_settings = GeneralConfig.from_config(self.conf)
                 tstop = tv_settings.tab_stop
                 indent_text = tv_settings.indent_text
-                
+
                 itext = m.group(0)
                 itext = itext.expandtabs(tstop)
                 ilevel = len(itext) // len(indent_text.expandtabs(tstop))
@@ -301,7 +315,7 @@ class IndentRetainingCodeModel(AbstractCodeModel):
                 return ilevel
         else:
             return 0
-    
+
     def dispose(self):
         pass
-        
+

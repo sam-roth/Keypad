@@ -3,7 +3,7 @@
 from .attributes import Attributes
 
 class AttributedString:
-
+    __slots__ = '_attrs', 'caches', '__weakref__', '_text'
     def __init__(self, text='', **attrs):
 
         self._attrs = Attributes()

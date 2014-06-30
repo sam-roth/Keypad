@@ -127,6 +127,7 @@ class CUAInteractionMode(Responder):
         self.modeline = AttributedString()
         self.view.modelines = (self.modeline,)
 
+        self._last_mouse_move = None
 
         def mov(func, *args, ignore_shift=False):
             def result(evt):
@@ -231,12 +232,17 @@ class CUAInteractionMode(Responder):
         pass
 
     def _on_mouse_down(self, line, col):
+        self._last_mouse_move = None
         sel = self.controller.selection
         sel.move(0,0).down(line).right(col)
         self._show_default_modeline()
         self.controller.refresh_view()
 
     def _on_mouse_move(self, buttons, line, col):
+        mouse_move = buttons, line, col
+        if self._last_mouse_move == mouse_move:
+            return
+
         if buttons & MouseButton.left_button:
             sel = self.controller.selection
             with sel.select():
@@ -244,6 +250,8 @@ class CUAInteractionMode(Responder):
 
             self._show_default_modeline()
             self.controller.refresh_view()
+
+        self._last_mouse_move = mouse_move
 
 
 

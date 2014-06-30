@@ -48,6 +48,7 @@ class Buffer(object):
 
     def __init__(self):
         self._lines = [AttributedString()]
+        self._line_view = util.ImmutableListView(self._lines)
         self.code_model = None
 
 
@@ -59,11 +60,17 @@ class Buffer(object):
         :type modification: TextModification
         '''
 
+    @Signal
+    def lines_added_or_removed(self, index, count):
+        '''
+        This signal may help make view implementations more efficient.
+        '''
+
 
     @property
     def lines(self):
-        return util.ImmutableListView(self._lines)
-    
+        return self._line_view
+
     def insert(self, pos, text):
         if not text:
             return
@@ -86,7 +93,6 @@ class Buffer(object):
         # Out[16]: 1073741828
         #
         # This, of course, does not cover the case of multi-line insertions.
-        
 
         if len(text_lines) == 0:
             result = (y, x)
@@ -102,16 +108,18 @@ class Buffer(object):
 
             self._lines = self._lines[:y+1] + \
                 [AttributedString(line) for line in text_lines[1:]] + self._lines[y+1:]
+            self._line_view = util.ImmutableListView(self._lines)
 
             y += len(text_lines)-1
-            
+
             line = self._lines[y]
             line.append(removed_text)
 
             result = (y, len(removed_text))
 
         self.text_modified(TextModification(pos=pos, insert=str(text)))
-
+        if len(text_lines) > 1:
+            self.lines_added_or_removed(y, len(text_lines))
     @property
     def text(self):
         return '\n'.join(line.text for line in self._lines)
@@ -134,6 +142,9 @@ class Buffer(object):
             del self._lines[sy+1:ey+1]
 
         self.text_modified(TextModification(pos=pos, remove=text))
+
+        if sy != ey:
+            self.lines_added_or_removed(ey, sy - ey)
 
     def execute(self, modification):
         if modification.insert:

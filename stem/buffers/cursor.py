@@ -4,13 +4,15 @@ import re
 
 class Cursor(object):
 
+    __slots__ = 'manip', 'buffer', '_pos', '_col_affinity', 'chirality', '__weakref__'
+
     class Chirality:
         Left = 0  # Inserting text at cursor doesn't move it.
         Right = 1 # Inserting text at cursor moves it.
 
     def __init__(self, manip, pos=(0,0)):    
         self.manip = manip
-        
+
         # allow either a buffer or a buffer manipulator through duck typing
         self.buffer = getattr(manip, 'buffer', manip)
 
@@ -90,12 +92,44 @@ class Cursor(object):
 
         If either end of the document is reached, the generator will raise StopIteration.
         '''
-        while True:
-            if not self.at_end:
+
+        # Optimization: hoisted loop invariants, manually, of course
+        # Let's hope PyQt gets ported to PyPy soon.
+
+        if stride == 0:
+            yield self.rchar
+        elif stride > 0:
+            while True:
+                if self.at_end:
+                    break
+                else:
+                    yield self.rchar
+                # inlined from self.advance(stride)
+                y, x = value = self.buffer.calculate_pos(self._pos, stride)
+                self._col_affinity = None
+                lines = self.buffer._lines
+
+                if y >= 0 and x >= 0 and y < len(lines):
+                    line = lines[y]
+                    if x <= len(line._text):
+                        self._pos = value
+
+        else:
+            if self.at_end:
+                self.advance(stride)
+            while True:
                 yield self.rchar
-            if stride == 0 or stride > 0 and self.at_end or stride < 0 and self.at_start:
-                break
-            self.advance(stride)
+                if self.at_start:
+                    break
+                # inlined from self.advance(stride)
+                y, x = value = self.buffer.calculate_pos(self._pos, stride)
+                self._col_affinity = None
+                lines = self.buffer._lines
+
+                if y >= 0 and x >= 0 and y < len(lines):
+                    line = lines[y]
+                    if x <= len(line._text):
+                        self._pos = value
 
     def walklines(self, stride):
         '''
@@ -154,7 +188,12 @@ class Cursor(object):
         '''
         The character to the right of the cursor.
         '''
-        return self.buffer.span_text(self.pos, offset=1)
+        lt = self.line.text
+        x = self.x
+        if x < len(lt):
+            return lt[x] # fast path
+        else:
+            return self.buffer.span_text(self.pos, offset=1)
         
     @property
     def rchar_attrs(self):
@@ -221,7 +260,7 @@ class Cursor(object):
         y, x = value
         if y < 0:
             raise IndexError('Line number must be positive')
-        
+
         try:
             line = self.buffer.lines[y]
         except IndexError:
@@ -231,6 +270,19 @@ class Cursor(object):
                 raise IndexError('Column {}/{}'.format(x, len(line)))
             else:
                 self._pos = value
+
+    def _set_pos_fast(self, value):
+        self._col_affinity = None
+        y, x = value
+        if y < 0 or x < 0:
+            return
+
+        lines = self.buffer._lines
+        if y < len(lines):
+            line = lines[y]
+            if x <= len(line.text):
+                self._pos = value
+
 
     def insert(self, text):        
         self.manip.execute(TextModification(pos=self.pos, insert=text))
@@ -255,16 +307,26 @@ class Cursor(object):
         for y, line in enumerate(self.buffer.lines[self_y:other_y+1], self_y):
             start_x = self_x   if y == self_y   else 0
             end_x   = other_x  if y == other_y  else None
-            
+
             line.set_attributes(start_x, end_x, **{key: value})
-        
+
         return self
 
     def advance(self, n=1):
-        try:
-            self.pos = self.buffer.calculate_pos(self.pos, n)
-        except IndexError:
-            pass
+        # inlined from
+        # self._set_pos_fast(self.buffer.calculate_pos(self._pos, n))
+        y, x = value = self.buffer.calculate_pos(self._pos, n)
+        self._col_affinity = None
+        lines = self.buffer._lines
+
+        if y < 0 or x < 0:
+            return self
+
+
+        if y < len(lines):
+            line = lines[y]
+            if x <= len(line._text):
+                self._pos = value
 
         return self
 
