@@ -1,6 +1,7 @@
 import re
 import keyword
 import logging
+import textwrap
 
 from concurrent import futures
 
@@ -112,8 +113,12 @@ class YAMLCompletionResults(AbstractCompletionResults):
         if d is None:
             return []
         else:
+            if d.__doc__ is not None:
+                docs = [AttributedString(textwrap.dedent(d.__doc__))]
+            else:
+                docs = []
             return [AttributedString.join(': ', [AttributedString(d.name),
-                                                 AttributedString(d.type.__name__, lexcat='type')])]
+                                                 AttributedString(d.type.__name__, lexcat='type')])] + docs
         return f
         
     @property
