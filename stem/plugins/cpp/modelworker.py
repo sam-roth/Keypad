@@ -107,6 +107,7 @@ class Engine:
             str(filename).encode(), 
             line+1, col+1, 
             unsaved_files=self.encode_unsaved(unsaved),
+            include_brief_comments=True
         )
         
         self.last_completion_results = cr
