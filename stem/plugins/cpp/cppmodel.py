@@ -77,9 +77,9 @@ class CXXCodeModel(IndentRetainingCodeModel):
         self.cxx_config.value_changed.connect(self._update_configuration)
         
         try:
-            self.prox = AsyncServerProxy()
+            self.prox = AsyncServerProxy(InitWorkerTask(self.cxx_config))
             self.prox.start()
-            self.prox.submit(InitWorkerTask(self.cxx_config)).result()
+#             self.prox.submit().result()
         except RemoteError as exc:
             self.prox.shutdown()
             cause = exc.__cause__ or exc

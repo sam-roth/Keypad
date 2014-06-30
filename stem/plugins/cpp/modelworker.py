@@ -7,11 +7,12 @@ import textwrap
 import logging
 import os
 import re
-
+import faulthandler
 
 ClangOptions = (cindex.TranslationUnit.PARSE_INCLUDE_BRIEF_COMMENTS_IN_CODE_COMPLETION |
-                                  cindex.TranslationUnit.PARSE_CACHE_COMPLETION_RESULTS |
-                                  cindex.TranslationUnit.PARSE_PRECOMPILED_PREAMBLE)
+                cindex.TranslationUnit.PARSE_CACHE_COMPLETION_RESULTS |
+                cindex.TranslationUnit.PARSE_PRECOMPILED_PREAMBLE |
+                cindex.TranslationUnit.PARSE_INCOMPLETE)
 ClangHeaderOptions = ClangOptions | cindex.TranslationUnit.PARSE_INCOMPLETE
 def expect(v, ty):
     if not isinstance(v, ty):
@@ -21,7 +22,7 @@ def expect(v, ty):
             tyname = t.__name__
         
         raise TypeError('Expected {} not {}'.format(tyname, type(v).__name__))
-            
+
 
 def tobytes(s):
     if s is None:
@@ -90,6 +91,7 @@ def _might_be_header(filename):
 
 class Engine:
     def __init__(self, config):
+        faulthandler.enable()
         assert isinstance(config, CXXConfig)
         self.config = config
 
