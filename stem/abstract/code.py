@@ -149,7 +149,7 @@ class AbstractCodeModel(metaclass=ABCMeta):
     call_tip_triggers = []
     open_braces = '([{'
     close_braces = ')]}'
-    statement_start = '{'
+    statement_start = '{}'
     reindent_triggers = '}'
     line_comment = '#'
 
@@ -240,6 +240,8 @@ class AbstractCodeModel(metaclass=ABCMeta):
         c = Cursor(self.buffer).move(pos)
         cur_line = c.y
 
+        no_align = c.line.text.strip().endswith(tuple(self.statement_start))
+
 
         for _ in c.walklines(-1):
             if c.searchline(r'^\s*$') is None:
@@ -259,7 +261,10 @@ class AbstractCodeModel(metaclass=ABCMeta):
 
 
         level = self.indent_level(c.y, cur_line=cur_line, timeout_ms=indent_level_timeout_ms)
-        col = self.alignment_column(pos, timeout_ms=brace_search_timeout_ms)
+        if no_align:
+            col = None
+        else:
+            col = self.alignment_column(pos, timeout_ms=brace_search_timeout_ms)
 
         return Indent(level, col)
 
