@@ -11,6 +11,7 @@ Submodules
    stem.buffers.buffer_manipulator
    stem.buffers.buffer_protector
    stem.buffers.cursor
+   stem.buffers.operator
    stem.buffers.selection
    stem.buffers.span
    stem.buffers.testutil

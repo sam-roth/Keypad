@@ -10,7 +10,6 @@ Submodules
    stem.plugins.cpp.cppmodel
    stem.plugins.cpp.modelworker
    stem.plugins.cpp.syntax
-   stem.plugins.cpp.tests
 
 Module contents
 ---------------

@@ -4,7 +4,7 @@ import re
 
 import pathlib
 
-from .cua_interaction           import CUAInteractionMode
+from .standard_interaction           import StandardInteractionMode
 from .diagnostics               import DiagnosticsController
 from ..                         import util
 from ..buffers                  import ModifiedCursor, Cursor, BufferManipulator, Buffer, Span, Region
@@ -94,7 +94,7 @@ class BufferController(Tagged, Responder):
         view.controller = self
 
         if provide_interaction_mode:
-            self.interaction_mode = CUAInteractionMode(self)
+            self.interaction_mode = StandardInteractionMode(self)
         else:
             self.interaction_mode = None
             

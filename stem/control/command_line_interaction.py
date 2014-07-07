@@ -1,7 +1,7 @@
 
 import traceback
 
-from .cua_interaction import CUAInteractionMode, isprint
+from .standard_interaction import StandardInteractionMode, isprint
 from ..core import Signal, Keys, errors
 from ..core.notification_queue import run_in_main_thread
 from ..core.signal import ClassSignal
@@ -43,7 +43,7 @@ class CommandLineSelection(Selection):
 
 
 
-class CommandLineInteractionMode(CUAInteractionMode):
+class CommandLineInteractionMode(StandardInteractionMode):
     def __init__(self, controller):
         super().__init__(controller)
         self.keybindings.update([

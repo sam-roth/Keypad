@@ -19,6 +19,7 @@ Submodules
    stem.core.command
    stem.core.commands
    stem.core.conftree
+   stem.core.default_code_model
    stem.core.errors
    stem.core.executors
    stem.core.filetype
@@ -33,7 +34,6 @@ Submodules
    stem.core.structure
    stem.core.swapfile
    stem.core.tag
-   stem.core.tests
    stem.core.timer
 
 Module contents

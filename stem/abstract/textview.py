@@ -112,7 +112,7 @@ class AbstractTextView(metaclass=abc.ABCMeta):
     @abc.abstractproperty
     def modelines_visible(self):
         '''
-        A boolean value indicating whether the modelines (e.g., ``... [CUAInteractionMode]``)
+        A boolean value indicating whether the modelines (e.g., ``... [StandardInteractionMode]``)
         should be visible.
         '''
 

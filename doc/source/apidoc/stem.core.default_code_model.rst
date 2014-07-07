@@ -1,7 +1,7 @@
-stem.control.cmdline_history module
+stem.core.default_code_model module
 ===================================
 
-.. automodule:: stem.control.cmdline_history
+.. automodule:: stem.core.default_code_model
     :members:
     :undoc-members:
     :show-inheritance:

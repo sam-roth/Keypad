@@ -16,8 +16,11 @@ Submodules
 
 .. toctree::
 
+   stem.plugins.cmake
+   stem.plugins.cmdline_history
    stem.plugins.comments
    stem.plugins.filechange
+   stem.plugins.rst
    stem.plugins.search
    stem.plugins.server
    stem.plugins.templates

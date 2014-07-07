@@ -12,6 +12,7 @@ Subpackages
     stem.core
     stem.plugins
     stem.qt
+    stem.testutil
     stem.util
 
 Submodules
@@ -22,7 +23,6 @@ Submodules
    stem.api
    stem.config
    stem.options
-   stem.tests
 
 Module contents
 ---------------

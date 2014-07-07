@@ -23,7 +23,7 @@ def isprint(ch):
         return False
 
 
-class CUAInteractionMode(Responder):
+class StandardInteractionMode(Responder):
     def make_cursor_move(self, fn):
         def result(evt):
             if evt.key.modifiers & Modifiers.Shift:

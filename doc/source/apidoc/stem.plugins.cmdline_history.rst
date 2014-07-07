@@ -1,7 +1,7 @@
-stem.control.cua_interaction module
+stem.plugins.cmdline_history module
 ===================================
 
-.. automodule:: stem.control.cua_interaction
+.. automodule:: stem.plugins.cmdline_history
     :members:
     :undoc-members:
     :show-inheritance:
