@@ -93,7 +93,7 @@ class Diagnostic(object):
         self.severity = severity
         self.text = text
         self.ranges = ranges
-    
+
     def __repr__(self):
         return 'Diagnostic{!r}'.format((
             self.severity,
@@ -107,17 +107,43 @@ class Indent:
         self.align = align
     def __repr__(self):
         return 'Indent{!r}'.format((self.level, self.align))
-    
+
+_different = object()
+
+def _get_is_included(c, exclude):
+    if exclude is _different:
+        for k, v in c.rchar_attrs:
+            if k == 'lexcat':
+                orig_lexcat = v
+                break
+        else:
+            orig_lexcat = None
+        def is_included():
+            for k, v in c.rchar_attrs:
+                if k == 'lexcat':
+                    return v == orig_lexcat
+            else:
+                return orig_lexcat is None
+    else:
+        def is_included():
+            for k, v in c.rchar_attrs:
+                if k == 'lexcat':
+                    return v not in exclude
+            else:
+                return True
+    return is_included
+
+
 class AbstractCodeModel(metaclass=ABCMeta):   
     '''
     The code model represents the editor's knowledge of the semantics of the
     buffer contents.
-    
+
     :ivar buffer:      The buffer that this code model is built from.
     :ivar path:        The path where the buffer will be saved
     :ivar conf:        The object containing configuration information for this object.
     '''
-    
+
     RelatedNameType = RelatedNameType
     completion_triggers = ['.']
     call_tip_triggers = []
@@ -126,7 +152,11 @@ class AbstractCodeModel(metaclass=ABCMeta):
     statement_start = '{'
     reindent_triggers = '}'
     line_comment = '#'
-    
+
+    #: Exclude all differing lexcats when searching for open brace. (Use this in
+    #: place of the `exclude` tuple.)
+    different = _different
+
     def __init__(self, buff, conf):
         '''
         :type buff: stem.buffers.Buffer
@@ -140,26 +170,22 @@ class AbstractCodeModel(metaclass=ABCMeta):
         '''
         Return the indentation level as a multiple of the tab stop for a given line.
         '''
-        
-    def open_brace_pos(self, pos, exclude=('literal',), time_limit_ms=50):
+
+    def open_brace_pos(self, pos, exclude=_different, time_limit_ms=50):
         '''
         Return the location of the closing brace for a given location in the text.
         '''
 
-        c = Cursor(self.buffer).move(pos).advance(-1)
+        c = Cursor(self.buffer).move(pos)
 
         open_braces = self.open_braces
         close_braces = self.close_braces
 
-        def is_included():
-            for k, v in c.rchar_attrs:
-                if k == 'lexcat':
-                    return v not in exclude
-            else:
-                return True
+        is_included = _get_is_included(c, exclude)
+        c.advance(-1)
 
         level = 1
-        for i, ch in enumerate(time_limited(c.walk(-1), ms=time_limit_ms)):
+        for ch in time_limited(c.walk(-1), ms=time_limit_ms):
             if ch in open_braces:
                 if is_included():
                     level -= 1
@@ -168,21 +194,25 @@ class AbstractCodeModel(metaclass=ABCMeta):
                     level += 1
 
             if level == 0:
-                if i == 0:
-                    return None
                 return c.pos
         else:
             return None
 
-    def close_brace_pos(self, pos, exclude=('literal',), time_limit_ms=50):
+    def close_brace_pos(self, pos, exclude=_different, time_limit_ms=50):
 
-        c = Cursor(self.buffer).move(pos).advance(1)
+        c = Cursor(self.buffer).move(pos)
 
+        open_braces = self.open_braces
+        close_braces = self.close_braces
+
+        is_included = _get_is_included(c, exclude)
+        c.advance(1)
         level = 1
+
         for ch in time_limited(c.walk(1), ms=time_limit_ms):
-            if ch in self.close_braces and dict(c.rchar_attrs).get('lexcat') not in exclude:
+            if ch in self.close_braces and is_included():
                 level -= 1
-            elif ch in self.open_braces and dict(c.rchar_attrs).get('lexcat') not in exclude:
+            elif ch in self.open_braces and is_included():
                 level += 1
 
             if level == 0:

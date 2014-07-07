@@ -169,7 +169,13 @@ class Cursor(object):
             raise RuntimeError("Can't find opening brace without code model.")
 
         new_pos = self.buffer.code_model.open_brace_pos(self.pos, time_limit_ms=timeout_ms)
-
+        if new_pos == self.pos:
+            self.advance(-1)
+            new_pos = self.buffer.code_model.open_brace_pos(self.pos, time_limit_ms=timeout_ms)
+            if new_pos is None:
+                self.advance(1)
+            elif new_pos == self.pos:
+                new_pos = None
         if new_pos is None:
             raise RuntimeError("Already at outermost brace.")
 
