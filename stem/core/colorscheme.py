@@ -5,17 +5,17 @@ import random
 import logging
 
 class Colorscheme(object):
-    
+
     fg = Color.from_hex('#000')
     bg = Color.from_hex('#FFF')
 
     nontext_bg = Color.from_hex('#333')
 
     cur_line_bg = bg
-    
+
     selection_bg = fg
     selection_fg = bg
-    
+
     fallback_sat = 0.5
     fallback_val = 128
 
@@ -40,16 +40,16 @@ class Colorscheme(object):
 
     @deprecated
     def emphasize(self, color, steps):
-        
+
         color = Color.from_hex(color)
         h,s,v = color.hsv
-        
+
         v = (v + 16 * steps) % 256
-        
+
         return Color.from_hsv(h, s, v, color.alpha)
 
     def emphasize_pair(self, fg, bg, steps):
-        
+
         steps *= 16
 
         bh, bs, bv = Color(bg).hsv
@@ -81,7 +81,7 @@ class Colorscheme(object):
             else:
                 bv = max_v
                 fv = min_v
-        
+
         else:
             # admit defeat
             pass
@@ -92,6 +92,9 @@ class Colorscheme(object):
     def cursor_color(self):
         return self.fg
 
+    @property
+    def cursor_inverse_color(self):
+        return self.bg
 
     @property
     def lexcats(self):
@@ -159,7 +162,7 @@ class SolarizedDark(AbstractSolarized):
 
     cur_line_bg = AbstractSolarized._base02
 
-    nontext_bg = extrap_value(AbstractSolarized._base02, 
+    nontext_bg = extrap_value(AbstractSolarized._base02,
                               AbstractSolarized._base03)
 
 
@@ -201,7 +204,7 @@ class SolarizedLight(AbstractSolarized):
         lc = self.lexcats
 
         lc.update(comment=dict(color=self._base1),
-                  search=dict(bgcolor=self._yellow, color=self._base01))
+                  search=dict(bgcolor=self._yellow, color=self.selection_fg))
         for key in bold:
             lc[key].update(bold=True)
 
@@ -231,14 +234,14 @@ class EnhancedContrastMixin:
                 color = Color.from_hex(v['color'])
                 l, a, b = color.lab
 
-                if abs(l - bg_lightness) < min_contrast: 
+                if abs(l - bg_lightness) < min_contrast:
                     if l > bg_lightness:
                         # light foreground color too dark
                         v['color'] = Color.from_lab(l - abs(l - bg_lightness) + min_contrast, a, b)
                     else:
                         # dark foreground color too light
                         v['color'] = Color.from_lab(l + abs(l - bg_lightness) - min_contrast, a, b)
-                        
+
 class TextMateTheme(Colorscheme):
     '''
     Use a TextMate/Sublime Text color scheme.
