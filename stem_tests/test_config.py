@@ -2,9 +2,14 @@
 import unittest
 import warnings
 
-from .nconfig import Config, Settings, Field, EnumField, SetField, SafetyContext, Conversions
+from stem.core.nconfig import (Config, 
+                               Settings,
+                               Field,
+                               EnumField,
+                               SetField,
+                               SafetyContext,
+                               Conversions)
 
-# Conversions.register(tuple, lambda lst: tuple(x * 2 for x in lst))
 
 class Settings1(Settings):
     _ns_ = 'stem.test.Settings1'

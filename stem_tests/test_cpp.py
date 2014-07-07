@@ -1,11 +1,35 @@
+'''
+Test the C++ code model.
+
+
+If these tests fail on your machine, you may need to add a test_stemrc on your PYTHONPATH
+with the appropriate configuration. Here's what mine looks like::
+
+    from stem.api import Config
+    from stem.plugins.cpp.config import CXXConfig
+    cxxsettings = CXXConfig.from_config(Config.root)
+    cxxsettings.clang_library = '/Library/Developer/CommandLineTools/usr/lib/libclang.dylib'
+    
+'''
+
+
+
 import pathlib, sys
-thisfile = pathlib.Path(__file__).absolute()
+
+from stem.plugins import cpp
+
+thisfile = pathlib.Path(cpp.__file__).absolute()
 sys.path.insert(0, str(thisfile.parent.parent.parent.parent / 'third-party'))
+
+try:
+    import test_stemrc
+except ImportError:
+    pass
 
 import unittest
 
-from .cppmodel import CXXCodeModel, CXXCompletionResults
-from .config import CXXConfig
+from stem.plugins.cpp.cppmodel import CXXCodeModel, CXXCompletionResults
+from stem.plugins.cpp.config import CXXConfig
 from stem.core.nconfig import Config
 from stem.buffers import Buffer, Cursor, Span
 from stem.abstract.code import RelatedName, Diagnostic
@@ -14,8 +38,6 @@ import pprint
 import sys
 
 
-# cxx_config = CXXConfig.from_config(Config.root)
-# cxx_config.clang_library = '/Library/Developer/CommandLineTools/usr/lib/libclang.dylib'
 
 def add_to_buffer(buff, text):
     result = []
@@ -32,11 +54,11 @@ class TestCXXCodeModel(unittest.TestCase):
         cls.buffer = Buffer()
         cls.cmodel = CXXCodeModel(cls.buffer, Config.root)
         cls.cmodel.path = '/tmp/test.cpp'
-        
+
     @classmethod
     def tearDownClass(cls):
         cls.cmodel.dispose()
-        
+
     def setUp(self):
         self.buffer.remove((0,0), len(self.buffer.text))
 

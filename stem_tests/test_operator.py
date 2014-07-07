@@ -25,12 +25,12 @@ efgh
 mnop
 '''
 
-from .buffer import Buffer
-from .operator import indent, enclosed_span, line_region, prepend, replace
-from .cursor import Cursor
-from .span import Span
-from ..core.default_code_model import DefaultCodeModel
-from . import testutil
+from stem.buffers.buffer import Buffer
+from stem.buffers.operator import indent, enclosed_span, line_region, prepend, replace
+from stem.buffers.cursor import Cursor
+from stem.buffers.span import Span
+from stem.core.default_code_model import DefaultCodeModel
+from stem.buffers import testutil
 import textwrap
 
 def todot(x):

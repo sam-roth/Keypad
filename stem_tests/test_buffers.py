@@ -2,8 +2,8 @@
 
 import unittest
 
-from .buffers import Buffer, Span, Region, Cursor, TextModification, BufferHistory
-from .core import write_atomically, errors
+from stem.buffers import Buffer, Span, Region, Cursor, TextModification, BufferHistory
+from stem.core import write_atomically, errors
 
 
 import random
@@ -21,26 +21,26 @@ def make_random_change(prng, buff):
     :type prng: random.Random
     :type buff: stem.buffers.Buffer
     '''
-    
+
     buflen = len(buff.text)
-    
+
     start_idx = prng.randrange(buflen)
     start_pos = buff.calculate_pos((0,0), start_idx)
-    
+
     if prng.randrange(2):
         return TextModification(pos=start_pos, 
                                 insert=random_printable(prng))
     else:
         end_idx = prng.randrange(start_idx, buflen)
         rm_len = end_idx - start_idx
-        
+
         return TextModification(pos=start_pos,
                                 remove=buff.span_text(start_pos,
                                                       offset=rm_len))
-        
+
 
 class TestBufferHistory(unittest.TestCase):
-    
+
     def setUp(self):
         self.buffer = Buffer()
         self.buffer.insert((0,0), buff_text)

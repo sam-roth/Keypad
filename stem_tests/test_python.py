@@ -1,18 +1,17 @@
 
 
 import unittest
-from .pymodel import PythonCodeModel, PythonCompletionResults, RelatedName
+from stem.plugins.pymodel.pymodel import PythonCodeModel, PythonCompletionResults, RelatedName
 from stem.abstract.code import AbstractCallTip
 from stem.core.conftree import ConfTree
 from stem.buffers import Buffer, Cursor, Span
-
+from stem.api import Config
 
 class TestPythonCodeModel(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        cls.config = ConfTree()
         cls.buffer = Buffer()
-        cls.cmodel = PythonCodeModel(cls.buffer, cls.config)
+        cls.cmodel = PythonCodeModel(cls.buffer, Config.root)
         cls.cmodel.path = '/tmp/test.py'
         
     @classmethod
