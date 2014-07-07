@@ -98,11 +98,21 @@ def cpplexer():
     HEX         = r'[a-fA-F0-9]'
     
     IncludeString = regex(r'<[^>]*>', STRING)
-    
-    Preproc = region(guard=regex(r'^\s*#\s*\w+'),
-                     exit=regex('$'),
+
+    PreprocIf = region(guard=regex(r'^\s*#if(def)?'),
+                       exit=regex(r'^\s*#endif'),
+                       contains=[])
+
+    PreprocComment = region(guard=regex(r'^\s*#if\s+0$'),
+                            exit=regex(r'^\s*#endif'),
+                            contains=[PreprocIf],
+                            attrs=COMMENT)
+
+    Preproc = region(guard=regex(r'^\s*#(?!if\s+0)\s*\w+'),
+                     exit=regex(r'(?<!\\)$'),
                      contains=[IncludeString],
                      attrs=PREPROC)
+
 
 
     Keyword = keyword(keywords, KEYWORD) 
@@ -172,6 +182,7 @@ def cpplexer():
             exit=None,
             contains=[RawString, DQString, Keyword, CPPComment, BuiltinNames, QualName,
                       CComment, DoxyCPPComment, DoxyCComment,
+                      PreprocComment,
                       Preproc, Type, HexLit, DecLit, FloatLit, CharLit,
                       CtxKeywords]
         )
