@@ -3,7 +3,7 @@ import re
 from stem.api import interactive, autoconnect, BufferController
 from stem.control.interactive import run as run_interactive
 from stem.buffers import Cursor, Span
-
+from stem.control.command_line_interaction import writer as cmdline_writer
 
 class RegexSearcher(object):
     '''
@@ -35,7 +35,7 @@ class RegexSearcher(object):
 
     def _on_buffer_change(self, chg):
         self._cached_text = None
-    
+
     @property
     def buffer_text(self):
         if self._cached_text is None:
@@ -59,7 +59,7 @@ class RegexSearcher(object):
         yield from map(self._translate_match, pattern.finditer(self.buffer_text))
 
 
-    
+
 
     def search(self, pos, pattern=None, backwards=False):
         index = self.buff.calculate_index(pos)
@@ -94,6 +94,40 @@ def _get_searcher(bufctl):
 
 from stem.core import errors
 
+@interactive('substitute', 's')
+def substitute(bctl: BufferController, *pattern):
+    '''
+    : s[ubstitute] <pattern>/<replacement>
+
+    Substitute a regular expression with a replacement in the selected
+    region, if there is one, or the entire document.
+
+    Example:
+
+    : s \\bboost::(regex_\\w+\\b)/std::\\1
+    '''
+    pattern = ' '.join(pattern)
+    pattern, replacement = pattern.split('/')
+
+    with bctl.history.transaction():
+        text = bctl.selection.text or bctl.buffer.text
+        pos = bctl.selection.pos
+        newtext, changes = re.subn(pattern, replacement, text)
+        if bctl.selection.text:
+            with bctl.selection.select():
+                bctl.selection.text = newtext
+        else:
+            c = Cursor(bctl.buffer)
+            (c
+             .remove_to(c.clone().last_line().end())
+             .insert(newtext))
+            bctl.selection.pos = pos
+
+        cmdline_writer.write('Made {} replacements.\n'.format(changes))
+
+
+
+
 @interactive('find', 'f')
 def find(bufctl: BufferController, *pattern):
     '''
@@ -102,12 +136,12 @@ def find(bufctl: BufferController, *pattern):
     Find the match of the given pattern following the cursor. (Uses Python
     regex syntax.) Omitting the pattern repeats the previous search.
 
-    Example: 
-    
+    Example:
+
     : find boost((::|/|\.)\w+)*
     '''
     assert isinstance(bufctl, BufferController)
-    
+
     searcher = _get_searcher(bufctl)
     pattern = ' '.join(pattern) if pattern else None
     res = searcher.search(bufctl.canonical_cursor.pos,
@@ -128,18 +162,18 @@ def findall(bufctl: BufferController, *pattern):
     : findall|fa[ll] [<pattern>...]
 
     Highlight all matches of the given pattern. The highlighting will be
-    cleared upon the next edit. Omitting the pattern is the same as using the 
+    cleared upon the next edit. Omitting the pattern is the same as using the
     previously used pattern.
 
     '''
     searcher = _get_searcher(bufctl)
     pattern = ' '.join(pattern) if pattern else None
-    
+
 
     def make_span(y, x, length):
         start = Cursor(bufctl.buffer).move(y, x)
         end = Cursor(bufctl.buffer).move(y, x).advance(length)
-    
+
         end.chirality = end.Chirality.Left
 
         return Span(start, end)
@@ -151,7 +185,7 @@ def findall(bufctl: BufferController, *pattern):
          'search')
         for ((y, x), length) in searcher.searchall(pattern)
     ])
-    
+
 
 @interactive('findclear', 'fc')
 def findclear(bufctl: BufferController):
@@ -170,3 +204,4 @@ def findclear(bufctl: BufferController):
              lambda tags: tags.get('regex_searcher'))
 def buffer_modified(bufctl, chg):
     findclear(bufctl)
+
