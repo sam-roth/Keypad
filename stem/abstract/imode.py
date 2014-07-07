@@ -1,6 +1,8 @@
 
 import abc
 from stem.core.attributed_string import AttributedString
+from stem.buffers.cursor import Cursor
+from stem.buffers.span import Span
 
 class AbstractInteractionMode(metaclass=abc.ABCMeta):
 
@@ -20,15 +22,18 @@ class AbstractInteractionMode(metaclass=abc.ABCMeta):
             self.buffer_controller.interaction_mode = self
 
         v = self._view
-        self.__connections = [(v.key_press,       self._on_key_press),
-                              (v.mouse_down_char, self._on_mouse_down),
-                              (v.mouse_move_char, self._on_mouse_move)]
+        self.__connections = [(v.key_press,            self._on_key_press),
+                              (v.mouse_down_char,      self._on_mouse_down),
+                              (v.mouse_move_char,      self._on_mouse_move),
+                              (v.input_method_preedit, self._on_input_method_preedit),
+                              (v.input_method_commit,  self._on_input_method_commit)]
 
 
         for src, dst in self.__connections:
             src.connect(dst)
 
         self._show_default_modeline()
+        self.__preedit_span = None
 
     def _show_modeline(self, text):
         if not isinstance(text, AttributedString):
@@ -105,5 +110,29 @@ class AbstractInteractionMode(metaclass=abc.ABCMeta):
         pass
 
 
+    # overrideable methods
+    def _on_input_method_preedit(self, text):
+        c = self._selection.insert_cursor
+        with c.manip.history.scratchpad():
+            sc = c.clone()
+            sc.chirality = Cursor.Chirality.Left
+            c.insert(text)
+            self.__preedit_span = Span(sc, c)
+            self.__preedit_span.set_attributes(lexcat='search')
+        self._show_default_modeline()
+
+    def _on_input_method_commit(self, 
+                                preedit_text,
+                                replace_start, replace_stop,
+                                replace_text):
+        c = self._selection.insert_cursor
+        with c.manip.history.transaction():
+            if self.__preedit_span is not None:
+                self.__preedit_span.text = replace_text
+                self.__preedit_span.set_attributes(lexcat=None)
+                self.__preedit_span = None
+            else:
+                c.insert(replace_text)
+        self._show_default_modeline()
 
 
