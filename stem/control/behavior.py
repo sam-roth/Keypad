@@ -21,7 +21,7 @@ def defer(_: object, *args):
     action()
 
 
-@interactive('idecl')
+@interactive('idecl', 'which')
 def find_interactive_declaration(_: object, interactive_name: 'Interactive'):
     '''
     idecl <interactive_name>
@@ -37,19 +37,33 @@ def find_interactive_declaration(_: object, interactive_name: 'Interactive'):
     '''
 
     from .command_line_interaction import writer
-    
+
     for ty, handler in dispatcher.find_all(interactive_name):
         code = handler.__code__
-        
-        
+
+
         filename = code.co_filename
         linenum = code.co_firstlineno
-        
+
         tyname = ty.__name__
 
         writer.write('{interactive_name}({tyname}, ...)\n  {filename}:{linenum}'.format(**locals()))
 
-@interactive('ihelp', 'ih')
+@interactive('iedit')
+def open_interactive_declaration(_: object, interactive_name: 'Interactive'):
+    '''
+    Open the first declaration for the given interactive command.
+    '''
+    from .command_line_interaction import writer
+    result = next(iter(dispatcher.find_all(interactive_name)), None)
+    if result is None:
+        writer.write('No command found: %r' % interactive_name)
+    else:
+        ty, handler = result
+        code = handler.__code__
+        interactive.run('edit', code.co_filename, code.co_firstlineno)
+
+@interactive('help', 'ihelp', 'ih')
 def interactive_command_help(_: object, interactive_name: 'Interactive'):
     '''
     ih[elp] <interactive_name>
