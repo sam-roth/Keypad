@@ -137,6 +137,14 @@ class AbstractTextView(metaclass=abc.ABCMeta):
         '''
 
     @abc.abstractproperty
+    def cursor_visible(self):
+        pass
+
+    @cursor_visible.setter
+    def cursor_visible(self, value):
+        pass
+
+    @abc.abstractproperty
     def first_line(self):
         '''
         The first visible line.

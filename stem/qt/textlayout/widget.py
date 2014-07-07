@@ -162,10 +162,11 @@ class TextViewProxyMixin:
         view._viewport.input_method_preedit.connect(self.input_method_preedit)
         view._viewport.input_method_commit.connect(self.input_method_commit)
 
+        self.__cursor_visible = True
     @property
     def modelines(self):
         return self._view.text_viewport.extra_lines
-    
+
     @modelines.setter
     def modelines(self, value):
         self._view.text_viewport.extra_lines = value
@@ -198,8 +199,11 @@ class TextViewProxyMixin:
 
     def _set_cursor_pos(self, value):
         self.__cursor_pos = value
+        ty = Caret.Type.bar if self.cursor_visible else Caret.Type.off
+
         self._view._viewport.set_carets('TextViewProxy.cursor',
-                                        [Caret(Caret.Type.bar, value)] if value is not None else [])
+                                        [Caret(ty, value)] 
+                                        if value is not None else [])
 
     @property
     def first_line(self):
@@ -218,6 +222,15 @@ class TextViewProxyMixin:
 
     def update(self):
         self._view._viewport.update()
+
+    @property
+    def cursor_visible(self):
+        return self.__cursor_visible
+
+    @cursor_visible.setter
+    def cursor_visible(self, value):
+        self.__cursor_visible = value
+        self._set_cursor_pos(self.cursor_pos)
 
 class TextViewProxy(TextViewProxyMixin, AbstractTextView):
     pass
