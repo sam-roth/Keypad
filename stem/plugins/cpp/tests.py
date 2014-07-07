@@ -14,8 +14,8 @@ import pprint
 import sys
 
 
-cxx_config = CXXConfig.from_config(Config.root)
-cxx_config.clang_library = '/Library/Developer/CommandLineTools/usr/lib/libclang.dylib'
+# cxx_config = CXXConfig.from_config(Config.root)
+# cxx_config.clang_library = '/Library/Developer/CommandLineTools/usr/lib/libclang.dylib'
 
 def add_to_buffer(buff, text):
     result = []
