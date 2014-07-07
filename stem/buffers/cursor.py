@@ -83,6 +83,22 @@ class Cursor(object):
             return span.Span(self.clone().move(col=match.start(group)),
                              self.clone().move(col=match.end(group)))
 
+    def line_region_matching(self, regex, flags=0, group=0):
+        spans = []
+        from . import span
+        for match in re.finditer(regex, self.line.text, flags):
+            spans.append(span.Span(self.clone().move(col=match.start(group)),
+                                   self.clone().move(col=match.end(group))))
+        return span.Region(*spans)
+        
+    def symmetric_walk(self, stride):
+        if stride >= 0:
+            yield from self.walk(stride)
+        else:
+            for _ in self.walk(stride):
+                yield self.lchar
+
+
     def walk(self, stride):
         '''
         Yield successive characters, moving the cursor in the direction implied

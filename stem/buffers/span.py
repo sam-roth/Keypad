@@ -126,6 +126,10 @@ class Span(BasicSpan):
         self.start_curs.insert(text)
         self.start_curs.move(p)
 
+    def clone(self):
+        return Span(self.start_curs.clone(),
+                    self.end_curs.clone())
+
     def __getitem__(self, key):
         if not isinstance(key, slice):
             key = slice(key, key + 1)
@@ -152,7 +156,9 @@ class Region(object):
                 if span1.end_curs.pos > span2.start_curs.pos:
                     logging.error('spans in regions must be exclusive: %r', self)
                     assert False, 'spans in regions must be exclusive'
-        
+
+    def clone(self):
+        return Region(*(s.clone() for s in self.spans))
 
     def __contains__(self, pos):
         return any(pos in x for x in self.spans)
@@ -236,3 +242,9 @@ class Region(object):
 
     def __eq__(self, other):
         return self.spans == other.spans
+
+
+    def remove(self):
+        for span in self.spans:
+            span.remove()
+
