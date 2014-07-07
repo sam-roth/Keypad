@@ -19,26 +19,6 @@ Stem is a text editor written in Python with a flexible plugin system.
 * **Lack of Dogma:** Stem is an editor for everyone. There's no right or wrong
   way of using it.
 
-## Plugin Example: Autoindent
-
-This is a plugin that maintains the indentation level when moving to a new line.
-
-```
-#!python
-@autoconnect(BufferController.user_changed_buffer, 
-             lambda tags: tags.get('autoindent'))           # handler for buffers with tag "autoindent"
-def autoindent(controller, chg):
-    if chg.insert.endswith('\n'):                           # user added a line
-        beg_curs = Cursor(controller.buffer).move(*chg.pos) # move to the start of the inserted text
-        indent = re.match(r'^\s*', beg_curs.line.text)      # find the indent of the original line
-        if indent is not None:
-            Cursor(controller.buffer)\                      # copy the indent to the new line
-                .move(*chg.insert_end_pos)\
-                .insert(indent.group(0))
-
-
-```
-
 ## Screenshot ([more](https://bitbucket.org/saroth/stem/wiki/Screenshots))
 
 ![Editing Python Code](https://bitbucket.org/saroth/stem/wiki/screenshots/overview.png)
