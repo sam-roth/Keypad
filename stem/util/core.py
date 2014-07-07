@@ -122,9 +122,11 @@ def trace(func):
             raise
         else:
             trace_logger.debug(ind + '  returned %r', result)
+            return result
         finally:
             _trace_indent -= 1
             trace_logger.debug('exiting %s', name)
+
 
     return wrapper
 
