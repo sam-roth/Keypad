@@ -62,7 +62,7 @@ class RelatedNameType(IntEnum):
 class RelatedName(object):
 
     Type = RelatedNameType
-            
+
     def __init__(self, type_, path, pos, name):
         self.type = type_
         self.path = path
@@ -140,7 +140,7 @@ class AbstractCodeModel(metaclass=ABCMeta):
         '''
         Return the indentation level as a multiple of the tab stop for a given line.
         '''
-
+        
     def open_brace_pos(self, pos, exclude=('literal',), time_limit_ms=50):
         '''
         Return the location of the closing brace for a given location in the text.
@@ -156,10 +156,10 @@ class AbstractCodeModel(metaclass=ABCMeta):
                 if k == 'lexcat':
                     return v not in exclude
             else:
-                return False
+                return True
 
         level = 1
-        for ch in time_limited(c.walk(-1), ms=time_limit_ms):
+        for i, ch in enumerate(time_limited(c.walk(-1), ms=time_limit_ms)):
             if ch in open_braces:
                 if is_included():
                     level -= 1
@@ -168,6 +168,8 @@ class AbstractCodeModel(metaclass=ABCMeta):
                     level += 1
 
             if level == 0:
+                if i == 0:
+                    return None
                 return c.pos
         else:
             return None
