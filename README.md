@@ -11,8 +11,7 @@ Stem is a text editor written in Python with a flexible plugin system.
 ## Design Principles
 
 * **Hackability:** Unlike heavyweight IDEs such as Eclipse, Stem makes plugins
-  simple plugins easy to write. There's an example on this page, and some
-  larger ones in the `plugins` directory.
+  simple plugins easy to write. 
 * **Flexibility:** Stem uses a model-view-controller architecture to isolate
   the GUI from the text editing logic, allowing for the possibility of
   additional frontends, such as a Curses frontend. 
