@@ -191,6 +191,8 @@ class StandardInteractionMode(Responder):
             (Keys.down      .optional(Shift),   movm('down', 1)),
             (Keys.backspace .optional(Shift),   movm('backspace', ignore_shift=True)),
             (Keys.delete    .optional(Shift),   movm('delete', 1, ignore_shift=True)),
+            (Keys.ctrl.return_,                 movm('line_break')),
+            (Keys.ctrl.enter,                   movm('line_break')),
             (Keys.home      .optional(Shift),   movm('home')),
             (Keys.end       .optional(Shift),   movm('end')),
             (Keys.ctrl.a,                       select_all),

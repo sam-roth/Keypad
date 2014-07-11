@@ -323,6 +323,13 @@ class Selection(object):
     def backspace(self):
         return self.delete(-1)
 
+    def line_break(self):
+        '''
+        Breaks and indents new line without aligning it.
+        '''
+
+        self.replace('\n')
+
 
 
 class BacktabMixin(object):
@@ -436,7 +443,10 @@ class IndentingSelectionMixin:
                 and self.insert_cursor.searchline(r'^\s*$')):
             self.reindent(phase_timeout_ms=self.__ai_settings.move_trigger_phase_timeout_ms)
 
-    def set_text(self, text):
+    def line_break(self):
+        self.set_text('\n', align=False)
+
+    def set_text(self, text, *, align=True):
         cm = self.buffer.code_model
 
         # Determine whether automatic indentation should occur.
@@ -455,9 +465,9 @@ class IndentingSelectionMixin:
         super().set_text(text)
 
         if indent:
-            self.reindent()
+            self.reindent(align=align)
 
-    def reindent(self, *, phase_timeout_ms=50):
+    def reindent(self, *, phase_timeout_ms=50, align=True):
         cm = self.buffer.code_model
         if cm is None:
             return
@@ -480,7 +490,7 @@ class IndentingSelectionMixin:
             curs.home().insert(self.__gen_settings.indent_text * indentation.level)
 
             # align if needed
-            if indentation.align is not None:
+            if align and indentation.align is not None:
                 spaces_to_align = indentation.align - curs.x
                 if spaces_to_align > 0:
                     curs.insert(self.__ai_settings.align_policy.align_text(spaces_to_align,
