@@ -43,7 +43,12 @@ class FieldDocumenter(autodoc.AttributeDocumenter):
             return '???'
 
     def format_signature(self):
-        return ': ' + self.retann + ' = ' + repr(self.object.default)
+        if self.object.safe:
+            safety = ' [safe]'
+        else:
+            safety = ''
+            
+        return ': ' + self.retann + safety + ' = ' + repr(self.object.default)
     def import_object(self):
         res = super().import_object()
         self.retann = self.object.type.__name__ if self.object.type else 'any'
