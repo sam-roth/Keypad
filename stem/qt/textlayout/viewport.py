@@ -27,7 +27,10 @@ import collections
 
 from .engine import TextLayoutEngine
 from stem.buffers import Buffer
-from stem.abstract.textview import MouseButton, AbstractColumnDelegate
+from stem.abstract.textview import (MouseButton, 
+                                    AbstractColumnDelegate,
+                                    MouseEventKind,
+                                    MouseEvent)
 from stem.core import Signal
 from stem.core.attributed_string import RangeDict, AttributedString
 from stem.util.coordmap import LinearInterpolator
@@ -163,13 +166,28 @@ class TextViewport(QWidget):
             m = self.map_from_point(event.pos())
             if m is not None:
                 (section, line), col = m
-                self.mouse_down_char(line, col)
+                if event.buttons() & Qt.LeftButton:
+                    self.mouse_down_char(line, col)
+                self.mouse_event(MouseEvent(MouseEventKind.mouse_down,
+                                            event.buttons(),
+                                            (line, col)))
+            return True
+        elif event.type() == QEvent.MouseButtonRelease:
+            m = self.map_from_point(event.pos())
+            if m is not None:
+                (section, line), col = m
+                self.mouse_event(MouseEvent(MouseEventKind.mouse_move,
+                                            event.buttons(),
+                                            (line, col)))
             return True
         elif event.type() == QEvent.MouseMove:
             m = self.map_from_point(event.pos())
             if m is not None:
                 (section, line), col = m
                 self.mouse_move_char(event.buttons(), line, col)
+                self.mouse_event(MouseEvent(MouseEventKind.mouse_move,
+                                            event.buttons(),
+                                            (line, col)))
             return True
 
         else:
@@ -571,6 +589,9 @@ class TextViewport(QWidget):
 
     @Signal
     def should_override_app_shortcut(self, event: KeyEvent): pass
+
+    @Signal
+    def mouse_event(self, event): pass
 
 def main():
     import sys

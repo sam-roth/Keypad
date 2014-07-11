@@ -8,7 +8,9 @@ from ..qt_util import (Qt,
                        QFrame,
                        QPoint,
                        QPointF,
-                       QRect)
+                       QMenu,
+                       QRect, 
+                       QCursor)
 
 from .viewport import TextViewport
 from stem.api import interactive, BufferController
@@ -161,8 +163,33 @@ class TextViewProxyMixin:
         view._viewport.should_override_app_shortcut.connect(self.should_override_app_shortcut)
         view._viewport.input_method_preedit.connect(self.input_method_preedit)
         view._viewport.input_method_commit.connect(self.input_method_commit)
+        view._viewport.mouse_event.connect(self.mouse_event)
 
         self.__cursor_visible = True
+
+
+    def show_context_menu(self, pos, items, *, auto=True):
+        '''
+        (Optional) Show a context menu with the given items.
+
+        Each item is a pair of its label and a callback.
+
+        The position should be the plane coordinates of a character to
+        which to anchor the menu.
+        '''
+
+        m = QMenu(self._view)
+        for item, action in items:
+            m.addAction(item, action)
+        if auto:
+            m.exec(QCursor.pos())
+        else:
+            line, col = pos
+            global_pos = self._view.text_viewport.mapToGlobal(
+                self._view.text_viewport.map_to_point(line, col))
+            m.exec(global_pos)
+
+
     @property
     def modelines(self):
         return self._view.text_viewport.extra_lines
@@ -296,7 +323,7 @@ class DummyBufferController:
         curs = Cursor(buf)
         curs.down()
         curs.line.set_attributes(color='#F00')
-    
+
         self.view.buffer = buf
 
         self.view.mouse_down_char.connect(self.mouse_down_char)
@@ -360,7 +387,7 @@ def tle(bctl: BufferController):
 
 if __name__ == '__main__':
     main()
-    
+
 
 
 

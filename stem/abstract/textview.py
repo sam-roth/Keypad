@@ -43,6 +43,23 @@ class MouseButton(enum.IntEnum):
     x_button_1 = 0x8
     x_button_2 = 0x10
 
+class MouseEventKind(enum.Enum):
+    mouse_down = 0
+    mouse_up = 1
+    mouse_move = 2
+
+class MouseEvent:
+    def __init__(self, kind, buttons, pos):
+        '''
+        :param pos: The location of the mouse event in character coordinates.
+
+        :type kind: MouseEventKind
+        :type buttons: MouseButton
+        :type pos: (int, int)
+        '''
+        self.kind = kind
+        self.buttons = buttons
+        self.pos = pos
 
 
 class AbstractColumnDelegate(metaclass=abc.ABCMeta):
@@ -86,6 +103,22 @@ class AbstractTextView(metaclass=abc.ABCMeta):
     '''
     The abstract base class for text views.
     '''
+
+
+    def show_context_menu(self, pos, items, *, auto=True):
+        '''
+        (Optional) Show a context menu with the given items.
+        
+        Each item is a pair of its label and a callback.
+
+        The position should be the plane coordinates of a character to
+        which to anchor the menu.
+
+        If `auto` is True, the position for the menu will be chosen automatically
+        if the implementor supports automatic menu positioning, otherwise the `pos`
+        value will be used. `auto` is True by default.
+
+        '''
 
     @abc.abstractproperty
     def buffer(self):
@@ -223,6 +256,14 @@ class AbstractTextView(metaclass=abc.ABCMeta):
 
         :param line: the line number under the mouse cursor
         :param col: the column number under the mouse cursor
+        '''
+
+    @Signal
+    def mouse_event(self, event):
+        '''
+        Emitted when any mouse action is performed.
+
+        :type event: MouseEvent
         '''
 
     @Signal

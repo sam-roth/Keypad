@@ -12,7 +12,7 @@ from ..options                  import GeneralSettings
 
 
 from ..abstract.application import app
-from ..abstract.textview import MouseButton
+from ..abstract.textview import MouseButton, MouseEvent, MouseEventKind
 
 import unicodedata
 
@@ -166,7 +166,19 @@ class StandardInteractionMode(Responder):
             height, width = self.view.plane_size
             sel.down(height * n)            
 
-        
+        def copy():
+            interactive.run('clipboard_copy')
+        def paste():
+            interactive.run('clipboard_paste')
+        def cut():
+            interactive.run('clipboard_cut')
+        def delete():
+            self.controller.selection.backspace()
+
+        self._context_menu_items = [('Cut', cut),
+                                    ('Copy', copy),
+                                    ('Paste', paste)]
+                                    
 
 
         manip = self.curs.manip
@@ -211,6 +223,7 @@ class StandardInteractionMode(Responder):
         self.controller.view.mouse_move_char.connect(self._on_mouse_move)
         self.controller.view.input_method_preedit.connect(self._on_input_method_preedit)
         self.controller.view.input_method_commit.connect(self._on_input_method_commit)
+        self.controller.view.mouse_event.connect(self._on_mouse_event)
 
 
         self._show_default_modeline()
@@ -222,11 +235,19 @@ class StandardInteractionMode(Responder):
     def detach(self):
         self.controller.remove_next_responders(self)
         self.controller.view.key_press.disconnect(self._on_key_press)
+        self.controller.view.mouse_event.disconnect(self._on_mouse_event)
 #         self.controller.view.scrolled.disconnect(self._on_view_scrolled)
         self.controller.view.mouse_down_char.disconnect(self._on_mouse_down)
         self.controller.view.mouse_move_char.disconnect(self._on_mouse_move)
         self.view.modelines = ()
 
+    def _on_mouse_event(self, event):
+        assert isinstance(event, MouseEvent)
+
+        if (event.kind == MouseEventKind.mouse_down
+                and event.buttons & MouseButton.right_button):
+            self.controller.view.show_context_menu(event.pos,
+                                                   self._context_menu_items)
 
     def _on_view_scrolled(self, start_line):
         pass
