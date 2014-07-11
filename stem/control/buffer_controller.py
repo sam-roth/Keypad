@@ -101,6 +101,12 @@ class BufferController(Tagged, Responder):
 
         self._last_path = None
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args, **kw):
+        self.dispose()
+
     def dispose(self):
         if self.code_model is not None:
             self.code_model = None
@@ -238,7 +244,13 @@ class BufferController(Tagged, Responder):
     @property
     def path(self):
         return self.tags.get('path')
-    
+
+
+    @path.setter
+    def path(self, value):
+        self.add_tags(path=value)
+        self.loaded_from_path(value)
+
     def clear(self):
         '''
         Remove all text from `self.buffer`.

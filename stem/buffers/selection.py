@@ -209,7 +209,7 @@ class Selection(object):
         with self.moving():
             self._insert_cursor.move(line, col)
         return self
-    
+
     def advance(self, n=1):
         with self.moving():
             self._insert_cursor.advance(n)
@@ -253,14 +253,14 @@ class Selection(object):
 
     @property
     def text(self): return self.get_text()
-    
+
     @text.setter
     def text(self, value): self.set_text(value)
 
     def replace(self, text):
         self.text = text
         return self
-    
+
     def delete(self, n=1):
         if not self._anchor_cursor:
             with self.select():
@@ -283,7 +283,7 @@ class Selection(object):
                 else:
                     skip = False
         return self
-    
+
 
     def tab(self, n=1):
         if self._anchor_cursor:
@@ -437,12 +437,24 @@ class IndentingSelectionMixin:
             self.reindent(phase_timeout_ms=self.__ai_settings.move_trigger_phase_timeout_ms)
 
     def set_text(self, text):
+        cm = self.buffer.code_model
+
+        # Determine whether automatic indentation should occur.
+        indent = False
+        # No code model means no autoindent.
+        if self.__ai_settings.trigger_on_newline and cm is not None:
+            # Indent new lines
+            if text.endswith('\n'):
+                indent = True
+            # Indent upon hitting a special trigger, such as '}'
+            elif text.endswith(tuple(cm.reindent_triggers)):
+                # Even then, if there's something else on the line, don't try to
+                # second-guess the user.
+                if not self.insert_cursor.line.text.strip():
+                    indent = True
         super().set_text(text)
 
-        cm = self.buffer.code_model
-        if (self.__ai_settings.trigger_on_newline 
-                and cm is not None
-                and text.endswith(('\n', ) + tuple(self.buffer.code_model.reindent_triggers))):
+        if indent:
             self.reindent()
 
     def reindent(self, *, phase_timeout_ms=50):
