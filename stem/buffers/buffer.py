@@ -32,10 +32,10 @@ class TextModification(Struct):
         if (bool(self.insert), bool(self.remove)) != (bool(other.insert), bool(other.remove)) or \
                 self.inserts_and_removes:
             return None 
-        
+
         if self.insert and other.insert_end_pos == self.pos:
             return TextModification(other.pos, insert=other.insert + self.insert)
-        
+
         else:
             return None
 
@@ -75,9 +75,13 @@ class Buffer(object):
         if not text:
             return
 
-        y, x = pos
-        
         text_lines = text.split('\n')
+        self.insert_lines(pos, text_lines, text=text)
+
+    def insert_lines(self, pos, lines, text=None):
+
+        y, x = pos
+        text_lines = list(lines) # TODO: use generator directly
 
         # TODO: this appears to be the best possible with builtin lists. It's also
         # fast enough for my purposes, but it could use improvement. This library
@@ -117,13 +121,15 @@ class Buffer(object):
 
             result = (y, len(removed_text))
 
-        self.text_modified(TextModification(pos=pos, insert=str(text)))
+        if text is None:
+            text = '\n'.join(text_lines)
+        self.text_modified(TextModification(pos=pos, insert=text))
         if len(text_lines) > 1:
             self.lines_added_or_removed(y, len(text_lines))
     @property
     def text(self):
         return '\n'.join(line.text for line in self._lines)
-
+        
     def remove(self, pos, length):
         if length == 0:
             return
@@ -187,9 +193,12 @@ class Buffer(object):
         line_start_offset = bx + offset
         y = by
 
-        while line_start_offset > len(self._lines[y]):
-            line_start_offset -= len(self._lines[y]) + 1
-            y += 1
+        try:
+            while line_start_offset > len(self._lines[y]):
+                line_start_offset -= len(self._lines[y]) + 1
+                y += 1
+        except IndexError:
+            return self.end_pos
 
         while line_start_offset < 0:
             y -= 1

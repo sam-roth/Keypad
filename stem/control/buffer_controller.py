@@ -4,7 +4,7 @@ import re
 
 import pathlib
 
-from .standard_interaction           import StandardInteractionMode
+from .standard_interaction      import StandardInteractionMode
 from .diagnostics               import DiagnosticsController
 from ..                         import util
 from ..buffers                  import ModifiedCursor, Cursor, BufferManipulator, Buffer, Span, Region
@@ -231,7 +231,7 @@ class BufferController(Tagged, Responder):
             self._is_modified = val
             self.modified_was_changed(val)
 
-    
+
     @Signal
     def modified_was_changed(self, val):
         pass
@@ -268,10 +268,12 @@ class BufferController(Tagged, Responder):
 
         Requires an active history transaction.
         '''
-        with path.open('rb') as f:
-            (Cursor(self.buffer)
-             .move(*self.buffer.end_pos)
-             .insert(f.read().decode(errors=codec_errors)))
+        with pathlib.Path(path).open('r', encoding='utf-8', errors=codec_errors) as f:
+            def gen():
+                for line in f:
+                    yield line.rstrip('\n')
+                    
+            self.buffer.insert_lines(self.buffer.end_pos, gen())
 
     def replace_from_path(self, path, create_new=False, *, codec_errors='strict'):
         '''
@@ -308,14 +310,20 @@ class BufferController(Tagged, Responder):
             self.will_write_to_path(path)
             with write_atomically(path) as f:
                 with self.history.suppress_scratchpad():
-                    f.write(self.buffer.text.encode(errors=codec_errors))
+                    for line in self.buffer.lines:
+                        # Use '\n' as a line terminator, rather than a line separator.
+                        # This is the standard behavior and avoids files without newlines
+                        # at the end.
+                        # If an exception is thrown during writing, the original file
+                        # is left unmodified.
+                        f.write((line.text + '\n').encode(errors=codec_errors))
 
         finally:
             self.selection.pos = sel
         self.wrote_to_path(path)
         self.is_modified = False
-    
-    
+
+
     @Signal
     def will_write_to_path(self, path):
         pass
@@ -331,7 +339,7 @@ class BufferController(Tagged, Responder):
     @Signal
     def path_changed(self):
         pass
-    
+
     @Signal
     def user_changed_buffer(self, change):
         pass
@@ -347,7 +355,7 @@ class BufferController(Tagged, Responder):
     @Signal
     def completion_requested(self):
         pass
-    
+
     @Signal
     def user_requested_help(self):
         pass
@@ -355,7 +363,7 @@ class BufferController(Tagged, Responder):
     def _on_view_scrolled(self, start_line):
         self.view.start_line = start_line
         self.refresh_view(full=True)
-        
+
     def refresh_view(self, full=False):
         self.view.lines = self.buffer.lines
 
