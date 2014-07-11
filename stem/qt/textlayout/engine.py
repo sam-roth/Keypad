@@ -12,6 +12,8 @@ from stem.core.attributed_string import RangeDict
 from stem.util.coordmap import TextCoordMapper, LinearInterpolator
 from stem.control import lorem
 
+from stem.abstract.textview import CaretType
+
 from ..options import TextViewSettings
 from ..qt_util import ending, to_q_color
 
@@ -28,10 +30,6 @@ def apply_overlay(text, overlay):
 
     return text
 
-
-class CaretType(enum.Enum):
-    off = 0
-    bar = 1
 
 class Caret:
     Type = CaretType
@@ -126,10 +124,11 @@ class TextLayoutEngine:
 
                     while bar_carets and offset <= bar_carets[-1] < offset + len(subchunk):
                         tp.paint_bar_caret(Qt.QPointF(d0.x() + fm.width(subchunk[:bar_carets[-1] - offset]),
-                                                      d0.y()))
+                                                      d0.y()),
+                                           color=self._settings.scheme.cursor_color)
 
                         bar_carets.pop()
-                        
+
 
 
                     offset += len(subchunk)
@@ -268,9 +267,27 @@ class TextLayoutEngine:
         
         if cache.get(params_key) != params: # cache invalid -> rerender
             cache[params_key] = params
+
+            # block/box carets behave like overlays
+            # TODO: box carets
+
+            def generate_caret_overlays():
+                for caret in carets:
+                    if caret.type == CaretType.block:
+                        yield (caret.pos[1], caret.pos[1] + 1, 
+                               'sel_bgcolor', self._settings.scheme.cursor_color)
+                        yield (caret.pos[1], caret.pos[1] + 1, 'sel_color', 
+                               self._settings.scheme.cursor_inverse_color)
+
+                    elif caret.type == CaretType.box:
+                        yield (caret.pos[1], caret.pos[1] + 1, 'cartouche', 
+                               self._settings.scheme.cursor_color)
+
+            effective_overlays = overlays | frozenset(generate_caret_overlays())
+
             lines = self.transform_line_for_display(line=line,
                                                     width=width,
-                                                    overlays=overlays,
+                                                    overlays=effective_overlays,
                                                     wrap=wrap,
                                                     prefix=())
             pm = Qt.QPixmap(Qt.QSize(width,

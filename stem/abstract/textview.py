@@ -24,7 +24,7 @@ class KeyEvent(collections.namedtuple('KeyEvent', 'key text')):
         self = super().__new__(cls, *args, **kw)
         self._is_intercepted = False
         return self
-    
+
     @property
     def is_intercepted(self): return self._is_intercepted
 
@@ -47,6 +47,13 @@ class MouseEventKind(enum.Enum):
     mouse_down = 0
     mouse_up = 1
     mouse_move = 2
+
+
+class CaretType(enum.Enum):
+    off = 0
+    bar = 1
+    block = 2
+    box = 3
 
 class MouseEvent:
     def __init__(self, kind, buttons, pos):
@@ -108,7 +115,7 @@ class AbstractTextView(metaclass=abc.ABCMeta):
     def show_context_menu(self, pos, items, *, auto=True):
         '''
         (Optional) Show a context menu with the given items.
-        
+
         Each item is a pair of its label and a callback.
 
         The position should be the plane coordinates of a character to
@@ -140,7 +147,7 @@ class AbstractTextView(metaclass=abc.ABCMeta):
     @modelines.setter
     def modelines(self, value):
         pass
-        
+
 
     @abc.abstractproperty
     def modelines_visible(self):
@@ -151,6 +158,18 @@ class AbstractTextView(metaclass=abc.ABCMeta):
 
     @modelines_visible.setter
     def modelines_visible(self, value):
+        pass
+
+    @abc.abstractproperty
+    def cursor_type(self):
+        '''
+        The caret type of the text cursor.
+
+        :rtype: CaretType
+        '''
+
+    @cursor_type.setter
+    def cursor_type(self, value):
         pass
 
     @abc.abstractproperty

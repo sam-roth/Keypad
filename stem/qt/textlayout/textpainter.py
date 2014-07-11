@@ -69,7 +69,7 @@ class TextPainter:
         sel_color = self._attrs.get('sel_color')
         if sel_color == 'auto':
             sel_color = self.settings.scheme.selection_fg
-        
+
         return Qt.QPen(to_q_color(sel_color 
                                   or self._attrs.get('color',
                                                      self.settings.q_fgcolor)))
@@ -81,7 +81,7 @@ class TextPainter:
         sel_bgcolor = self._attrs.get('sel_bgcolor')
         if sel_bgcolor == 'auto':
             sel_bgcolor = self.settings.scheme.selection_bg
-        
+
         return Qt.QBrush(to_q_color(sel_bgcolor 
                                     or self._attrs.get('bgcolor',
                                                        self.settings.q_bgcolor)))
@@ -117,7 +117,8 @@ class TextPainter:
         '''
         Paint a bar-shaped caret in the given position.
         '''
-        r = Qt.QRectF(pos, Qt.QSizeF(2, self._metrics.lineSpacing()))
+        # Round the values so that the cursor doesn't change width.
+        r = Qt.QRect(pos.toPoint(), Qt.QSize(2, self._metrics.lineSpacing()))
 
         if color is not None:
             color = to_q_color(color)
@@ -161,6 +162,18 @@ class TextPainter:
 
         if self.settings.double_strike:
             self._painter.drawText(p, text)
+            
+        # FIXME: this should merge across spans
+        c = self._attrs.get('cartouche')
+        if c:
+            with restoring(self._painter):
+                if c not in (True, 'auto'):
+                    self._painter.setPen(to_q_color(c))
+                self._painter.setBrush(Qt.Qt.transparent)
+                self._painter.drawRect(Qt.QRectF(pos, 
+                                                 Qt.QSizeF(ep.x() - p.x() - 2,
+                                                           self._metrics.lineSpacing()-2)))
+
 
         if self._attrs.get('error'):
             with restoring(self._painter):

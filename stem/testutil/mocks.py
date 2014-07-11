@@ -1,5 +1,5 @@
 
-from stem.abstract.textview import AbstractCodeView, KeyEvent
+from stem.abstract.textview import AbstractCodeView, KeyEvent, CaretType
 from stem.abstract.completion import AbstractCompletionView
 from stem.core.key import Modifiers
 import string
@@ -116,7 +116,14 @@ class MockCodeView(AbstractCodeView):
     def cursor_visible(self):
         return True
 
+    @property
+    def cursor_type(self):
+        return CaretType.bar
 
+    @cursor_type.setter
+    def cursor_type(self, value):
+        pass
+        
     @cursor_visible.setter
     def cursor_visible(self, value):
         pass

@@ -156,6 +156,7 @@ class TextViewProxyMixin:
 
         self._view = view
         self.__cursor_pos = None
+        self.__cursor_ty = Caret.Type.bar
 
         view._viewport.mouse_move_char.connect(self.mouse_move_char)
         view._viewport.mouse_down_char.connect(self.mouse_down_char)
@@ -223,11 +224,10 @@ class TextViewProxyMixin:
     @cursor_pos.setter
     def cursor_pos(self, value):
         self._set_cursor_pos(value)
-
+        
     def _set_cursor_pos(self, value):
         self.__cursor_pos = value
-        ty = Caret.Type.bar if self.cursor_visible else Caret.Type.off
-
+        ty = self.__cursor_ty if self.cursor_visible else Caret.Type.off
         self._view._viewport.set_carets('TextViewProxy.cursor',
                                         [Caret(ty, value)] 
                                         if value is not None else [])
@@ -258,6 +258,17 @@ class TextViewProxyMixin:
     def cursor_visible(self, value):
         self.__cursor_visible = value
         self._set_cursor_pos(self.cursor_pos)
+
+
+    @property
+    def cursor_type(self):
+        return self.__cursor_ty
+
+
+    @cursor_type.setter
+    def cursor_type(self, value):
+        self.__cursor_ty = value
+        self._set_cursor_pos(self.__cursor_pos) # update type
 
 class TextViewProxy(TextViewProxyMixin, AbstractTextView):
     pass
