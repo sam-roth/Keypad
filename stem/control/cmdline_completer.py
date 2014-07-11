@@ -7,7 +7,7 @@ from stem.abstract.completion import AbstractCompletionView
 from stem.api import interactive, app, Span, Cursor
 from stem.plugins.semantics.completer import AbstractCompleter
 from stem.control.interactive import dispatcher
-
+from stem.core import errors
 
 def _expand_user(p):
     return pathlib.Path(os.path.expanduser(str(p)))
@@ -55,21 +55,26 @@ class CmdlineCompleter(AbstractCompleter):
                     docs.append(doc)
 
             self.show_documentation(docs)
-        
 
     def _request_completions(self):
+        try:
+            self._get_completions()
+        except errors.UserError as exc:
+            interactive.run('show_error', exc)
+
+    def _get_completions(self):
         imode = self.buf_ctl.interaction_mode
         line, col = self._start_pos
         current_cmdline = imode.current_cmdline[:col-imode.cmdline_col]
 
 
         tokens = list(shlex.shlex(current_cmdline))
-        
+
         if len(tokens) == 0:
             # complete interactive command name
             self.show_completions([(iname, ) for iname in dispatcher.keys()])
             self.__compcat = 'Interactive'
-            
+
         else:
             # complete argument
             ty, resp, handler = dispatcher.find(app(), tokens[0])
@@ -82,10 +87,13 @@ class CmdlineCompleter(AbstractCompleter):
                 if category == 'Path':
                     typed_rootpath = imode.current_cmdline[col-imode.cmdline_col:]
                     rootpath = _expand_user(typed_rootpath)
+
                     if not rootpath.is_dir():
                         rootpath = rootpath.parent
+                        if not rootpath.exists() or typed_rootpath.endswith(os.path.sep):
+                            raise errors.NoSuchFileError('%s does not exist.' % typed_rootpath)
                         typed_rootpath = os.path.join(*(os.path.split(typed_rootpath)[:-1]))
-                    
+
 
                     def completion_generator():
                         for p in _get_directory_contents_rec(rootpath):

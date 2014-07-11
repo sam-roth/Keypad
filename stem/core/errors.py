@@ -1,16 +1,22 @@
 
+
 class UserError(RuntimeError):
     '''
     An error that should be reported to the user.
     '''
 
-class ExistentialError(UserError): 
+class ExistenceError(UserError): 
     '''
     Something exists that prevents an operation from occuring, or something
     does not exist that is required for an operation.
     '''
-    
-class NoCodeModelError(ExistentialError):
+
+class NoSuchFileError(ExistenceError, FileNotFoundError):
+    '''
+    A file was not found and this error should be reported to the user.
+    '''
+
+class NoCodeModelError(ExistenceError):
     '''
     The operation requires a code model and there wasn't one.
 
@@ -18,27 +24,27 @@ class NoCodeModelError(ExistentialError):
     and other language-specific features.
     '''
 
-class NoSuchCommandError(ExistentialError):
+class NoSuchCommandError(ExistenceError):
     '''
     No meaning is known for the command in this context.
     '''    
 
-class HistoryExistentialError(ExistentialError):
+class HistoryExistenceError(ExistenceError):
     '''
     The requested information about the document's history does not exist.
     '''
 
-class NameNotFoundError(ExistentialError):
+class NameNotFoundError(ExistenceError):
     '''
     No declaration, assignment, or definition of the given name was found.
     '''
 
-class CantUndoError(HistoryExistentialError): pass
-class CantRedoError(HistoryExistentialError): pass
-class OldestHistoryItemError(HistoryExistentialError): pass
-class NewestHistoryItemError(HistoryExistentialError): pass
+class CantUndoError(HistoryExistenceError): pass
+class CantRedoError(HistoryExistenceError): pass
+class OldestHistoryItemError(HistoryExistenceError): pass
+class NewestHistoryItemError(HistoryExistenceError): pass
 
-class UnknownCommandError(ExistentialError): pass
+class UnknownCommandError(ExistenceError): pass
 
 class BufferModifiedError(UserError):
     '''
@@ -46,6 +52,6 @@ class BufferModifiedError(UserError):
     '''
 
 
-class NoBufferActiveError(ExistentialError): pass
+class NoBufferActiveError(ExistenceError): pass
 
 
