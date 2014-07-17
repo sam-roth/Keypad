@@ -4,6 +4,7 @@ from stem.api import interactive, autoconnect, BufferController
 from stem.control.interactive import run as run_interactive
 from stem.buffers import Cursor, Span
 from stem.control.command_line_interaction import writer as cmdline_writer
+from stem.util import time_limited
 
 class RegexSearcher(object):
     '''
@@ -82,6 +83,7 @@ class RegexSearcher(object):
         return self._translate_match(match)
 
 
+
 def _get_searcher(bufctl):
     try:
         searcher = bufctl.tags['regex_searcher']
@@ -93,6 +95,25 @@ def _get_searcher(bufctl):
 
 
 from stem.core import errors
+
+@interactive('raw_substitute')
+def raw_substitute(bctl: BufferController, pattern, replacement):
+    with bctl.history.transaction():
+        text = bctl.selection.text or bctl.buffer.text
+        pos = bctl.selection.pos
+        newtext, changes = re.subn(pattern, replacement, text)
+        if bctl.selection.text:
+            with bctl.selection.select():
+                bctl.selection.text = newtext
+        else:
+            c = Cursor(bctl.buffer)
+            (c
+             .remove_to(c.clone().last_line().end())
+             .insert(newtext))
+            bctl.selection.pos = pos
+
+        return 'Made {} replacements.\n'.format(changes)
+
 
 @interactive('substitute', 's')
 def substitute(bctl: BufferController, *pattern):
@@ -108,22 +129,22 @@ def substitute(bctl: BufferController, *pattern):
     '''
     pattern = ' '.join(pattern)
     pattern, replacement = pattern.split('/')
+    cmdline_writer.write(raw_substitute(bctl, pattern, replacement))
 
-    with bctl.history.transaction():
-        text = bctl.selection.text or bctl.buffer.text
-        pos = bctl.selection.pos
-        newtext, changes = re.subn(pattern, replacement, text)
-        if bctl.selection.text:
-            with bctl.selection.select():
-                bctl.selection.text = newtext
-        else:
-            c = Cursor(bctl.buffer)
-            (c
-             .remove_to(c.clone().last_line().end())
-             .insert(newtext))
-            bctl.selection.pos = pos
+def find_impl(bufctl: BufferController, pattern, backwards=False):
+    searcher = _get_searcher(bufctl)
 
-        cmdline_writer.write('Made {} replacements.\n'.format(changes))
+    res = searcher.search(bufctl.canonical_cursor.pos,
+                          pattern,
+                          backwards=backwards)
+
+    if res is None:
+        raise errors.UserError('No match for {!r}'.format(pattern))
+
+    (y, x), _ = res
+
+    bufctl.selection.move(y, x)
+    bufctl.refresh_view()
 
 
 
@@ -141,23 +162,16 @@ def find(bufctl: BufferController, *pattern):
     : find boost((::|/|\.)\w+)*
     '''
     assert isinstance(bufctl, BufferController)
-
-    searcher = _get_searcher(bufctl)
     pattern = ' '.join(pattern) if pattern else None
-    res = searcher.search(bufctl.canonical_cursor.pos,
-                          pattern)
+    find_impl(bufctl, pattern)
 
-    if res is None:
-        raise errors.UserError('No match for {!r}'.format(pattern))
-
-    (y, x), _ = res
-
-    bufctl.selection.move(y, x)
-    bufctl.refresh_view()
-
+@interactive('findprev', 'fp')
+def findprev(bufctl: BufferController, *pattern):
+    pattern = ' '.join(pattern) if pattern else None
+    find_impl(bufctl, pattern, backwards=True)
 
 @interactive('findall', 'fall', 'fa')
-def findall(bufctl: BufferController, *pattern):
+def findall(bufctl: BufferController, *pattern, timeout_ms=300):
     '''
     : findall|fa[ll] [<pattern>...]
 
@@ -183,8 +197,14 @@ def findall(bufctl: BufferController, *pattern):
         (make_span(y, x, length),
          'lexcat',
          'search')
-        for ((y, x), length) in searcher.searchall(pattern)
+        for ((y, x), length) 
+        in time_limited(searcher.searchall(pattern), ms=timeout_ms)
+        if length > 0
     ])
+
+@interactive('findall_timeout')
+def findall_timeout(bufctl: BufferController, pattern, timeout):
+    findall(bufctl, pattern, timeout_ms=timeout)
 
 
 @interactive('findclear', 'fc')

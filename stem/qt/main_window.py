@@ -62,7 +62,7 @@ class CommandLineWidget(Responder, QWidget):
                                              provide_interaction_mode=False,
                                              config=config)
 
-        
+
         self.__imode = CommandLineInteractionMode(self.__controller)
         self.__controller.interaction_mode = self.__imode
         self.__completer = CmdlineCompleter(self.__controller)
@@ -78,7 +78,7 @@ class CommandLineWidget(Responder, QWidget):
 
         self.__imode.accepted.connect(self.__run_command)
         self.__imode.text_written.connect(self.__on_text_written)
-        
+
         layout.addWidget(self.__view)
         self.setFocusProxy(self.__view)
 
@@ -350,3 +350,5 @@ def activate_cmdline(win: MainWindow):
     def update():
         win.activate_cmdline()
     update()
+
+    

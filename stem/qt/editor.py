@@ -1,13 +1,13 @@
 
 
 from stem.abstract.editor import AbstractEditor
-# from stem.core.responder import Responder
 from stem.abstract.application import app
-# from .view import TextView
 from .textlayout.widget import CodeView, CodeViewProxy
 from .qt_util import *
+from .find import FindWidget
 from stem.core.signal import Signal
 from stem.api import run_in_main_thread
+from stem import api
 
 class Editor(AbstractEditor, Autoresponder, QWidget, metaclass=ABCWithQtMeta):
 
@@ -21,11 +21,14 @@ class Editor(AbstractEditor, Autoresponder, QWidget, metaclass=ABCWithQtMeta):
         AbstractEditor.__init__(self, self.__prox, self.__config)
         Responder.__init__(self)
 
-
+        self.__find_widget = FindWidget()
+        self.__find_widget.hide()
         self.__view.setParent(self)
         self.__layout = QVBoxLayout(self)
         self.__layout.addWidget(self.__view)
+        self.__layout.addWidget(self.__find_widget)
         self.__layout.setContentsMargins(0, 0, 0, 0)
+        self.__layout.setSpacing(0)
         self.__guard = True
         self.next_responder = self.buffer_controller
 
@@ -33,7 +36,11 @@ class Editor(AbstractEditor, Autoresponder, QWidget, metaclass=ABCWithQtMeta):
         self.__view.viewport().installEventFilter(self)
 
         self.setFocusProxy(self.__view)
-        
+
+    def open_find_panel(self):
+        self.__find_widget.show()
+        self.__find_widget.setFocus()
+
     @Signal
     def window_should_kill_editor(self, editor):
         pass
@@ -67,4 +74,9 @@ class Editor(AbstractEditor, Autoresponder, QWidget, metaclass=ABCWithQtMeta):
             self.editor_activated()
         return super().eventFilter(obj, ev)
 
+@api.interactive('gui_find')
+def gui_find(ed: Editor):
+    ed.open_find_panel()
+
+api.menu(5, 'Edit/Find', 'gui_find', keybinding=api.Keys.ctrl.f)
 
