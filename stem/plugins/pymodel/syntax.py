@@ -17,16 +17,18 @@ def pylexer():
     from stem.plugins.semantics.syntaxlib import keyword, regex, region
 
     Keyword     = keyword(_python_kwlist, dict(lexcat='keyword'))
-    Import      = keyword('from import'.split(), dict(lexcat='preprocessor'))
-    Const       = keyword(_python_builtins, dict(lexcat='function'))
-    Type        = keyword(_python_types, dict(lexcat='type'))
+    Import      = keyword('from import'.split(), dict(lexcat='keyword.modulesystem'))
+    Const       = keyword(_python_builtins, dict(lexcat='identifier.constant'))
+    Type        = keyword(_python_types, dict(lexcat='identifier.type'))
 
-    
-    ESCAPE      = dict(lexcat='escape')
-    STRING      = dict(lexcat='literal')
+
+    ESCAPE      = dict(lexcat='literal.string.escape')
+    STRING      = dict(lexcat='literal.string')
     COMMENT     = dict(lexcat='comment')
-    FUNCTION    = dict(lexcat='function')
+    FUNCTION    = dict(lexcat='identifier.function')
     TODO        = dict(lexcat='todo')
+    SIGIL       = dict(lexcat='punctuation.sigil')
+    NUMBER      = dict(lexcat='literal.numeric')
     
     Todo        = regex(r'\btodo:|\bfixme:|\bhack:', TODO, flags=re.IGNORECASE)
     Comment     = region(guard=regex('#'),
@@ -35,8 +37,8 @@ def pylexer():
                          attrs=COMMENT)
 
     HEX         = r'[a-fA-F0-9]'
-    
-    
+
+
     Esc1        = regex(r'''\\[abfnrtv'"\\]''', ESCAPE)
     Esc2        = regex(r'''\\\[0-7]{1,3}''', ESCAPE)
     Esc3        = regex(r'''\\x[a-fA-F0-9]{2}''', ESCAPE)
@@ -61,7 +63,7 @@ def pylexer():
                 )
 
     Escs        = [Esc1, Esc2, Esc3, Esc4, Esc5, Esc6]
-    
+
     DQString    = region(
                     guard=regex(r'"(?!"")'),
                     exit=regex(r'"'),
@@ -75,7 +77,7 @@ def pylexer():
                     attrs=STRING
                 ) 
 
-    
+
     TDQString   = region(
                     guard=regex(r'"""'),
                     exit=regex(r'"""'),
@@ -92,7 +94,7 @@ def pylexer():
 
     def make_raw_string(quote):
         
-        
+
         return region(
             guard=regex(r"r" + quote),
             exit=regex(r"\\\\" + quote + "|" + r"(?<!\\)" + quote),
@@ -102,11 +104,11 @@ def pylexer():
 
     RSQString = make_raw_string("'")
     RDQString = make_raw_string('"')
-    
+
     RTSQString = make_raw_string("'''")
     RTDQString = make_raw_string('"""')
     
-    NUMBER = dict(lexcat='literal')
+
 
     FloatLiteral = regex(r'\b\d*\.\d+', NUMBER)
     IntLiteral   = regex(r'\b\d+L?', NUMBER)
@@ -116,7 +118,7 @@ def pylexer():
 
     FuncDef = regex(r'(?:(?<=\bdef)|(?<=\bclass)|(?<=@))\s+\w+', FUNCTION)
     Deco    = regex(r'(?<=@)\s*[\w.]+', FUNCTION)
-    CommAt = regex(re.escape('@'), ESCAPE)
+    CommAt = regex(re.escape('@'), SIGIL)
     
 
     PythonLexers = [

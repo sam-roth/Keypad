@@ -105,7 +105,7 @@ class TextPainter:
         if lc is not sentinel:
             self._cur_lc_attrs.clear()
             if lc is not None:
-                lcattrs = self.settings.scheme.lexical_category_attrs(lc)
+                lcattrs = self.settings.scheme.lexcat_attrs(lc)
                 self._cur_lc_attrs.update(lcattrs)
 
         self._painter.setPen(self._make_pen())

@@ -79,24 +79,25 @@ class RawStringStartLexer(Lexer):
 def cpplexer():
     from stem.plugins.semantics.syntaxlib import keyword, regex, region
     import re
-    
-    
 
 
-    CONTEXT_KW  = dict(lexcat='function')    
-    NAME        = dict(lexcat='function')
+
+
+    CONTEXT_KW  = dict(lexcat='keyword.context')    
+    NAME        = dict(lexcat='identifier')
     KEYWORD     = dict(lexcat='keyword')
-    ESCAPE      = dict(lexcat='escape')
-    STRING      = dict(lexcat='literal')
-    NUMBER      = dict(lexcat='literal')
+    ESCAPE      = dict(lexcat='literal.string.escape')
+    STRING      = dict(lexcat='literal.string')
+    NUMBER      = dict(lexcat='literal.numeric')
     COMMENT     = dict(lexcat='comment')
-    DOC         = dict(lexcat='docstring')
+    DOC         = dict(lexcat='comment.documentation')
     PREPROC     = dict(lexcat='preprocessor')
     TODO        = dict(lexcat='todo')
-    TYPE        = dict(lexcat='type')
+    TYPE        = dict(lexcat='identifier.type')
+
 
     HEX         = r'[a-fA-F0-9]'
-    
+
     IncludeString = regex(r'<[^>]*>', STRING)
 
     PreprocIf = region(guard=regex(r'^\s*#if(def)?'),
@@ -106,8 +107,8 @@ def cpplexer():
     PreprocComment = region(guard=regex(r'^\s*#if\s+0$'),
                             exit=regex(r'^\s*#endif'),
                             contains=[PreprocIf],
-                            attrs=COMMENT)
-
+                            attrs=dict(lexcat='comment.preprocessor'))
+    
     Preproc = region(guard=regex(r'^\s*#(?!if\s+0)\s*\w+'),
                      exit=regex(r'(?<!\\)$'),
                      contains=[IncludeString],

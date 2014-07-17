@@ -4,6 +4,24 @@ from ..util import clamp, deprecated, scopedict
 import random
 import logging
 
+
+class LexcatDict(scopedict.ScopeDict):
+
+    adapt = {
+        'type': 'identifier.type',
+        'function': 'identifier.function',
+        'escape': 'literal.string.escape',
+    }
+
+    @classmethod
+    def make_key(cls, key):
+        v = cls.adapt.get(key)
+        if v is not None:
+            return super().make_key(v)
+        else:
+            return super().make_key(key)
+
+
 class Colorscheme(object):
 
     fg = Color.from_hex('#000')
@@ -20,8 +38,7 @@ class Colorscheme(object):
     fallback_val = 128
 
     def __init__(self):
-        self.lexical_categories = {
-        }
+        self.lexical_categories = LexcatDict()
 
     def lexcat_attrs(self, lexcat):
         return self.lexical_category_attrs(lexcat)
@@ -143,8 +160,22 @@ class AbstractSolarized(Colorscheme):
             escape=dict(color=self._red),
             todo=dict(color=self._magenta),
             docstring=dict(color=self._violet),
-            type=dict(color=self._yellow)
+#             type=dict(color=self._yellow),
+            identifier=dict(color=self._blue)
         )
+
+        self.lexcats.update({
+            'keyword.context': dict(color=self._blue),
+            'keyword.modulesystem': dict(color=self._orange),
+            'identifier.type': dict(color=self._yellow),
+            'punctuation.sigil': dict(color=self._red),
+            'comment.documentation': dict(color=self._violet),
+        })
+
+#         self.lexcats['identifier.reserved'] = self._blue
+#         self.lexcats['keyword.context'] = dict(color=self._blue)
+#         self.lexcats['identifier.type'] = dict(color=self._yellow)
+
 
 
 def extrap_value(color1, color2):
@@ -250,20 +281,21 @@ class TextMateTheme(Colorscheme):
     scopes = scopedict.splitkeys({
         'comment': 'comment',
 
-        'constant.numeric': 'literal',
-        'constant.character': 'literal',
+        'constant.numeric': 'literal.numeric',
+        'constant.character': 'literal.character',
         'string': 'literal',
 
-        'constant.language': 'function',
-        'entity.name.function': 'function',
-        'support.function': 'function',
+        'constant.language': 'identifier.constant',
+        # we'll consider this to be the default
+        'entity.name.function': 'identifier', 
+        'support.function': 'identifier.function',
 
-        'support.type': 'type',
-        'support.class': 'type',
-        'storage.type': 'type',
-        'storage.modifier': 'type',
+        'support.type': 'identifier.type',
+        'support.class': 'identifier.type',
+        'storage.type': 'identifier.type',
+        'storage.modifier': 'identifier.type',
 
-        'variable.parameter': 'preprocessor',
+        'variable.parameter': 'identifier.local.parameter',
 
         'keyword': 'keyword',
 
@@ -321,7 +353,7 @@ class TextMateTheme(Colorscheme):
                     assigned = False
                     for scope in group.scope.split(','):
                         lcname = scopedict.most_specific(self.scopes, scope.strip(), default=None)
-                        if lcname not in lc:
+                        if lcname is not None and lcname not in lc:
                             lc[lcname] = attrs
                             assigned = True
 
