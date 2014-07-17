@@ -9,6 +9,7 @@ from stem.core.nconfig import Config, Settings, Field
 from .qt_util import *
 from ..core.notification_queue import in_main_thread
 from ..control import interactive
+
 import traceback
 import logging
 
@@ -351,4 +352,13 @@ def activate_cmdline(win: MainWindow):
         win.activate_cmdline()
     update()
 
-    
+
+
+@interactive.interactive('about')
+def about(win: MainWindow):
+    from . import about
+    about.AboutDialog(win).show()
+
+interactive.menu(0, 'Help/About', 'about')
+
+
