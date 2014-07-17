@@ -14,7 +14,7 @@ class Responder(object):
     def __init__(self, *args, **kw):
         super().__init__(*args, **kw)
         self._next_responders = weakref.WeakSet()
-        
+
     def add_next_responders(self, *responders):
         '''
         If there's no matching `@interactive` command at this level, try finding one that matches
@@ -43,8 +43,8 @@ class Responder(object):
 
     @property
     def next_responders(self):
-        return list(x for x in self._next_responders if x is not None)
-    
+        return [x for x in self._next_responders if x is not None]
+
 
     @property
     def next_responder(self): 
@@ -53,13 +53,26 @@ class Responder(object):
             return nr[0]
         else:
             return None
-    
+
     @next_responder.setter
     def next_responder(self, value): 
         self.clear_next_responders()
         self.add_next_responders(value)
-    
+
     @Signal
     def responder_chain_changed(self):
         pass
+
+
+    def find_responder(self, ty):
+        if isinstance(self, ty):
+            return self
+        else:
+            for r in self.next_responders:
+                result = r.find_responder(ty)
+                if result is not None:
+                    return result
+            else:
+                return None
+
 
