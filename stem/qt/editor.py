@@ -1,7 +1,7 @@
 
 
 from stem.abstract.editor import AbstractEditor
-from stem.core.responder import Responder
+# from stem.core.responder import Responder
 from stem.abstract.application import app
 # from .view import TextView
 from .textlayout.widget import CodeView, CodeViewProxy
@@ -9,7 +9,7 @@ from .qt_util import *
 from stem.core.signal import Signal
 from stem.api import run_in_main_thread
 
-class Editor(AbstractEditor, Responder, QWidget, metaclass=ABCWithQtMeta):
+class Editor(AbstractEditor, Autoresponder, QWidget, metaclass=ABCWithQtMeta):
 
     def __init__(self, config):
         QWidget.__init__(self)

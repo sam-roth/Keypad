@@ -7,6 +7,8 @@ import contextlib
 from ..core.key import SimpleKeySequence
 from ..core.color import Color
 from ..abstract.textview import KeyEvent
+from ..core.responder import Responder
+from .. import api
 
 import abc
 import math
@@ -82,13 +84,31 @@ def qcolor_marshaller(attrname):
 
     def fset(self, value):
         setattr(self, attrname, to_q_color(value))
-    
+
     return property(fget, fset)
 
 
 
 class ABCWithQtMeta(pyqtWrapperType, abc.ABCMeta):
     pass
-    #def __new__(cls, *args, **kw):
-    #    return super().__new__(cls, *args, **kw)
+
+
+class AutoresponderMixin:
+
+
+    @property
+    def next_responders(self):
+
+        pw = self.parentWidget()
+        while pw is not None and not isinstance(pw, Responder):
+            pw = pw.parentWidget()
+            
+        if pw is not None and isinstance(pw, Responder):
+            return [pw] + super().next_responders
+        else:
+            return super().next_responders
+
+class Autoresponder(AutoresponderMixin, Responder):
+    pass
+
 

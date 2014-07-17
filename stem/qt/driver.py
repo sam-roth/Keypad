@@ -6,7 +6,7 @@ from ..control import behavior # module contains autoconnects
 
 import pathlib
 
-from ..core import notification_queue, errors
+from ..core import notification_queue, errors, responder
 
 from ..abstract.application import (AbstractApplication, 
                                     SaveResult,
@@ -49,10 +49,19 @@ class Application(AbstractApplication, QApplication, metaclass=ABCWithQtMeta):
             if mversion > QSysInfo.MV_10_8:
                 # Workaround for QTBUG-32789
                 QFont.insertSubstitution('.Lucida Grande UI', 'Lucida Grande')
-        
+
         QApplication.setApplicationName('Stem')
         super().__init__(args)
 
+
+        self.focusChanged.connect(self.__on_focus_change)
+
+        
+    def __on_focus_change(self, old, new):
+        while new is not None and not isinstance(new, responder.Responder):
+            new = new.parentWidget()
+        if new is not None and isinstance(new, responder.Responder):
+            self.next_responder = new
 
     def beep(self):
         QApplication.beep()

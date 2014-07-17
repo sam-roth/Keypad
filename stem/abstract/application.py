@@ -254,6 +254,22 @@ class AbstractApplication(Responder, metaclass=abc.ABCMeta):
     def windows(self):
         return tuple(self._windows)
 
+
+    def find_object(self, ty):
+        '''
+        Find the active object of type `ty`.
+
+        .. example::
+
+            To kill the active editor, use::
+
+                app().find_object(AbstractEditor).kill()
+
+        '''
+        result = self.next_responder.find_responder(ty)
+        assert isinstance(result, (NoneType, ty))
+        return result
+
 def app():
     return AbstractApplication.instance()
 

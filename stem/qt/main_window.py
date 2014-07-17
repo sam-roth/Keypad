@@ -67,7 +67,7 @@ class CommandLineWidget(Responder, QWidget):
         self.__controller.interaction_mode = self.__imode
         self.__completer = CmdlineCompleter(self.__controller)
         self.__interpreter = CommandLineInterpreter()
-
+        
         self.add_next_responders(self.__completer, self.__controller)
         self.__completer.add_next_responders(self.prev_responder)
 
@@ -97,11 +97,9 @@ class CommandLineWidget(Responder, QWidget):
 
     def __run_command(self):
         self.hide()
-        app().next_responder = self.prev_responder
         try:
             self.__interpreter.exec(app(), self.__imode.current_cmdline)
         except BaseException as exc:
-#             interactive.dispatcher.dispatch(app(), 'show_error', exc)
             interactive.run('show_error', exc)
 
     def set_cmdline(self, text):
@@ -141,7 +139,6 @@ class CommandLineWidget(Responder, QWidget):
         self.setGeometry(geom)        
 
         event.accept()
-        app().next_responder = self
         self.anim = anim = QPropertyAnimation(self, 'windowOpacity')
         anim.setDuration(self.__settings.animation_duration_ms)
         anim.setStartValue(0.0)
@@ -162,7 +159,7 @@ def testref(p):
         logging.debug('testref: %r', val)
     return callback
 
-class MainWindow(AbstractWindow, QMainWindow, metaclass=ABCWithQtMeta):
+class MainWindow(AutoresponderMixin, AbstractWindow, QMainWindow, metaclass=ABCWithQtMeta):
     def __init__(self, config):
         super().__init__()
         self.__cmdline = CommandLineWidget(self, config, self)
@@ -252,8 +249,6 @@ class MainWindow(AbstractWindow, QMainWindow, metaclass=ABCWithQtMeta):
         editor.is_modified_changed.connect(self.__child_modified_changed, add_sender=True)
         
     def event(self, evt):
-        if evt.type() == QEvent.WindowActivate:
-            app().next_responder = self
         return super().event(evt)
 
 
@@ -270,8 +265,6 @@ class MainWindow(AbstractWindow, QMainWindow, metaclass=ABCWithQtMeta):
 
 
         editor = asw.widget()
-        self.next_responder = editor
-
 
         self.setWindowModified(editor.is_modified)
         if editor.path is not None:
@@ -284,7 +277,7 @@ class MainWindow(AbstractWindow, QMainWindow, metaclass=ABCWithQtMeta):
             asw.setWindowTitle('Untitled')
 
         self.editor_activated(editor)
-        
+
     def __on_sub_window_activated(self, win):
         self.__update_window_path()
         asw = self.__mdi.activeSubWindow()
@@ -324,7 +317,7 @@ class MainWindow(AbstractWindow, QMainWindow, metaclass=ABCWithQtMeta):
         item = self._item_for_action[self.sender()]
 
         try:
-            interactive.dispatcher.dispatch(self, item.interactive_name, *item.interactive_args)
+            interactive.dispatcher.dispatch(app(), item.interactive_name, *item.interactive_args)
         except Exception as exc:
             interactive.dispatcher.dispatch(self, 'show_error', exc)
 
