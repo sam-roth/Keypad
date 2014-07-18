@@ -7,7 +7,7 @@ from ..core import Signal
 import logging
 
 class AbstractEditor(metaclass=abc.ABCMeta):
-    
+
 
     def __init__(self, view, config):
         self.__view = view
@@ -112,7 +112,7 @@ class AbstractEditor(metaclass=abc.ABCMeta):
             raise
 
         self.saved()
-
+        
     def load(self, path, *, codec_errors='strict'):
         '''
         Load the file from the path given.

@@ -248,7 +248,12 @@ class MainWindow(AutoresponderMixin, AbstractWindow, QMainWindow, metaclass=ABCW
         editor.show()
         editor.window_should_kill_editor.connect(self.__kill_editor)
         editor.is_modified_changed.connect(self.__child_modified_changed, add_sender=True)
-        
+        editor.saved.connect(self.__child_saved, add_sender=True)
+
+    def __child_saved(self, sender):
+        self.setWindowFilePath(None)
+        self.__update_window_path()
+
     def event(self, evt):
         return super().event(evt)
 
