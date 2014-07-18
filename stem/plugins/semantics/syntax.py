@@ -1,20 +1,20 @@
 import logging
 
-from .syntaxlib import Tokenizer
+from .syntaxlib import Tokenizer, TokenizerEvent
 from stem.util import time_limited
 class SyntaxHighlighter(object):
-    
+
     def __init__(self, name, lexer, base_attrs):
         self._tokenizer = Tokenizer(lexer)
         self._name = name
-        
+
         self._end_state_key     = name + '.' + 'end_state'
         self._start_state_key   = name + '.' + 'start_state'
         self._token_stack_key   = name + '.' + 'token_stack'
 
         self._base_attrs = base_attrs
 
-    
+
     def highlight_buffer(self, buff):
         self._tokenizer.reset()
         state = self._tokenizer.save()
@@ -22,50 +22,46 @@ class SyntaxHighlighter(object):
         # TODO: start on modified line
         for i, line in time_limited(enumerate(buff.lines), ms=100):
             line_start_state = line.caches.get(self._start_state_key) 
-            
+
             if line_start_state != state:
                 # reset line attributes
                 line.set_attributes(0, None, **self._base_attrs)
                 self._tokenizer.restore(state)
-                
+
 
                 attr_ranges = []
 
                 # Handle tokens that end on this line
                 for ty, lexer, pos in self._tokenizer.tokenize(line, 0, len(line)):
-                    if ty == 'token_start':
+                    if ty == TokenizerEvent.token_start:
                         token_stack.append((lexer, pos))
                     else:
                         start_lexer = None
                         try:
-                            # either of these statement can fail, but neither should
+                            # We should be in a token here, and the token's lexer should be 
+                            # the same as the current lexer.
+                            # If this isn't the case, raise RuntimeError.
                             start_lexer, start = token_stack.pop()
                             if start_lexer is not lexer: raise RuntimeError()
                         except:
+                            # Catch the error caused by popping off an empty stack, or by
+                            # a lexer mismatch.
                             logging.warning('Expected %r, got %r.', lexer, start_lexer)
                         else:
                             attr_ranges.append((start, pos, lexer.attrs))
-
-                            #line.set_attributes(start, pos, **lexer.attrs)
 
                 # Handle tokens that go past the end of the line
                 next_line_token_stack = []
 
                 for lexer, start in token_stack:
-                    #attr_ranges.append((start, None, lexer.attrs))
                     line.set_attributes(start, None, **lexer.attrs)
-                    
-#                     if not lexer.atomic:
                     next_line_token_stack.append((lexer, 0))
-                        
-#                 if next_line_token_stack:
-#                     logging.debug('line %d: next line token stack: %r', i, next_line_token_stack)                
-                
+                    
                 for start, end, attrs in reversed(attr_ranges):
                     line.set_attributes(start, end, **attrs)
 
                 token_stack = next_line_token_stack
-                               
+
                 line.caches[self._token_stack_key] = tuple(token_stack)
                 line.caches[self._start_state_key] = state
                 state = self._tokenizer.save()

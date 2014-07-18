@@ -39,6 +39,9 @@ Putting these together, we have::
 import abc
 from abc import abstractmethod
 import re
+import logging
+import enum
+import heapq
 
 class Lexer(metaclass=abc.ABCMeta):
     atomic = False
@@ -120,9 +123,38 @@ class RegionLexer(Lexer):
     
     def exit_match(self, string, start, stop):
         return self.exit.guard_match(string, start, stop)
-import logging
 
-class Tokenizer(object):
+
+class TokenizerEvent(enum.Enum):
+    token_start = 0
+    token_end = 1
+
+class AbstractTokenizer(metaclass=abc.ABCMeta):
+    @abc.abstractmethod
+    def reset(self):
+        pass
+
+    @abc.abstractmethod
+    def save(self):
+        pass
+
+    @abc.abstractmethod
+    def restore(self, state):
+        pass
+
+    @abc.abstractmethod
+    def tokenize(self, string, start, stop):
+        '''
+        Generator yielding a sequence of tuples 
+        ``(event: TokenizerEvent, lexer: Lexer, pos: int)``
+        each giving an event type, the lexer that caused the event, and
+        the position of the event in the string.
+        '''
+        pass
+
+
+
+class Tokenizer(AbstractTokenizer):
     def __init__(self, lexer):
         self.start_lexer = lexer
         self.lexer_stack = [lexer]
@@ -135,10 +167,10 @@ class Tokenizer(object):
 
     def restore(self, stack):
         self.lexer_stack = list(stack)
-    
+
     def tokenize(self, string, start, stop):
         pop = object()
-        
+
         lexer_stack = self.lexer_stack
 
         while lexer_stack and start <= stop:
@@ -163,23 +195,68 @@ class Tokenizer(object):
                 break
             else:
                 fg_start, fg_stop, fg_lexer = first_guard
-                
+
                 # check for the sentinel `pop` indicating that the lexer is done
                 if fg_lexer is pop:
-                    yield 'token_end', lexer_stack[-1], fg_stop
+                    yield TokenizerEvent.token_end, lexer_stack[-1], fg_stop
                     lexer_stack.pop()
                 else:
                     lexer_stack.append(fg_lexer.enter())
-                    yield 'token_start', lexer_stack[-1], fg_start
-                                        
+                    yield TokenizerEvent.token_start, lexer_stack[-1], fg_start
+
                 start = fg_stop
+
+class UnionTokenizer(AbstractTokenizer):
+    def __init__(self, *tokenizers):
+        self._tokenizers = tuple(tokenizers)
+
+    def reset(self):
+        for t in self._tokenizers:
+            t.reset()
+
+    def save(self):
+        return [t.save() for t in self._tokenizers]
+
+    def restore(self, state):
+        assert len(state) == len(self._tokenizers)
+        for t, s in zip(self._tokenizers, state):
+            t.restore(s)
+
+
+    def tokenize(self, string, start, stop):
+        # FIXME: How should this handle simultaneous state transitions?
+        '''
+        Generator yielding a sequence of tuples
+        ``(event: TokenizerEvent, lexer: Lexer, pos: int)``
+        each giving an event type, the lexer that caused the event, and
+        the position of the event in the string.
+        '''
+        q = [] # This will be used as a priority queue.
+
+        # Prime the iterators.
+        for tok in self._tokenizers:
+            it = iter(tok.tokenize(string, start, stop))
+            v = next(it, None)
+            if v is not None:
+                heapq.heappush(q, (v[-1], v, it))
+
+        # Reorder the events so that they are sequential.
+        while q:
+            _, value, it = heapq.heappop(q)
+            yield value
+            value = next(it, None)
+            # Add the next value into the heap if the iterator is not
+            # exhausted.
+            if value is not None:
+                heapq.heappush(q, (value[-1], value, it))
+
 
 def keyword(kws, attrs=None, caseless=False):
     if caseless:
         flags = re.IGNORECASE
     else:
         flags = 0
-        
+
     return RegexLexer('|'.join(r'\b' + re.escape(x) + r'\b' 
                                for x in kws),
                       attrs,
