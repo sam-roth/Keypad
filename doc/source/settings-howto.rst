@@ -54,7 +54,7 @@ contextual configuration
 
 
 
-.. py:currentmodule:: stem.core.nconfig
+.. py:currentmodule:: keypad.core.nconfig
 
 Cascading Configuration
 =======================
@@ -73,7 +73,7 @@ To adjust settings from a Python script,
 
 
 #. Find the Settings class in which they are declared.
-#. Use the :py:meth:`~stem.core.nconfig.Settings.from_config` method to load
+#. Use the :py:meth:`~keypad.core.nconfig.Settings.from_config` method to load
    the settings from a configuration.
 #. Modify the setting.
 
@@ -81,8 +81,8 @@ To adjust settings from a Python script,
 For example, the following snippet will set the text view font to
 Fira Mono globally::
     
-    from stem.options import GeneralSettings
-    from stem.core import Config
+    from keypad.options import GeneralSettings
+    from keypad.core import Config
 
     s = GeneralSettings.from_config(Config.root)
     s.font_family = 'Fira Mono OT'
@@ -92,20 +92,20 @@ further action is necessary.
 
 To do the same thing with a YAML configuration file, use this snippet::
 
-    from stem.core import Config
+    from keypad.core import Config
 
     Config.root.load_yaml('''
     general:
         font_family: 'Fira Mono OT'
     ''', safe=False)
 
-Notice how `~stem.options.GeneralSettings` wasn't mentioned in the second
+Notice how `~keypad.options.GeneralSettings` wasn't mentioned in the second
 example? This is because the settings (the schema) and the configuration (the
 data) are decoupled. We only needed to modify the underlying data, so we didn't need
 the settings class. 
 
 Where did the ``general`` come from? It's specified in the documentation
-for `~stem.options.GeneralSettings`, under the heading "Config Namespace".
+for `~keypad.options.GeneralSettings`, under the heading "Config Namespace".
 
 
 .. tip::
@@ -124,7 +124,7 @@ Settings subclasses consist of:
 
 * An assignment to the class attribute ``_ns_``, which stands for "namespace"
   and controls the name used for the section in the configuration file.
-* One or more class attributes of type `~stem.core.nconfig.Field`, as detailed
+* One or more class attributes of type `~keypad.core.nconfig.Field`, as detailed
   below.
 
 .. autoclass:: Field
@@ -148,7 +148,7 @@ Observing Settings
 ==================
 
 You may observe the fields of a settings object by using its
-`~stem.core.nconfig.Settings.value_changed` signal. This signal is emitted
+`~keypad.core.nconfig.Settings.value_changed` signal. This signal is emitted
 whenever the value of a field changes, even if it was changed by reading a
 configuration file or by modifying an ancestor configuration.
 

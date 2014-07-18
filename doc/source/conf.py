@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
-# Stem documentation build configuration file, created by
+# Keypad documentation build configuration file, created by
 # sphinx-quickstart on Sun May 11 19:23:37 2014.
 #
 # This file is execfile()d with the current directory set to its
@@ -62,7 +62,7 @@ source_encoding = 'utf-8-sig'
 master_doc = 'index'
 
 # General information about the project.
-project = 'Stem'
+project = 'Keypad'
 copyright = '2014, Sam Roth'
 
 # The version info for the project you're documenting, acts as replacement for
@@ -107,7 +107,7 @@ add_module_names = False
 pygments_style = 'sphinx'
 
 # A list of ignored prefixes for module index sorting.
-modindex_common_prefix = ['stem.']
+modindex_common_prefix = ['keypad.']
 
 # If true, keep warnings as "system message" paragraphs in the built documents.
 #keep_warnings = False
@@ -124,7 +124,7 @@ html_theme = 'bootstrap'
 # documentation.
 html_theme_options = {
     # Navigation bar title. (Default: ``project`` value)
-    'navbar_title': "Stem",
+    'navbar_title': "Keypad",
 
     # Tab name for entire site. (Default: "Site")
     'navbar_site_name': "Site",
@@ -304,7 +304,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  ('apidoc/modules', 'Stem.tex', 'Stem Documentation',
+  ('apidoc/modules', 'Keypad.tex', 'Keypad Documentation',
    'Sam Roth', 'manual'),
 ]
 
@@ -334,7 +334,7 @@ latex_domain_indices = True
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'stem', 'Stem Documentation',
+    ('index', 'keypad', 'Keypad Documentation',
      ['Sam Roth'], 1)
 ]
 
@@ -348,8 +348,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'Stem', 'Stem Documentation',
-   'Sam Roth', 'Stem', 'One line description of project.',
+  ('index', 'Keypad', 'Keypad Documentation',
+   'Sam Roth', 'Keypad', 'One line description of project.',
    'Miscellaneous'),
 ]
 

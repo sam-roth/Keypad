@@ -10,8 +10,8 @@ from sphinx.domains.python import (PyClassmember,
                                    PyXRefRole,
                                    Index)
 from sphinx.ext import autodoc
-from stem.core.nconfig import Settings, Field
-from stem.core.signal import Signal, InstanceSignal
+from keypad.core.nconfig import Settings, Field
+from keypad.core.signal import Signal, InstanceSignal
 import enum
 
 

@@ -1,7 +1,7 @@
-stem
-====
+keypad
+======
 
 .. toctree::
    :maxdepth: 4
 
-   stem
+   keypad

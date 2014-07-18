@@ -27,7 +27,7 @@ name in Qt.
 Observing a Signal
 ==================
 
-.. py:currentmodule:: stem.core.signal
+.. py:currentmodule:: keypad.core.signal
 
 You may start observing a signal by using its `~InstanceSignal.connect` method.
 The argument to this method is the function that should be called upon emission
@@ -56,7 +56,7 @@ Declaring a Signal
 You declare a signal using the `~Signal` decorator on a method of a class.
 Here's an example::
 
-    from stem.core import Signal
+    from keypad.core import Signal
 
     class Spam:
     

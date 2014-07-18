@@ -1,4 +1,4 @@
-# Stem – an editor
+# Keypad Text Editor
 
 **See the [developer documentation](http://saroth.bitbucket.org/stemdoc/html/).**
 
@@ -6,28 +6,23 @@
 serious at this point.**
 
 
-Stem is a text editor written in Python with a flexible plugin system. 
+Keypad is a text editor written in Python with a flexible plugin system. It was formerly 
+known as Stem.
 
 ## Design Principles
 
-* **Hackability:** Unlike heavyweight IDEs such as Eclipse, Stem makes simple
+* **Hackability:** Unlike heavyweight IDEs such as Eclipse, Keypad makes simple
   plugins easy to write. 
-* **Flexibility:** Stem uses a model-view-controller architecture to isolate
+* **Flexibility:** Keypad uses a model-view-controller architecture to isolate
   the GUI from the text editing logic, allowing for the possibility of
   additional user interfaces. For instance, it would be possible to build 
   a Curses frontend.
-* **Lack of Dogma:** While Stem is optimized for a certain style of text editing,
+* **Lack of Dogma:** While Keypad is optimized for a certain style of text editing,
   it can be easily modified to suport others.
 
-## Screenshot ([more](https://bitbucket.org/saroth/stem/wiki/Screenshots))
+## Screenshot ([more](https://bitbucket.org/saroth/keypad/wiki/Screenshots))
 
-![Editing Python Code](https://bitbucket.org/saroth/stem/wiki/screenshots/overview.png)
-
-## The Name
-
-The name of this project is likely to change in the future. "Stem" is a
-metaphor for the plugin architecture used by the editor. If the core of the
-editor is the stem, then the plugins are leaves.
+![Editing Python Code](https://bitbucket.org/saroth/keypad/wiki/screenshots/overview.png)
 
 ## Installation and Running
 
@@ -51,8 +46,8 @@ substituting the path with one appropriate for your system.
 ```
 #!python
 import pathlib
-import stem.plugins.cpp.options
-stem.plugins.cpp.options.ClangLibrary = pathlib.Path('/Library/Developer/CommandLineTools/usr/lib/libclang.dylib')
+import keypad.plugins.cpp.options
+keypad.plugins.cpp.options.ClangLibrary = pathlib.Path('/Library/Developer/CommandLineTools/usr/lib/libclang.dylib')
 ```
 
 
@@ -64,12 +59,12 @@ stem.plugins.cpp.options.ClangLibrary = pathlib.Path('/Library/Developer/Command
 ### Running
 
 ```
-python3.3 -m stem
+python3.3 -m keypad
 ```
 
 ## License
 
-Stem Text Editor  
+Keypad Text Editor  
 Copyright © 2014 Sam Roth.
 
 This program is free software: you can redistribute it and/or modify it under

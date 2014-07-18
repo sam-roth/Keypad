@@ -9,7 +9,7 @@ Plugin Creation HOWTO
 
 .. topic:: Abstract
     
-    This is an overview of how to create plugins for the Stem text editor. 
+    This is an overview of how to create plugins for the Keypad text editor. 
     It provides a simpler overview of the concepts involved than the API documentation.
     Although the focus of this document is plugin construction, it may also
     help in understanding the architecture of the application.
@@ -18,7 +18,7 @@ Plugin Discovery
 ================
 
 A plugin module is any Python module that makes one or more valid calls to
-:py:func:`~stem.core.plugin.register_plugin` when it is imported.
+:py:func:`~keypad.core.plugin.register_plugin` when it is imported.
 
 In order to make the plugins contained discoverable, a user must must import
 the module from their ``stemrc.py`` file. This file is an ordinary Python
@@ -30,7 +30,7 @@ Plugin Classes
 ==============
 
 Each plugin class is a subclass of
-:py:class:`~stem.core.plugin.Plugin` and should contain at least the following,
+:py:class:`~keypad.core.plugin.Plugin` and should contain at least the following,
 
 *   An assignment to each of the following fields:
 
@@ -46,15 +46,15 @@ Each plugin class is a subclass of
 Failing to implement either attach or detach will make it impossible to
 instantiate your plugin class.
 
-The :py:meth:`~stem.core.plugin.Plugin.attach` method is called when your plugin is attached.
-Likewise, the :py:meth:`~stem.core.plugin.Plugin.detach` method is called when your plugin is detached.
+The :py:meth:`~keypad.core.plugin.Plugin.attach` method is called when your plugin is attached.
+Likewise, the :py:meth:`~keypad.core.plugin.Plugin.detach` method is called when your plugin is detached.
 These methods are called automatically. You should not call them except as part of tests.
 
 Contributed Commands
 ====================
 
 A plugin may contribute ``interactive`` commands by decorating methods with 
-:py:class:`stem.core.plugin.command`. These commands will automatically be registered and
+:py:class:`keypad.core.plugin.command`. These commands will automatically be registered and
 deregistered when the plugin is loaded or unloaded.
 
 
@@ -63,7 +63,7 @@ Quick Example
 
 This is an example of a plugin class definition::
 
-    from stem.api import (Plugin,
+    from keypad.api import (Plugin,
                           register_plugin,
                           command,
                           app,
@@ -90,9 +90,9 @@ When the command ``hello`` is given, a message box will appear with the text
 
 The API
 =======
-.. py:currentmodule:: stem.api
+.. py:currentmodule:: keypad.api
 
-:main article: :py:mod:`stem.api`
+:main article: :py:mod:`keypad.api`
 
 Functions
 ---------

@@ -1,16 +1,16 @@
-.. Stem documentation master file, created by
+.. Keypad documentation master file, created by
    sphinx-quickstart on Sun May 11 19:23:37 2014.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Stem's documentation!
+Welcome to Keypad's documentation!
 ================================
 
 .. Contents:
 .. .. toctree:
 ..     :maxdepth: 2
 .. 
-..     apidoc/stem
+..     apidoc/keypad
 ..     plugins
 .. 
 
