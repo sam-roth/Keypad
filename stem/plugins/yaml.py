@@ -7,7 +7,7 @@ from concurrent import futures
 
 from stem.api import BufferController, autoconnect, Plugin, register_plugin, command
 from stem.options import GeneralSettings
-from stem.plugins.semantics.syntax import SyntaxHighlighter, lazy
+from stem.core.syntaxlib import SyntaxHighlighter, lazy
 from stem.abstract.code import IndentRetainingCodeModel, AbstractCompletionResults
 from stem.core import AttributedString
 from stem.buffers.cursor import Cursor
@@ -15,11 +15,11 @@ from stem.core import nconfig, filetype
 from stem.core.fuzzy import FuzzyMatcher
 from stem.core.executors import future_wrap
 
-from stem.plugins.semantics.syntaxlib import RegexLexer
+from stem.core.syntaxlib import RegexLexer
 
 @lazy
 def yaml_lexer():
-    from stem.plugins.semantics.syntaxlib import keyword, regex, region
+    from stem.core.syntaxlib import keyword, regex, region
     import re
     
     KEYWORD     = dict(lexcat='keyword')

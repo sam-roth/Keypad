@@ -1,10 +1,10 @@
 from stem import api
-from stem.plugins.semantics import syntax, syntaxlib
+from stem.core import syntaxlib
 import re
 
-@syntax.lazy
+@syntaxlib.lazy
 def lexer():
-    from stem.plugins.semantics.syntaxlib import regex, region, keyword
+    from stem.core.syntaxlib import regex, region, keyword
 
     class RSTLexer:
 
@@ -70,7 +70,7 @@ class RSTCodeModel(api.IndentRetainingCodeModel):
 
 
     def highlight(self):
-        highlighter = syntax.SyntaxHighlighter(
+        highlighter = syntaxlib.SyntaxHighlighter(
             'stem.plugins.rst',
             lexer().All,
             dict(lexcat=None)

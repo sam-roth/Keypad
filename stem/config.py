@@ -5,7 +5,8 @@ if not os.environ.get('STEM_NO_RC'):
     try:
         import stemrc
     except ImportError:
-        pass
+        import traceback
+        traceback.print_exc()
 
 
 from .api import *

@@ -7,8 +7,12 @@ from stem.core.attributed_string import AttributedString
 from stem.abstract.code import IndentRetainingCodeModel, Indent, AbstractCompletionResults
 from stem.core.executors import future_wrap
 from stem.core.fuzzy import FuzzyMatcher
-from stem.plugins.semantics.syntaxlib import regex, region, keyword
-from stem.plugins.semantics.syntax import lazy, SyntaxHighlighter
+
+from stem.core.syntaxlib import (regex, region, keyword,
+                                 lazy, SyntaxHighlighter)
+
+# from stem.plugins.semantics.syntaxlib import regex, region, keyword
+# from stem.plugins.semantics.syntax import lazy, SyntaxHighlighter
 
 @lazy
 def lexer():

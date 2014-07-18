@@ -7,7 +7,7 @@ from stem.api import (Plugin,
                       Cursor)
 
 from stem.abstract.code import IndentRetainingCodeModel, AbstractCompletionResults
-from stem.plugins.semantics.syntax import SyntaxHighlighter, lazy
+from stem.core.syntaxlib import SyntaxHighlighter, lazy
 from stem.core.processmgr.client import AsyncServerProxy
 from stem.core.fuzzy import FuzzyMatcher
 from stem.core.executors import future_wrap

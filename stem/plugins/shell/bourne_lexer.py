@@ -3,7 +3,7 @@ Lexer for Bourne shells.
 '''
 
 import re
-from stem.plugins.semantics.syntaxlib import keyword, regex, region, Lexer
+from stem.core.syntaxlib import keyword, regex, region, Lexer
 
 class HeredocEndLexer(Lexer):
     def __init__(self, text, attrs):

@@ -4,7 +4,7 @@ from concurrent.futures import Future
 
 from stem.api import interactive
 from stem.abstract.code import IndentRetainingCodeModel, AbstractCompletionResults
-from stem.plugins.semantics.syntax import SyntaxHighlighter
+from stem.core.syntaxlib import SyntaxHighlighter
 from stem.core.processmgr.client import AsyncServerProxy, RemoteError
 from stem.core.fuzzy import FuzzyMatcher, Filter
 from stem.core.conftree import ConfTree

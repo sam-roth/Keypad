@@ -3,8 +3,7 @@ import keyword
 import logging
 
 from stem.api import BufferController, autoconnect
-from stem.plugins.semantics.syntax import SyntaxHighlighter, lazy
-from stem.plugins.semantics.syntaxlib import Lexer
+from stem.core.syntaxlib import (SyntaxHighlighter, lazy, Lexer)
 
 
 keywords = '''
@@ -73,11 +72,11 @@ class RawStringStartLexer(Lexer):
 
     def enter(self):
         return RawStringEndLexer(')' + self.eof_pat + '"', self.attrs)
-
+        
 
 @lazy
 def cpplexer():
-    from stem.plugins.semantics.syntaxlib import keyword, regex, region
+    from stem.core.syntaxlib import keyword, regex, region
     import re
 
 

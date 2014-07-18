@@ -5,7 +5,7 @@ import logging
 import builtins
 
 from stem.api import BufferController, autoconnect
-from stem.plugins.semantics.syntax import SyntaxHighlighter, lazy
+from stem.core.syntaxlib import SyntaxHighlighter, lazy
 
 
 _python_kwlist = frozenset(keyword.kwlist) - frozenset('from import None False True'.split())
@@ -14,8 +14,8 @@ _python_types = frozenset(x for x in dir(builtins) if isinstance(getattr(builtin
 
 @lazy
 def pylexer():
-    from stem.plugins.semantics.syntaxlib import keyword, regex, region
-
+    from stem.core.syntaxlib import keyword, regex, region
+    
     Keyword     = keyword(_python_kwlist, dict(lexcat='keyword'))
     Import      = keyword('from import'.split(), dict(lexcat='keyword.modulesystem'))
     Const       = keyword(_python_builtins, dict(lexcat='identifier.constant'))
