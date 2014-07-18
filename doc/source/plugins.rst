@@ -21,7 +21,7 @@ A plugin module is any Python module that makes one or more valid calls to
 :py:func:`~keypad.core.plugin.register_plugin` when it is imported.
 
 In order to make the plugins contained discoverable, a user must must import
-the module from their ``stemrc.py`` file. This file is an ordinary Python
+the module from their ``keypadrc.py`` file. This file is an ordinary Python
 module that must be located somewhere on the ``PYTHONPATH``. It is
 automatically loaded upon starting the editor.
 

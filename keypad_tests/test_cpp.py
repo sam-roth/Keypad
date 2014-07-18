@@ -2,7 +2,7 @@
 Test the C++ code model.
 
 
-If these tests fail on your machine, you may need to add a test_stemrc on your PYTHONPATH
+If these tests fail on your machine, you may need to add a test_keypadrc on your PYTHONPATH
 with the appropriate configuration. Here's what mine looks like::
 
     from keypad.api import Config
@@ -22,7 +22,7 @@ thisfile = pathlib.Path(cpp.__file__).absolute()
 sys.path.insert(0, str(thisfile.parent.parent.parent.parent / 'third-party'))
 
 try:
-    import test_stemrc
+    import test_keypadrc
 except ImportError:
     pass
 

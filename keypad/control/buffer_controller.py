@@ -139,6 +139,9 @@ class BufferController(Tagged, Responder):
         
         
         config_path = next(search_upwards(path, '.stemdir.yaml'), None)
+        if config_path is None:
+            config_path = next(search_upwards(path, '.kpdir.yaml'), None)
+            
         if config_path is not None:
             with config_path.open('rb') as f:
                 self.config.load_yaml_safely(f)

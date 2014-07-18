@@ -1,12 +1,19 @@
+'''
+This module loads user configuration from ``keypadrc`` as well
+as providing basic built-in configuration.
+'''
+
 import os
 
-if not os.environ.get('STEM_NO_RC'):
+if not os.environ.get('STEM_NO_RC') and not os.environ.get('KEYPAD_NO_RC'):
 
-    try:
-        import stemrc
-    except ImportError:
-        import traceback
-        traceback.print_exc()
+    for mod in ['stemrc', 'keypadrc']:
+        try:
+            exec('import {}'.format(mod))
+        except ImportError as exc:
+            if exc.name != mod:
+                import traceback
+                traceback.print_exc()
 
 
 from .api import *
