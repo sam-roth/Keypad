@@ -5,8 +5,8 @@ import sys
 import runpy
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
-import stem.__main__
-stem.__main__.main()
+import keypad.__main__
+keypad.__main__.main()
 
 
 
