@@ -116,7 +116,7 @@ class CodeView(TextView):
 
         if p is None:
             return
-            
+
         x = p.x()
         y = p.y()
         
@@ -140,13 +140,17 @@ class CodeView(TextView):
 
         normal_compl_rect = QRect(self.mapToGlobal(QPoint(x, y + line_height)),
                                   self.completion_view.size())
-        intersect = QApplication.desktop().screenGeometry().intersected(normal_compl_rect)
-        if intersect != normal_compl_rect:
+
+        screen_geom = QApplication.desktop().screenGeometry()
+
+        if normal_compl_rect.top() > screen_geom.height():
             normal_compl_rect.moveBottomLeft(
                 self.mapToGlobal(
                     QPoint(x, y - line_height)))
-        
-            
+        if normal_compl_rect.right() > screen_geom.width():
+            normal_compl_rect.moveRight(screen_geom.width())
+
+
         self.completion_view.move_(normal_compl_rect.topLeft())
         self.completion_view.show()
 
