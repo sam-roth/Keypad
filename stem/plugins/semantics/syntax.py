@@ -1,11 +1,14 @@
 import logging
 
-from .syntaxlib import Tokenizer, TokenizerEvent
+from .syntaxlib import AbstractTokenizer, Tokenizer, TokenizerEvent
 from stem.util import time_limited
 class SyntaxHighlighter(object):
 
     def __init__(self, name, lexer, base_attrs):
-        self._tokenizer = Tokenizer(lexer)
+        if isinstance(lexer, AbstractTokenizer):
+            self._tokenizer = lexer
+        else:
+            self._tokenizer = Tokenizer(lexer)
         self._name = name
 
         self._end_state_key     = name + '.' + 'end_state'
@@ -37,18 +40,15 @@ class SyntaxHighlighter(object):
                         token_stack.append((lexer, pos))
                     else:
                         start_lexer = None
-                        try:
-                            # We should be in a token here, and the token's lexer should be 
-                            # the same as the current lexer.
-                            # If this isn't the case, raise RuntimeError.
-                            start_lexer, start = token_stack.pop()
-                            if start_lexer is not lexer: raise RuntimeError()
-                        except:
-                            # Catch the error caused by popping off an empty stack, or by
-                            # a lexer mismatch.
-                            logging.warning('Expected %r, got %r.', lexer, start_lexer)
+                        # Find the token to pop by going through the token
+                        # stack until a match is found.
+                        for i, (start_lexer, start) in enumerate(reversed(token_stack)):
+                            if start_lexer is lexer:
+                                attr_ranges.append((start, pos, lexer.attrs))
+                                del token_stack[-(i+1)]
+                                break
                         else:
-                            attr_ranges.append((start, pos, lexer.attrs))
+                            logging.warning('Expected %r, which was not in the token stack.', lexer)
 
                 # Handle tokens that go past the end of the line
                 next_line_token_stack = []
@@ -56,7 +56,7 @@ class SyntaxHighlighter(object):
                 for lexer, start in token_stack:
                     line.set_attributes(start, None, **lexer.attrs)
                     next_line_token_stack.append((lexer, 0))
-                    
+
                 for start, end, attrs in reversed(attr_ranges):
                     line.set_attributes(start, end, **attrs)
 

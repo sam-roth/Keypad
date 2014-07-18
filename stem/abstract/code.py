@@ -301,7 +301,7 @@ class AbstractCodeModel(metaclass=ABCMeta):
         it involves mutation of the buffer, and it may be better to make
         the code model a factory for a "Highlighter" object.        
         '''
-
+        
     @abstractmethod
     def dispose(self):
         '''
