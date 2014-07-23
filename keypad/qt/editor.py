@@ -1,15 +1,18 @@
 
 
 from keypad.abstract.editor import AbstractEditor
+from keypad.abstract.asyncmsg import AbstractMessageBarTarget
 from keypad.abstract.application import app
 from .textlayout.widget import CodeView, CodeViewProxy
 from .qt_util import *
 from .find import FindWidget
+from .asyncmsg import MessageBarView
 from keypad.core.signal import Signal
 from keypad.api import run_in_main_thread
 from keypad import api
 
-class Editor(AbstractEditor, Autoresponder, QWidget, metaclass=ABCWithQtMeta):
+class Editor(AbstractEditor, AbstractMessageBarTarget, 
+             Autoresponder, QWidget, metaclass=ABCWithQtMeta):
 
     def __init__(self, config):
         QWidget.__init__(self)
@@ -23,8 +26,10 @@ class Editor(AbstractEditor, Autoresponder, QWidget, metaclass=ABCWithQtMeta):
 
         self.__find_widget = FindWidget()
         self.__find_widget.hide()
+        self.__msgbar = MessageBarView(self)
         self.__view.setParent(self)
         self.__layout = QVBoxLayout(self)
+        self.__layout.addWidget(self.__msgbar)
         self.__layout.addWidget(self.__view)
         self.__layout.addWidget(self.__find_widget)
         self.__layout.setContentsMargins(0, 0, 0, 0)
@@ -73,6 +78,9 @@ class Editor(AbstractEditor, Autoresponder, QWidget, metaclass=ABCWithQtMeta):
         if (obj is self.__view or obj is self.__view.viewport()) and ev.type() == QEvent.FocusIn:
             self.editor_activated()
         return super().eventFilter(obj, ev)
+
+    def show_message_bar(self, bar):
+        self.__msgbar.enqueue(bar)
 
 @api.interactive('gui_find')
 def gui_find(ed: Editor):

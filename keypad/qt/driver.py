@@ -25,7 +25,7 @@ class _ProcessPosted(QEvent):
 
     '''
     ProcessPostedType = QEvent.registerEventType()
-    
+
     def __init__(self):
         super().__init__(_ProcessPosted.ProcessPostedType)
 from ..core.processmgr.client import AsyncServerProxy
@@ -56,7 +56,7 @@ class Application(AbstractApplication, QApplication, metaclass=ABCWithQtMeta):
 
         self.focusChanged.connect(self.__on_focus_change)
 
-        
+
     def __on_focus_change(self, old, new):
         while new is not None and not isinstance(new, responder.Responder):
             new = new.parentWidget()
@@ -70,7 +70,7 @@ class Application(AbstractApplication, QApplication, metaclass=ABCWithQtMeta):
                      text, choices,
                      accept=0, reject=-1,
                      kind=None):
-    
+
         assert choices, 'must provide at least one choice'
 
         mbox = QMessageBox(parent)
