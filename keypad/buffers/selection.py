@@ -220,7 +220,15 @@ class Selection(object):
 
     def home(self):
         with self.moving():
-            self._insert_cursor.home()
+            sp = Span(self.insert_cursor.clone().home(),
+                      self.insert_cursor)
+
+            # Otherwise, move to the first non-space character.
+            match = re.search(r'\S', sp.text)
+            self.insert_cursor.home()
+
+            if match:
+                self.insert_cursor.right(match.start())
         return self
 
     def end(self):
