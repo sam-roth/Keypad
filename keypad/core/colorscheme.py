@@ -3,7 +3,7 @@ from .color import Color
 from ..util import clamp, deprecated, scopedict
 import random
 import logging
-
+import collections.abc
 
 class LexcatDict(scopedict.ScopeDict):
 
@@ -20,6 +20,16 @@ class LexcatDict(scopedict.ScopeDict):
             return super().make_key(v)
         else:
             return super().make_key(key)
+
+    def __setitem__(self, key, val):
+        if not isinstance(val, collections.abc.Mapping):
+            raise TypeError('Each lexcat must be a mapping.')
+        for k, v in val.items():
+            if not isinstance(k, str):
+                raise TypeError('The keys of each lexcat must be strings, not {}.'.format(type(k)))
+            if k in ('color', 'bgcolor', 'sel_bgcolor', 'sel_color') and not isinstance(v, (Color, str)):
+                raise TypeError('Keys representing colors must be strings or Colors, not {}.'.format(type(v)))
+        super().__setitem__(key, val)
 
 
 class Colorscheme(object):
@@ -45,11 +55,24 @@ class Colorscheme(object):
 
     def lexical_category_attrs(self, lexcat):
         if lexcat not in self.lexical_categories:
-            self.lexical_categories[lexcat] = dict(
-                color=Color.from_hsv(random.random(), self.fallback_sat, self.fallback_val))
+            if lexcat == 'matchbrace':
+                self.lexcats[lexcat] = dict(color=self.matching_brace_fg,
+                                            bgcolor=self.matching_brace_bg)
+            else:
+                self.lexcats[lexcat] = dict(color=Color.from_hsv(random.random(),
+                                                                 self.fallback_sat,
+                                                                 self.fallback_val))
 
-        return self.lexical_categories[lexcat]
 
+        return self.lexcats[lexcat]
+
+    @property
+    def matching_brace_bg(self):
+        return self.fg
+
+    @property
+    def matching_brace_fg(self):
+        return self.bg
 
     @property
     def extra_line_bg(self):
@@ -177,6 +200,9 @@ class AbstractSolarized(Colorscheme):
 #         self.lexcats['identifier.type'] = dict(color=self._yellow)
 
 
+    @property
+    def matching_brace_fg(self):
+        return self._red
 
 def extrap_value(color1, color2):
     _, _, v1 = color1.hsv

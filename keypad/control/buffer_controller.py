@@ -431,11 +431,7 @@ class BufferController(Tagged, Responder):
                     spans.append(Span(close_cursor.clone(), close_cursor.clone().right()))
                     overlays = []
                     for span in spans:
-                        overlays += [
-                            (span, 'sel_color', 'auto'),
-                            (span, 'sel_bgcolor', 'auto')
-                        ]
-
+                        overlays += [(span, 'lexcat', 'matchbrace')]
                     self.view.set_overlays('matched_brace', overlays)
             except (RuntimeError, IndexError):
                 pass
