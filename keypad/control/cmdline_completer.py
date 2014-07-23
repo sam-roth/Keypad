@@ -9,7 +9,7 @@ from keypad.plugins.semantics.completer import AbstractCompleter
 from keypad.control.interactive import dispatcher
 from keypad.core import errors
 
-def _expand_user(p):
+def expand_user(p):
     return pathlib.Path(os.path.expanduser(str(p)))
 
 def _as_posix_or_none(x):
@@ -19,7 +19,7 @@ def _as_posix_or_none(x):
         return x.as_posix()
 
 
-def _get_directory_contents_rec(path):
+def get_directory_contents_rec(path):
     queue = collections.deque()
     path = pathlib.Path(path)
 
@@ -34,7 +34,27 @@ def _get_directory_contents_rec(path):
         except PermissionError:
             pass
 
-    
+
+def get_filename_completions(typed_rootpath, working_path=None):
+    rootpath = expand_user(typed_rootpath)
+    if working_path and not rootpath.is_absolute():
+        rootpath = pathlib.Path(working_path).joinpath(rootpath)
+
+
+    if not rootpath.is_dir():
+        rootpath = rootpath.parent
+        if not rootpath.exists() or typed_rootpath.endswith(os.path.sep):
+            raise errors.NoSuchFileError('%s does not exist.' % typed_rootpath)
+        typed_rootpath = os.path.join(*(os.path.split(typed_rootpath)[:-1]))
+
+
+
+    for p in get_directory_contents_rec(rootpath):
+        yield os.path.join(typed_rootpath,
+                           str(p.relative_to(rootpath)))
+
+
+
 class CmdlineCompleter(AbstractCompleter):
 
     TriggerPattern = re.compile(r'^')
@@ -86,7 +106,7 @@ class CmdlineCompleter(AbstractCompleter):
                 self.__compcat = category
                 if category == 'Path':
                     typed_rootpath = imode.current_cmdline[col-imode.cmdline_col:]
-                    rootpath = _expand_user(typed_rootpath)
+                    rootpath = expand_user(typed_rootpath)
 
                     if not rootpath.is_dir():
                         rootpath = rootpath.parent
@@ -96,7 +116,7 @@ class CmdlineCompleter(AbstractCompleter):
 
 
                     def completion_generator():
-                        for p in _get_directory_contents_rec(rootpath):
+                        for p in get_directory_contents_rec(rootpath):
                             yield (os.path.join(typed_rootpath,
                                                 str(p.relative_to(rootpath))),)
 
@@ -105,3 +125,6 @@ class CmdlineCompleter(AbstractCompleter):
                     self.show_completions(limited_glob)
                 elif category == 'Interactive':
                     self.show_completions([(iname, ) for iname in dispatcher.keys()])
+
+
+

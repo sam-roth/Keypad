@@ -15,7 +15,6 @@ def set_future_result(future, func, *args, **kw):
         logging.exception('exception')
         future.set_exception(exc)
     else:
-        logging.debug('OK: %r', result)
         future.set_result(result)
     
     
