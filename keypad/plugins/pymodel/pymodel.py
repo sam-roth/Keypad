@@ -12,7 +12,7 @@ from keypad.abstract.code import (AbstractCodeModel,
                                 RelatedName,
                                 IndentRetainingCodeModel,
                                 AbstractCallTip)
- 
+
 from keypad.buffers import Cursor
 from . import syntax, settings
 from keypad.core.processmgr.client import AsyncServerProxy
@@ -22,11 +22,11 @@ from keypad.util import dump_object
 class PythonCompletionResults(AbstractCompletionResults):
     def __init__(self, token_start, results, runner):
         super().__init__(token_start)
-               
+
         self._rows = []
         for res in results:
-            self._rows.append((AttributedString(res), ))
-        
+            self._rows.append((AttributedString(res[0]), AttributedString(res[1], lexcat='comment')))
+
         self._filt_rows = self._rows
         self._filt_indices = list(range(len(self._rows)))
         self._runner = runner
@@ -34,31 +34,31 @@ class PythonCompletionResults(AbstractCompletionResults):
     @property
     def rows(self):
         return self._filt_rows
-    
+
     def text(self, index):
         return self.rows[index][0].text
-    
+
     def filter(self, pattern):
         self._filt_rows = []
         rgx = re.compile('.*?' + '.*?'.join(map(re.escape, pattern.lower())))
-        
+
         filt_rows = []
         for i, row in enumerate(self._rows):
             if rgx.match(row[0].text.lower()):
                 filt_rows.append((i, row))
-                
+
         filt_rows.sort(key=lambda key: len(key[1][0]))
-        
+
         self._filt_rows = [r[1] for r in filt_rows]
         self._filt_indices = [r[0] for r in filt_rows]
-        
+
     def doc_async(self, index):
         real_index = self._filt_indices[index]
         return self._runner.submit(GetDocs(real_index))
-        
+
     def dispose(self):
         pass # TODO
-        
+
 class WorkerStart(object):
     def __call__(self, worker):
         worker.refs = [
@@ -77,7 +77,7 @@ class WorkerTask(object):
         self.filename = filename
         self.pos = pos
         self.unsaved = unsaved
-        
+
     def __call__(self, worker):
         line, col = self.pos
         script = jedi.Script(self.unsaved, line+1, col, self.filename)
@@ -94,22 +94,22 @@ class UpdateSettings:
 class Complete(WorkerTask):
     def process(self, script):
         compls = script.completions()
-        result = [c.name_with_symbols for c in compls]
+        result = [(c.name_with_symbols, c.description) for c in compls]
         self.worker.last_result = compls
-        
+
         return result
-        
+
 class PythonCallTip(AbstractCallTip):
     def __init__(self, text):
         self.text = text
-        
+
     def to_astring(self, index):
         return self.text
-    
+
 class GetCallTip(WorkerTask):
     def process(self, script):
         assert isinstance(script, jedi.Script)
-        
+
         signature = next(iter(script.call_signatures()), None)
         if signature is None:
             return None
@@ -118,9 +118,20 @@ class GetCallTip(WorkerTask):
                                         bold=i==signature.index,
                                         underline=i==signature.index) 
                        for (i, p) in enumerate(signature.params)]
-        
+
         return PythonCallTip(AttributedString.join(
             [signature.name, AttributedString('('), AttributedString.join(', ', param_names), AttributedString(')')]))
+
+
+import textwrap
+
+def _wrap_paragraphs(text):
+    paras = re.split(r'\n\s*\n', text)
+    for i, line in enumerate(paras):
+        if i != 0:
+            yield ''
+        yield re.sub(r'\s+', ' ', line.replace('\n', ' '))
+
 
 class GetDocs(object):
     def __init__(self, index):
@@ -128,19 +139,21 @@ class GetDocs(object):
 
     def __call__(self, worker):
         try:
-            defn = next(iter(worker.last_result[self.index].follow_definition()), None)
+            defns = worker.last_result[self.index].follow_definition()
+            if defns is None:
+                return []
+            defn = next(iter(defns), None)
             if defn is None:
                 return []
             else:
-                lines = str(defn.doc).splitlines()
-                return [AttributedString(line) for line in lines]
-                
+                return [AttributedString(line) for line in _wrap_paragraphs(str(defn.doc))]
+
         except Exception as exc:
             # workaround for Jedi bug
             if "has no attribute 'isinstance'" not in str(exc):
                 logging.exception('Error getting documentation')
             return []
-        
+            
 
 class FindRelated(WorkerTask):
     def __init__(self, types, *args, **kw):
