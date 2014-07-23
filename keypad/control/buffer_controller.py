@@ -498,28 +498,18 @@ def show_error(buff: BufferController, error):
 
 @interactive('clipboard_cut')
 def clipboard_cut(buff: BufferController):
-    if buff.anchor_cursor is not None:
-        clipboard_copy(buff)
-        with buff.history.transaction():
-            buff.selection.replace('')
+    with buff.history.transaction():
+        buff.selection.cut()
 
 
 @interactive('clipboard_copy')
 def clipboard_copy(buff: BufferController):
-    if buff.anchor_cursor is not None:
-        text = buff.anchor_cursor.text_to(buff.canonical_cursor)
-        app().clipboard_value = text
-
+    buff.selection.copy()
+        
 @interactive('clipboard_paste')
 def clipboard_paste(buff: BufferController):
-    clip_val = app().clipboard_value
-    if clip_val is None:
-        return
-
     with buff.history.transaction():
-        if buff.anchor_cursor is not None:
-            text = buff.anchor_cursor.remove_to(buff.canonical_cursor)
-        buff.canonical_cursor.insert(clip_val)
+        buff.selection.paste()
 
 @interactive('undo')
 def undo(buff: BufferController):

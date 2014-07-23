@@ -3,11 +3,13 @@ import abc
 import contextlib
 import re
 import enum
+import textwrap
 
 from ..core import Signal
 from ..options import GeneralSettings
 from ..core.nconfig import Settings, Field, Conversions
 from .span import Span
+from ..abstract.application import app
 
 _AdvanceWordRegex = re.compile(
     r'''
@@ -329,6 +331,44 @@ class Selection(object):
         '''
 
         self.replace('\n')
+
+    def paste(self):
+        '''
+        Paste from clipboard.
+        '''
+        text = app().clipboard_value
+        if not text:
+            return
+
+        text = textwrap.dedent(text)
+
+        # Correct indentation of pasted lines
+        if '\n' in text and self.insert_cursor.searchline(r'^\s*$'):
+
+            sp = Span(self.insert_cursor.clone().home(), self.insert_cursor)
+            indent = sp.text
+            sp.remove()
+
+            text = ''.join(indent + s + '\n' for s in text.splitlines())
+
+        self.replace(text)
+
+    def copy(self):
+        '''
+        Copy to clipboard.
+
+        The contents of the clipboard are only set if there is a selection.
+        '''
+        if self.text:
+            app().clipboard_value = self.text
+
+    def cut(self):
+        '''
+        Cut to clipboard. (Equivalent to ``self.copy(); self.clear()``.)
+        '''
+        self.copy()
+        self.replace('')
+
 
 
 
