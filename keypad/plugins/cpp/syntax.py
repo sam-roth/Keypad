@@ -149,7 +149,7 @@ def cpplexer():
 
     HexLit      = regex(r'\b0x[0-9a-fA-F]+L?\b', NUMBER)
     DecLit      = regex(r'\b[\d]+L?\b', NUMBER)
-    FloatLit    = regex(r'\b(?:\d+\.\d*|\.\d+)f?\b', NUMBER)
+    FloatLit    = regex(r'\b(?:\d+\.\d*|\.\d+)[Ff]?\b', NUMBER)
     
     Todo        = regex(r'\btodo:|\bfixme:|\bhack:', TODO, flags=re.IGNORECASE)
 
