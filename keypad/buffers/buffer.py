@@ -50,7 +50,7 @@ class Buffer(object):
         self._lines = [AttributedString()]
         self._line_view = util.ImmutableListView(self._lines)
         self.code_model = None
-
+        self.history = None
 
     @Signal
     def text_modified(self, modification):
@@ -129,7 +129,7 @@ class Buffer(object):
     @property
     def text(self):
         return '\n'.join(line.text for line in self._lines)
-        
+
     def remove(self, pos, length):
         if length == 0:
             return

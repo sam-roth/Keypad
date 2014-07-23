@@ -1,6 +1,7 @@
 
 
 import abc
+
 from ..core.responder import Responder
 from ..core.signal import Signal, ClassSignal
 from ..core.plugin import Plugin, attach_plugin, detach_plugin
@@ -90,7 +91,7 @@ class AbstractApplication(Responder, metaclass=abc.ABCMeta):
     def message_box(self, parent, 
                      text, choices,
                      accept=0, reject=-1, kind=None):
-    
+
         return self._message_box(parent,
                                  text,
                                  choices,
@@ -267,7 +268,7 @@ class AbstractApplication(Responder, metaclass=abc.ABCMeta):
 
         '''
         result = self.next_responder.find_responder(ty)
-        assert isinstance(result, (NoneType, ty))
+        assert isinstance(result, (type(None), ty))
         return result
 
 def app():
@@ -297,4 +298,4 @@ class AbstractWindow(Responder, metaclass=abc.ABCMeta):
     @Signal
     def editor_activated(self, editor):
         pass
-        
+

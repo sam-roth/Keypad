@@ -13,18 +13,18 @@ class HistoryCoalescencePolicy(object):
     Skip = 5 # number of changesets to skip before coalescing
     def __init__(self):
         pass
-    
+
     @staticmethod
     def _coalesce_changeset(x, y):
         if len(x) != 1 or len(y) != 1:
             return None
         else:
             return x[0].coalesce(y[0])
-            
+
     def coalesce(self, changesets):
         processed = changesets[-self.Skip:]
         del changesets[-self.Skip:]
-        
+
         if len(changesets) >= 2:
             proposed = self._coalesce_changeset(changesets[-1], changesets[-2])
             if proposed:
@@ -32,11 +32,11 @@ class HistoryCoalescencePolicy(object):
                 if self.WordRegex.match(text):
                     del changesets[-2:]
                     changesets.append([proposed])
-        
+
         changesets.extend(processed)
-        
+
         return changesets
-        
+
         
 class BufferHistory(object):
     def __init__(self, buff):
@@ -55,7 +55,7 @@ class BufferHistory(object):
         self._scratchpad_active = False
 
         self.buff = buff
-
+        buff.history = self
         self.buff.text_modified.connect(self._on_buffer_text_modified)
 
 

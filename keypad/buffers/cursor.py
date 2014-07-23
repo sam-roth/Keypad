@@ -1,6 +1,9 @@
+import re
+import contextlib
+
 
 from .buffer import TextModification, Buffer
-import re
+
 
 class Cursor(object):
 
@@ -204,7 +207,7 @@ class Cursor(object):
         '''
         
         return self.clone().advance(-1).rchar
-        
+
     @property
     def rchar(self):
         '''
@@ -216,7 +219,7 @@ class Cursor(object):
             return lt[x] # fast path
         else:
             return self.buffer.span_text(self.pos, offset=1)
-        
+
     @property
     def rchar_attrs(self):
         return self.line.attributes(self.x)
@@ -276,6 +279,19 @@ class Cursor(object):
     def pos(self, value):
         self._set_pos(value)
 
+
+    @contextlib.contextmanager
+    def transaction(self):
+        '''
+        Return a context manager for a history transaction if a BufferHistory has
+        been attached to the buffer.
+        '''
+        h = self.buffer.history
+        if h is not None:
+            with h.rec_transaction():
+                yield
+        else:
+            yield
 
     def _set_pos(self, value):
         self._col_affinity = None
