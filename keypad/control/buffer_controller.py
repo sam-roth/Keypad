@@ -31,6 +31,16 @@ class SelectionImpl(BacktabMixin, Selection):
     pass
 
 
+_matching_delim = {
+    '{': '}',
+    '}': '{',
+    '[': ']',
+    ']': '[',
+    '(': ')',
+    ')': '(',
+    "'": "'",
+    '"': '"'
+}
 from .interactive import interactive
 
 def _selection_code_completion_hint(s):
@@ -392,7 +402,7 @@ class BufferController(Tagged, Responder):
             selected_region = Region()
 
         
-        
+
         overlay_spans = []
         for span in selected_region.spans:
             overlay_spans.extend([
@@ -413,29 +423,40 @@ class BufferController(Tagged, Responder):
                 lchar = curs.lchar
                 rchar = curs.rchar
                 open_cursor, close_cursor = None, None
-                if rchar in self.code_model.close_braces:
-                    close_cursor = curs.clone()
-                    open_cursor = curs.clone().opening_brace(timeout_ms=timeout)
-                elif lchar in self.code_model.close_braces:
+                if lchar in self.code_model.close_braces:
                     close_cursor = curs.clone().left()
                     open_cursor = close_cursor.clone().opening_brace(timeout_ms=timeout)
-                elif rchar in self.code_model.open_braces:
-                    open_cursor = curs.clone()
-                    close_cursor = curs.clone().closing_brace(timeout_ms=timeout)
+                elif rchar in self.code_model.close_braces:
+                    close_cursor = curs.clone()
+                    open_cursor = curs.clone().opening_brace(timeout_ms=timeout)
                 elif lchar in self.code_model.open_braces:
                     open_cursor = curs.clone().left()
                     close_cursor = open_cursor.clone().closing_brace(timeout_ms=timeout)
+                elif rchar in self.code_model.open_braces:
+                    open_cursor = curs.clone()
+                    close_cursor = curs.clone().closing_brace(timeout_ms=timeout)
+
                 if open_cursor is not None:
                     spans = []
                     spans.append(Span(open_cursor.clone(), open_cursor.clone().right()))
                     spans.append(Span(close_cursor.clone(), close_cursor.clone().right()))
+
+                    ch1 = spans[0].text
+                    ch2 = spans[1].text
+
+                    if _matching_delim.get(ch1, ch2) != ch2:
+                        lc = 'punctuation.mismatch'
+                    else:
+                        lc = 'punctuation.match'
+
                     overlays = []
                     for span in spans:
-                        overlays += [(span, 'lexcat', 'matchbrace')]
+                        overlays += [(span, 'lexcat', lc)]
+
                     self.view.set_overlays('matched_brace', overlays)
             except (RuntimeError, IndexError):
                 pass
-        
+
 #         if full:
 #             self.view.full_redraw()
 #         else:
@@ -505,7 +526,7 @@ def clipboard_cut(buff: BufferController):
 @interactive('clipboard_copy')
 def clipboard_copy(buff: BufferController):
     buff.selection.copy()
-        
+
 @interactive('clipboard_paste')
 def clipboard_paste(buff: BufferController):
     with buff.history.transaction():

@@ -55,9 +55,12 @@ class Colorscheme(object):
 
     def lexical_category_attrs(self, lexcat):
         if lexcat not in self.lexical_categories:
-            if lexcat == 'matchbrace':
+            if lexcat == 'punctuation.match':
                 self.lexcats[lexcat] = dict(color=self.matching_brace_fg,
                                             bgcolor=self.matching_brace_bg)
+            elif lexcat == 'punctuation.mismatch':
+                self.lexcats[lexcat] = dict(color=self.brace_mismatch_fg,
+                                            bgcolor=self.brace_mismatch_bg)
             else:
                 self.lexcats[lexcat] = dict(color=Color.from_hsv(random.random(),
                                                                  self.fallback_sat,
@@ -65,6 +68,14 @@ class Colorscheme(object):
 
 
         return self.lexcats[lexcat]
+
+    @property
+    def brace_mismatch_bg(self):
+        return self.fg
+
+    @property
+    def brace_mismatch_fg(self):
+        return self.bg
 
     @property
     def matching_brace_bg(self):
@@ -199,10 +210,21 @@ class AbstractSolarized(Colorscheme):
 #         self.lexcats['keyword.context'] = dict(color=self._blue)
 #         self.lexcats['identifier.type'] = dict(color=self._yellow)
 
+    @property
+    def matching_brace_bg(self):
+        return self.selection_bg
 
     @property
     def matching_brace_fg(self):
         return self._red
+
+    @property
+    def brace_mismatch_bg(self):
+        return self._orange
+
+    @property
+    def brace_mismatch_fg(self):
+        return self._base03
 
 def extrap_value(color1, color2):
     _, _, v1 = color1.hsv
