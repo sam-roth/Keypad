@@ -1,6 +1,8 @@
-from keypad import api
-from keypad.core import syntaxlib
 import re
+import pathlib
+
+from keypad import api
+from keypad.core import syntaxlib, executors
 
 @syntaxlib.lazy
 def lexer():
@@ -77,6 +79,33 @@ class RSTCodeModel(api.IndentRetainingCodeModel):
         )
 
         highlighter.highlight_buffer(self.buffer)
+
+
+    def __filename_at(self, pos):
+        y, x = pos
+        c = api.Cursor(self.buffer, pos)
+        for match in re.finditer(r'\S+', c.line.text):
+            if match.start() <= x < match.end():
+                return match.group(0)
+        else:
+            return None
+
+    @executors.future_wrap
+    def find_related_async(self, pos, types):
+        if types & self.RelatedNameType.decl:
+            f = self.__filename_at(pos)
+            if f:
+                if self.path is not None:
+                    path = (pathlib.Path(self.path).parent / f).absolute()
+                else:
+                    path = pathlib.Path(f).absolute()
+
+                if path.exists():
+                    return [api.RelatedName(self.RelatedNameType.decl,
+                                            path,
+                                            (0, 0),
+                                            str(path))]
+        return []
 
 
 

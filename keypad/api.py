@@ -12,7 +12,7 @@ from .buffers import Span, Region, Buffer, Cursor
 from .core.notification_queue import run_in_main_thread, in_main_thread
 from .abstract.application import AbstractWindow, AbstractApplication
 from .abstract.editor import AbstractEditor
-from .abstract.code import AbstractCodeModel, IndentRetainingCodeModel
+from .abstract.code import AbstractCodeModel, IndentRetainingCodeModel, RelatedName, RelatedNameType
 
 def bind(key, interactive_command_name):
     keybinding.controller.add_binding(key, interactive_command_name)
@@ -63,6 +63,8 @@ __all__ = '''
     Region
     Buffer
     Cursor
+    RelatedName
+    RelatedNameType
 '''.split()
 
 
