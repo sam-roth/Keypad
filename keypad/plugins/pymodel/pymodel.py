@@ -18,6 +18,7 @@ from . import syntax, settings
 from keypad.core.processmgr.client import AsyncServerProxy
 from keypad.core import AttributedString
 from keypad.util import dump_object
+from keypad.abstract.rewriting import ReplaceFileRewrite
 
 class PythonCompletionResults(AbstractCompletionResults):
     def __init__(self, token_start, results, runner):
@@ -191,16 +192,14 @@ class Rename(WorkerTask):
     def __init__(self, name, *args, **kw):
         super().__init__(*args, **kw)
         self.name = name
-
+        
     def process(self, script):
         import jedi.refactoring
-        import pprint
         refac = jedi.refactoring.rename(script, self.name)
-        from IPython import embed
-        embed()
-
-
-
+        result = []
+        for path, (new_path, before, after) in refac.change_dct.items():
+            result.append(ReplaceFileRewrite(path, '\n'.join(after), new_path=new_path))
+        return result
 
 
 class PythonCodeModel(IndentRetainingCodeModel):

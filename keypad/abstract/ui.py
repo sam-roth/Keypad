@@ -107,3 +107,4 @@ def next_tab(win: AbstractWindow, n=1):
     else:
         for _ in range(-n):
             win.prev_tab()
+

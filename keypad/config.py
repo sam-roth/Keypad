@@ -122,7 +122,7 @@ menu(8,
      'next_cursor_position',
      keybinding=Keys.ctrl.bracketright)
 
-    
+
 menu(2, 'Window')
 
 menu(0,
@@ -149,4 +149,5 @@ menu(4, 'Semantics')
 menu(0, 'Semantics/Find Declaration', 'find_declaration', keybinding=Keys.shift.f3)
 menu(1, 'Semantics/Find Definition',  'find_definition', keybinding=Keys.f3)
 menu(2, 'Semantics/Show Diagnostic', 'show_diagnostics', keybinding=Keys.f2)
+menu(3, 'Semantics/Rename Identifier', 'grename', keybinding=Keys.ctrl.shift.r)
 

@@ -70,7 +70,7 @@ class RelatedName(object):
         self.pos = pos
         self.name = name
 
-    
+
     def __repr__(self):
         return 'RelatedName{!r}'.format((
             self.type,
@@ -304,7 +304,7 @@ class AbstractCodeModel(Responder, metaclass=ABCMeta):
         it involves mutation of the buffer, and it may be better to make
         the code model a factory for a "Highlighter" object.        
         '''
-        
+
     @abstractmethod
     def dispose(self):
         '''
@@ -323,6 +323,18 @@ class AbstractCodeModel(Responder, metaclass=ABCMeta):
         return False
 
     def diagnostics_async(self):
+        raise NotImplementedError
+
+    def rename(self, pos, name):
+        '''
+        :refactoring action:
+            Return a list of `~keypad.abstract.AbstractRewrite` that renames a
+            given identifier to a different identifier throughout the
+            program.
+
+        :rtype: list(keypad.abstract.AbstractRewrite)
+        :raise: `NotImplementedError` if unimplemented
+        '''
         raise NotImplementedError
 
 class IndentRetainingCodeModel(AbstractCodeModel):

@@ -34,7 +34,7 @@ class PythonCodeModelPlugin(Plugin):
         import jedi
 
         # based on :PyImport from vim-jedi
-        
+
         sc = jedi.Script('import {}'.format(name))
         try:
             compl = sc.goto_assignments()[0]
@@ -46,11 +46,11 @@ class PythonCodeModelPlugin(Plugin):
             else:
                 interactive.run('edit', compl.module_path)
 
-
-    @command('rename')
-    def rename(self, cm: PythonCodeModel, name):
-        from keypad import api
-        bctl = self.app.find_object(api.BufferController)
-        cm.rename(bctl.selection.pos, name)
-
+#                 
+#     @command('rename')
+#     def rename(self, cm: PythonCodeModel, name):
+#         from keypad import api
+#         bctl = self.app.find_object(api.BufferController)
+#         cm.rename(bctl.selection.pos, name)
+# 
 

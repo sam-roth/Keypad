@@ -787,5 +787,41 @@ def join(bctl: BufferController):
                                indent)
         bctl.selection.text = text
 
+@interactive('rename')
+def rename(bctl: BufferController, name):
+    from ..abstract.rewriting import AbstractRewrite
+    cm = bctl.code_model
+    if cm is None:
+        return interactive.call_next
+    try:
+        for rewrite in cm.rename(bctl.selection.pos, name).result():
+            # TODO: path change
+            # TODO: other files
+            if rewrite.orig_path.absolute() == bctl.path.absolute():
+                pos = bctl.selection.pos
+                with bctl.history.transaction():
+                    rewrite.perform(bctl.buffer)
+                bctl.selection.pos = pos
+    except NotImplementedError:
+        return interactive.call_next
+
+@interactive('grename')
+def grename(bctl: BufferController):
+    from ..abstract import asyncmsg
+
+    RENAME = 'Rename'
+
+    mb = asyncmsg.MessageBar(title='Rename identifier', 
+                             choices=[RENAME],
+                             text_box='')
+
+    @mb.add_callback
+    def callback(choice):
+        option, text = choice
+        if option == RENAME:
+            rename(bctl, text)
+
+    target = app().find_object(asyncmsg.AbstractMessageBarTarget)
+    target.show_message_bar(mb)
 
 

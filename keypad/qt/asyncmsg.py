@@ -2,6 +2,7 @@
 
 from PyQt4 import Qt as qt
 
+from . import qt_util
 from ..abstract.asyncmsg import MessageBar
 import collections
 import platform
@@ -56,6 +57,7 @@ class MessageBarView(qt.QWidget):
         self._widgets = []
         self.hide()
 
+
     def _on_is_valid_changed(self):
         is_valid = self._msg.is_valid
         if is_valid:
@@ -71,11 +73,13 @@ class MessageBarView(qt.QWidget):
         self._msg.emit_text_changed(self._text_box.text())
 
     def _on_shortcut(self):
-        if self._widgets:
+        if self._text_box.isVisible():
+            self._text_box.setFocus()
+        elif self._widgets:
             self._widgets[0].setFocus()
 
     def _get_result(self, choice):
-        if self._msg.text_box:
+        if self._msg.text_box is not None:
             return choice, self._text_box.text()
         else:
             return choice
@@ -132,6 +136,8 @@ class MessageBarView(qt.QWidget):
             self._layout.addWidget(b)
             self._widgets.append(b)
             b.clicked.connect(self._on_click)
+
+        qt_util.set_tab_order(self, [self._text_box] + self._widgets)
 
         self._on_is_valid_changed()
 

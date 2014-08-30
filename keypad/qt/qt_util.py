@@ -13,6 +13,10 @@ from .. import api
 import abc
 import math
 
+def set_tab_order(parent, widgets):
+    for first, second in zip(widgets, widgets[1:]):
+        parent.setTabOrder(first, second)
+
 def qsizef_ceil(size):
     '''
     Converts a QSizeF to a QSize, rounding up.
@@ -102,7 +106,7 @@ class AutoresponderMixin:
         pw = self.parentWidget()
         while pw is not None and not isinstance(pw, Responder):
             pw = pw.parentWidget()
-            
+
         if pw is not None and isinstance(pw, Responder):
             return [pw] + super().next_responders
         else:
