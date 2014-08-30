@@ -295,6 +295,25 @@ class Selection(object):
         return self
 
 
+    def expand_to_line(self):
+        if self._anchor_cursor:
+            anchor = self._anchor_cursor.pos
+        else:
+            anchor = self._insert_cursor.pos
+
+        insert = self._insert_cursor.pos
+
+        first, last = sorted([anchor, insert])
+
+        self.clear_selection()
+        self.move(first)
+        self.home().home()
+        with self.select():
+            self.move(last)
+            self.end()
+        return self
+
+
     def tab(self, n=1):
         if self._anchor_cursor:
             first, second = sorted([

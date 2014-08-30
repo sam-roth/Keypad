@@ -754,13 +754,38 @@ def show_diagnostics(bc: BufferController):
         for f, p1, p2 in diag.ranges:
             if p1 is not None and p1[0] == bc.selection.pos[0]:
                 bc.view.call_tip_model = SimpleCallTip(AttributedString(diag.text))
-    
-#     bc._diagnostics_controller.update()
-    
-    
-#     diags = bc.code_model.diagnostics_async().result()
-    
-#     for diag in diags:
-#         print(diag)
+
+@interactive('paragraph')
+def paragraph(bctl: BufferController, width=75):
+    '''
+    Wrap the selected paragraphs.
+    '''
+    from keypad import util
+
+    width = int(width) # user input
+
+    with bctl.history.transaction():
+        bctl.selection.expand_to_line()
+        text = bctl.selection.text
+        text = util.paragraph_fill(text, width=width)
+        bctl.selection.text = text
+
+
+@interactive('join')
+def join(bctl: BufferController):
+    '''
+    Join the selected lines using spaces.
+    '''
+    from keypad import util
+    import textwrap
+
+    with bctl.history.transaction():
+        bctl.selection.expand_to_line()
+        text = bctl.selection.text
+        indent = util.common_indent(text)
+        text = textwrap.indent(util.strip_indent(text, indent).replace('\n', ' '),
+                               indent)
+        bctl.selection.text = text
+
 
 

@@ -15,3 +15,8 @@ from .core import (ImmutableListView,
                    default,
                    bifilter)
 
+from .wrap import (paragraph_fill,
+                   common_indent,
+                   strip_indent,
+                   ParagraphWrapper)
+
