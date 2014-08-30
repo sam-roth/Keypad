@@ -26,20 +26,36 @@ def _make_inheritable(handle):
         return h
     else:
         return handle
-        
 
+INTERPRETER_OVERRIDE = None
+
+def _get_interpreter():
+    if INTERPRETER_OVERRIDE is not None:
+        return INTERPRETER_OVERRIDE
+    else:
+        return sys.executable
+
+USE_SMOD = True
+
+def _get_worker_args(rh, wh):
+    result = [_get_interpreter()]
+    if USE_SMOD:
+        smod = os.path.join(os.path.dirname(__file__),
+                            'bootstrap.py')
+        result.append(smod)
+    result += [str(int(rh)),
+               str(int(wh))]
+
+    return result
 
 class ServerProxy(object):
     def start(self):
-        smod = os.path.join(os.path.dirname(__file__),
-                            'bootstrap.py')
-        
         lr, rw = os.pipe()
         rr, lw = os.pipe()
-        
+
         self.fin = open(lr, 'rb')
         self.fout = open(lw, 'wb')
-    
+
         child_env = dict(os.environ)
         child_env['PYTHONPATH'] = os.pathsep.join(sys.path)
         kw = {}
@@ -50,17 +66,14 @@ class ServerProxy(object):
 
         rh = _make_inheritable(rr)
         wh = _make_inheritable(rw)
-        
-        self.proc = subprocess.Popen([
-            sys.executable,
-            smod,
-            str(int(rh)),
-            str(int(wh))
-        ], env=child_env, **kw)
 
+
+        self.proc = subprocess.Popen(_get_worker_args(rh, wh),
+                                     env=child_env,
+                                     **kw)
         os.close(rw)
         os.close(rr)
-    
+
     def send(self, msg):
         try:
             pickle.dump(msg, self.fout)
@@ -89,7 +102,7 @@ class ServerProxy(object):
     @property
     def is_running(self):
         return self.proc.poll() is None
-        
+
     def shutdown(self):
         if self.is_running:
             from .server import ShutdownMessage
@@ -98,15 +111,15 @@ class ServerProxy(object):
             finally:
                 self.fout.close()
                 self.fin.close()
-    
+
     def restart(self):
         self.shutdown()
         self.start()
-    
+
     def __enter__(self):
         self.start()
         return self
-        
+
     def __exit__(self, *args):
         self.shutdown()
         return False
@@ -249,5 +262,4 @@ class AsyncServerProxy(object):
         
 if __name__ == "__main__":
     sp = ServerProxy()
-        
-        
+

@@ -25,7 +25,7 @@ class AboutDialog(Autoresponder, qt.QDialog):
             layout.addWidget(lbl)
             return lbl
 
-        label('<b>Stem</b>')
+        label('<b>KeyPad</b>')
 
         layout.addWidget(self._browser)
         label('<small>Copyright 2014 Sam Roth</small>')
@@ -35,9 +35,9 @@ class AboutDialog(Autoresponder, qt.QDialog):
 
     def _create_markup(self):
         parts = []
-
+        
         start = '''
-        <b>Stem Text Editor</b><br>
+        <b>KeyPad Text Editor</b><br>
         Copyright &copy; 2014 Sam Roth.
 
         <p>

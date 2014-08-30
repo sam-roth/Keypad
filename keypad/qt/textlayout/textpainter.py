@@ -153,7 +153,7 @@ class TextPainter:
         '''
 
         ep = self.paint_background(pos, len(text), bgcolor=bgcolor)
-        p = Qt.QPointF(pos.x(), self._metrics.ascent() + pos.y() - 1)
+        p = Qt.QPointF(pos.x(), self._metrics.ascent() + pos.y())# - 1)
         if color is not None:
             oldpen = self._painter.pen()
             self._painter.setPen(to_q_color(color))

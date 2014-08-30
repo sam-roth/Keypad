@@ -45,12 +45,12 @@ menu(1,
      'File/New',
      'new',
      keybinding=Keys.ctrl.n)
-     
+
 menu(2,    
      'File/Open',
      'gui_edit',
      keybinding=Keys.ctrl.o)
-     
+
 menu(3,    
      'File/Save',
      'gui_save',
@@ -80,7 +80,7 @@ menu(2,
      'Edit/Copy',
      'clipboard_copy',
      keybinding=Keys.ctrl.c)
-     
+
 menu(3,    
      'Edit/Paste',
      'clipboard_paste',
