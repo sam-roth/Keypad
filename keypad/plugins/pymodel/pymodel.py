@@ -153,7 +153,7 @@ class GetDocs(object):
             if "has no attribute 'isinstance'" not in str(exc):
                 logging.exception('Error getting documentation')
             return []
-            
+
 
 class FindRelated(WorkerTask):
     def __init__(self, types, *args, **kw):
@@ -179,19 +179,33 @@ class FindRelated(WorkerTask):
         if self.types & RelatedName.Type.defn:
             for rel in script.goto_definitions():
                 results.append(self.__convert_related(rel, RelatedName.Type.defn))
-        
+
         if self.types & RelatedName.Type.assign or self.types & RelatedName.Type.decl:
             for rel in script.goto_assignments():
                 results.append(self.__convert_related(rel, RelatedName.Type.assign | RelatedName.Type.decl))
-            
+
         return results
-            
+
+
+class Rename(WorkerTask):
+    def __init__(self, name, *args, **kw):
+        super().__init__(*args, **kw)
+        self.name = name
+
+    def process(self, script):
+        import jedi.refactoring
+        import pprint
+        refac = jedi.refactoring.rename(script, self.name)
+        from IPython import embed
+        embed()
+
+
 
 
 
 class PythonCodeModel(IndentRetainingCodeModel):
     call_tip_triggers = ['(', ')', ',', '\n']
-    
+
     def __init__(self, *args, **kw):
 
         super().__init__(*args, **kw)
@@ -236,11 +250,11 @@ class PythonCodeModel(IndentRetainingCodeModel):
                 break
         else:
             i = -1
-            
+
 
         return c.y, i + 1
-            
-    
+
+
     def completions_async(self, pos):
         tok_start = self._find_token_start(pos)
         return self.runner.submit(
@@ -262,10 +276,19 @@ class PythonCodeModel(IndentRetainingCodeModel):
                 self.buffer.text
             ),
         )
-        
+
+    def rename(self, pos, name):
+        tok_start = self._find_token_start(pos)
+        return self.runner.submit(Rename(name,
+                                         str(self.path) if self.path else None,
+                                         tok_start,
+                                         self.buffer.text))
+
     def dispose(self):
         try:
             self.runner.shutdown()
         finally:
             self.disposed = True
+
+
 

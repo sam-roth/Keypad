@@ -38,8 +38,10 @@ class MessageBarView(qt.QWidget):
         self._layout.addStretch()
         self._layout.addWidget(self._text_box)
 
+        self._text_box.setEnabled(False)
         self._text_box.hide()
         self._text_box.textEdited.connect(self._on_text_change)
+        self._text_box.setFocusPolicy(qt.Qt.NoFocus)
 
         self._edit_invalid_stylesheet = '''
             background-color: #FAA;
@@ -117,7 +119,11 @@ class MessageBarView(qt.QWidget):
         self._widgets.clear()
 
         self._title.setText(msg.title)
-        self._text_box.setVisible(msg.text_box is not None)
+
+        has_text_box = msg.text_box is not None
+        self._text_box.setVisible(has_text_box)
+        self._text_box.setEnabled(has_text_box)
+        self._text_box.setFocusPolicy(qt.Qt.StrongFocus if has_text_box else qt.Qt.NoFocus)
         self._text_box.setText(msg.text_box or '')
 
         for choice in msg.choices:
@@ -153,7 +159,7 @@ if __name__ == '__main__':
     def callback(r):
         print(r)
         app.quit()
-        
+
     mbv.enqueue(MessageBar(title='Baz',
                            choices=['Done'],
                            text_box='', 

@@ -93,7 +93,7 @@ class BufferController(Tagged, Responder):
         self.selection.moved                += self.selection_moved
         self.loaded_from_path               += self.__path_change
         self.wrote_to_path                  += self.__path_change
-        
+
         self._diagnostics_controller = None
         self.buffer_set = buffer_set
         self._prev_region = Region()
@@ -107,7 +107,7 @@ class BufferController(Tagged, Responder):
             self.interaction_mode = StandardInteractionMode(self)
         else:
             self.interaction_mode = None
-            
+
 
         self._last_path = None
 
@@ -130,7 +130,7 @@ class BufferController(Tagged, Responder):
             self.__filetype = ft
             self.add_tags(**ft.tags)
             self.code_model = ft.make_code_model(self.buffer, self.config)
-            
+
             
             
     def __path_change(self, path):
@@ -138,28 +138,28 @@ class BufferController(Tagged, Responder):
             self._last_path = path
         else:
             return
-        
+
         if path is None:
             self.__set_filetype(filetype.Filetype.default())
         else:
             self.__set_filetype(filetype.Filetype.by_suffix(pathlib.Path(path).suffix))
-        
+
         if self.code_model is not None:
             self.code_model.path = self.path
-        
+
         
         config_path = next(search_upwards(path, '.stemdir.yaml'), None)
         if config_path is None:
             config_path = next(search_upwards(path, '.kpdir.yaml'), None)
-            
+
         if config_path is not None:
             with config_path.open('rb') as f:
                 self.config.load_yaml_safely(f)
             logging.debug('loaded file config from %r, indent text is %r', config_path, 
                 GeneralConfig.from_config(self.config).indent_text)
-                
+
         self.path_changed()
-        
+
     @property
     def code_model(self):
         '''
@@ -172,7 +172,7 @@ class BufferController(Tagged, Responder):
     @code_model.setter
     def code_model(self, value):
         if self._code_model is not None:
-            self.remove_next_responders(self.completion_controller)
+            self.remove_next_responders(self.completion_controller, self.code_model)
             dc = self._diagnostics_controller
             if dc is not None:
                 dc.overlays_changed.disconnect(
@@ -184,11 +184,11 @@ class BufferController(Tagged, Responder):
 
         self._code_model = value
         self.buffer.code_model = value
-        
+
         
         if self._code_model is not None:
             self._code_model.path = self.path
-            self.add_next_responders(self.completion_controller)
+            self.add_next_responders(self.completion_controller, self.code_model)
             if self._code_model.can_provide_diagnostics:
                 dc = DiagnosticsController(self.config, self._code_model, self.buffer)
                 dc.overlays_changed.connect(self.__on_diagnostic_overlay_change)

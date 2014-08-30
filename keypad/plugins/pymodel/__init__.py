@@ -6,8 +6,8 @@ from keypad.api import (Plugin,
                         interactive,
                         errors)
 
+from .pymodel import PythonCodeModel
 def make_python_code_model(*args):
-    from .pymodel import PythonCodeModel
     return PythonCodeModel(*args)
 
 
@@ -34,16 +34,23 @@ class PythonCodeModelPlugin(Plugin):
         import jedi
 
         # based on :PyImport from vim-jedi
-
+        
         sc = jedi.Script('import {}'.format(name))
         try:
             compl = sc.goto_assignments()[0]
         except IndexError:
-            raise errors.NameNotFoundError('Name not found: {!r}'.format(name))
+            raise errors.NameNotFoundError('Name not found: {!r}'.format(name)) from None
         else:
             if compl.in_builtin_module():
                 raise errors.NameNotFoundError('Module is builtin: {!r}'.format(name))
             else:
                 interactive.run('edit', compl.module_path)
+
+
+    @command('rename')
+    def rename(self, cm: PythonCodeModel, name):
+        from keypad import api
+        bctl = self.app.find_object(api.BufferController)
+        cm.rename(bctl.selection.pos, name)
 
 

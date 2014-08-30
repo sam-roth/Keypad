@@ -1,10 +1,11 @@
 
 from abc import ABCMeta, abstractmethod
 from enum import IntEnum, Enum
-        
+
 from keypad.buffers.cursor import Cursor
 from keypad.options import GeneralConfig
 from keypad.util import time_limited
+from keypad.core.responder import Responder
 
 class AbstractCompletionResults(metaclass=ABCMeta):
 
@@ -56,7 +57,7 @@ class RelatedNameType(IntEnum):
     defn = 2
     assign = 4
     use = 8
-    
+
     all = decl | defn | assign | use
 
 class RelatedName(object):
@@ -68,7 +69,7 @@ class RelatedName(object):
         self.path = path
         self.pos = pos
         self.name = name
-    
+
     
     def __repr__(self):
         return 'RelatedName{!r}'.format((
@@ -77,7 +78,7 @@ class RelatedName(object):
             self.pos,
             self.name
         ))
-        
+
 class DiagnosticSeverity(Enum):
     unknown = -1
     fatal = 0
@@ -88,7 +89,7 @@ class DiagnosticSeverity(Enum):
 
 class Diagnostic(object):
     Severity = DiagnosticSeverity
-    
+
     def __init__(self, severity, text, ranges):
         self.severity = severity
         self.text = text
@@ -134,7 +135,7 @@ def _get_is_included(c, exclude):
     return is_included
 
 
-class AbstractCodeModel(metaclass=ABCMeta):   
+class AbstractCodeModel(Responder, metaclass=ABCMeta):   
     '''
     The code model represents the editor's knowledge of the semantics of the
     buffer contents.
@@ -161,9 +162,11 @@ class AbstractCodeModel(metaclass=ABCMeta):
         '''
         :type buff: keypad.buffers.Buffer
         '''
+        super().__init__()
         self.buffer = buff
         self.path = None
         self.conf = conf
+
 
     @abstractmethod
     def indent_level(self, line, cur_line=None, *, timeout_ms=50):

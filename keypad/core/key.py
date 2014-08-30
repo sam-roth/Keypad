@@ -103,6 +103,16 @@ class SimpleKeySequence(object):
     def __repr__(self):
         return str(self)
 
+    def __hash__(self):
+        return hash(self._keycode) ^ hash(self._modifiers) ^ hash(self._optional_modifiers)
+
+    def __eq__(self, other):
+        if isinstance(other, SimpleKeySequence):
+            return ((self._keycode, self._modifiers, self._optional_modifiers)
+                    == (other._keycode, other._modifiers, other._optional_modifiers))
+        else:
+            return False
+
     def matches(self, other):
         if other.keycode != self.keycode:
             return False
