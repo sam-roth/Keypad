@@ -114,7 +114,7 @@ class GetCallTip(WorkerTask):
         if signature is None:
             return None
 
-        param_names = [AttributedString(getattr(p,'name','*'), 
+        param_names = [AttributedString(getattr(p,'name','*') or '*',
                                         bold=i==signature.index,
                                         underline=i==signature.index) 
                        for (i, p) in enumerate(signature.params)]
