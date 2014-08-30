@@ -25,6 +25,7 @@ class MessageBarView(qt.QWidget):
         self._layout = qt.QHBoxLayout(self)
         self._msg = None
         self._title = qt.QLabel(self)
+        self._text_box = qt.QLineEdit(self)
 
         self._close_button = qt.QToolButton(self)
         self._close_button.setIcon(self.style().standardIcon(qt.QStyle.SP_TitleBarCloseButton))
@@ -35,6 +36,16 @@ class MessageBarView(qt.QWidget):
         self._layout.addWidget(self._close_button)
         self._layout.addWidget(self._title)
         self._layout.addStretch()
+        self._layout.addWidget(self._text_box)
+
+        self._text_box.hide()
+        self._text_box.textEdited.connect(self._on_text_change)
+
+        self._edit_invalid_stylesheet = '''
+            background-color: #FAA;
+        '''
+
+
         lbl = qt.QLabel('({})'.format(_get_keyboard_hint()), self)
         lbl.setStyleSheet('font-size: 10pt; font-style: italic;')
         self._layout.addWidget(lbl)
@@ -43,17 +54,37 @@ class MessageBarView(qt.QWidget):
         self._widgets = []
         self.hide()
 
+    def _on_is_valid_changed(self):
+        is_valid = self._msg.is_valid
+        if is_valid:
+            self._text_box.setStyleSheet('')
+        else:
+            self._text_box.setStyleSheet(self._edit_invalid_stylesheet)
+
+        for w in self._widgets:
+            w.setEnabled(is_valid)
+
+
+    def _on_text_change(self):
+        self._msg.emit_text_changed(self._text_box.text())
+
     def _on_shortcut(self):
         if self._widgets:
             self._widgets[0].setFocus()
 
+    def _get_result(self, choice):
+        if self._msg.text_box:
+            return choice, self._text_box.text()
+        else:
+            return choice
+
     def _on_close(self):
-        self._msg.done(None)
+        self._msg.done(self._get_result(None))
         self._show_next()
 
     def _on_click(self):
         b = self.sender()
-        self._msg.done(b.text())
+        self._msg.done(self._get_result(b.text()))
         self._show_next()
 
     def _show_next(self):
@@ -73,8 +104,12 @@ class MessageBarView(qt.QWidget):
 
             return
 
+        if self._msg is not None:
+            self._msg.is_valid_changed.disconnect(self._on_is_valid_changed)
+
         msg = self._q.popleft()
         assert isinstance(msg, MessageBar)
+        msg.is_valid_changed.connect(self._on_is_valid_changed)
         self._msg = msg
         for widget in self._widgets:
             widget.deleteLater()
@@ -82,6 +117,8 @@ class MessageBarView(qt.QWidget):
         self._widgets.clear()
 
         self._title.setText(msg.title)
+        self._text_box.setVisible(msg.text_box is not None)
+        self._text_box.setText(msg.text_box or '')
 
         for choice in msg.choices:
             b = qt.QPushButton(self)
@@ -89,6 +126,8 @@ class MessageBarView(qt.QWidget):
             self._layout.addWidget(b)
             self._widgets.append(b)
             b.clicked.connect(self._on_click)
+
+        self._on_is_valid_changed()
 
         self.show()
 
@@ -106,12 +145,35 @@ if __name__ == '__main__':
     mbv = MessageBarView()
     mbv.show()
     mbv.raise_()
+
+
+    def validator(sender, text):
+        sender.is_valid = len(text) > 5
+
+    def callback(r):
+        print(r)
+        app.quit()
+        
+    mbv.enqueue(MessageBar(title='Baz',
+                           choices=['Done'],
+                           text_box='', 
+                           is_valid=False)
+                .add_callback(lambda r: print(r))
+                .add_text_changed_callback(validator,
+                                           add_sender=True))
+
     mbv.enqueue(MessageBar(title='Foo', 
                            choices=['Bar', 'Baz'])
                 .add_callback(lambda r: print(r)))
+
     mbv.enqueue(MessageBar(title='Bar',
                            choices=['Baz', 'Quux'])
-                .add_callback(lambda r: app.quit()))
+                .add_callback(lambda r: print(r)))
+
+    mbv.enqueue(MessageBar(title='Baz',
+                           choices=['Done'],
+                           text_box='')
+                .add_callback(callback))
     app.exec()
 
 
