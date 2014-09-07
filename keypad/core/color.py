@@ -118,7 +118,7 @@ def _lab2lch(l, a, b):
 
 
 class Color(namedtuple('Color', 'red green blue alpha')):
-    
+
     def __new__(cls, *args, **kw):
         total = len(args) + len(kw)
 
@@ -178,25 +178,25 @@ class Color(namedtuple('Color', 'red green blue alpha')):
         h,s,v = self.hsv
         v *= value
         return self.from_hsv(h,s,v,self.alpha)
-        
+
     def lighter(self, value):
         '''
         Returns a color with an (L*, a*, b*) L* value adjusted by the factor given.
         '''
         l, a, b = self.lab
         return self.from_lab(_clamp(l * value, 0, 1), a, b)
-        
+
 
     @classmethod
     def from_rgb(cls, red, green, blue, alpha=255):
-        return cls(min(red, 255), min(green, 255), min(blue, 255), min(alpha, 255))
-    
+        return cls(min(int(red), 255), min(int(green), 255), min(int(blue), 255), min(int(alpha), 255))
+        
     @classmethod
     def from_hsv(cls, hue, sat, val, alpha=255):
         r, g, b = colorsys.hsv_to_rgb(hue, sat, val)
         return cls.from_rgb(r, g, b, alpha)
 
-            
+
     @classmethod
     def from_hex(cls, num):
         alpha = 255
