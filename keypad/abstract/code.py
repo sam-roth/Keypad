@@ -176,7 +176,7 @@ class AbstractCodeModel(Responder, metaclass=ABCMeta):
 
     def open_brace_pos(self, pos, exclude=_different, time_limit_ms=50):
         '''
-        Return the location of the closing brace for a given location in the text.
+        Return the location of the opening brace for a given location in the text.
         '''
 
         c = Cursor(self.buffer).move(pos)
