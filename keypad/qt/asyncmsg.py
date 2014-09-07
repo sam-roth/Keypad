@@ -3,7 +3,7 @@
 from PyQt4 import Qt as qt
 
 from . import qt_util
-from ..abstract.asyncmsg import MessageBar
+from ..abstract.asyncmsg import MessageBar, ButtonKind
 import collections
 import platform
 
@@ -43,6 +43,7 @@ class MessageBarView(qt.QWidget):
         self._text_box.hide()
         self._text_box.textEdited.connect(self._on_text_change)
         self._text_box.setFocusPolicy(qt.Qt.NoFocus)
+        self._text_box.editingFinished.connect(self._on_editing_finished)
 
         self._edit_invalid_stylesheet = '''
             background-color: #FAA;
@@ -55,8 +56,17 @@ class MessageBarView(qt.QWidget):
 
 
         self._widgets = []
+        self._default_widget = None
+
         self.hide()
 
+
+    def keyPressEvent(self, event):
+        if event.key() == qt.Qt.Key_Escape:
+            event.accept()
+            self._close_button.click()
+        else:
+            super().keyPressEvent(event)
 
     def _on_is_valid_changed(self):
         is_valid = self._msg.is_valid
@@ -72,7 +82,11 @@ class MessageBarView(qt.QWidget):
     def _on_text_change(self):
         self._msg.emit_text_changed(self._text_box.text())
 
+
     def _on_shortcut(self):
+        self._activate()
+
+    def _activate(self):
         if self._text_box.isVisible():
             self._text_box.setFocus()
         elif self._widgets:
@@ -93,8 +107,13 @@ class MessageBarView(qt.QWidget):
         self._msg.done(self._get_result(b.text()))
         self._show_next()
 
+    def _on_editing_finished(self):
+        if self._default_widget is not None:
+            self._default_widget.click()
+
     def _show_next(self):
         pw = self.parentWidget()
+        self._default_widget = None
         if pw is not None:
             pw.setFocus()
         if not self._q:
@@ -132,7 +151,11 @@ class MessageBarView(qt.QWidget):
 
         for choice in msg.choices:
             b = qt.QPushButton(self)
-            b.setText(choice)
+            if choice.kind == ButtonKind.ok:
+                b.setDefault(True)
+                self._default_widget = b
+
+            b.setText(choice.name)
             self._layout.addWidget(b)
             self._widgets.append(b)
             b.clicked.connect(self._on_click)
@@ -143,6 +166,8 @@ class MessageBarView(qt.QWidget):
 
         self.show()
 
+        if msg.steal_focus:
+            self._activate()
 
     def enqueue(self, msg):
         assert isinstance(msg, MessageBar)

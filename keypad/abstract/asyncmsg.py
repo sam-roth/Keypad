@@ -1,6 +1,7 @@
 
 import abc
 import functools
+import enum
 from ..core.signal import Signal
 
 class AbstractMessageBarTarget(metaclass=abc.ABCMeta):
@@ -13,14 +14,39 @@ class AbstractMessageBarTarget(metaclass=abc.ABCMeta):
         :type bar: MessageBar
         '''
 
+class ButtonKind(enum.Enum):
+    default = 0
+    ok = 1
+
+
+class Button:
+    __slots__ = 'name', 'kind'
+
+    def __init__(self, name, kind=ButtonKind.default):
+        self.name = name
+        self.kind = kind
+
+    def __repr__(self):
+        if self.kind != ButtonKind.default:
+            return 'Button({!r}, kind={!r})'.format(self.name, self.kind)
+        else:
+            return 'Button({!r})'.format(self.name)
+
+def _to_button(button_or_str):
+    if isinstance(button_or_str, Button):
+        return button_or_str
+    else:
+        return Button(button_or_str)
+
 class MessageBar:
-    def __init__(self, *, title, choices=[], text_box=None, is_valid=True):
+    def __init__(self, *, title, choices=[], text_box=None, is_valid=True, steal_focus=False):
         self.title = title
-        self.choices = choices
+        self.choices = tuple(map(_to_button, choices))
         self.callbacks = []
         self.text_box = text_box
         self._is_valid = is_valid
-        
+        self.steal_focus = steal_focus
+
     @property
     def is_valid(self):
         return self._is_valid
