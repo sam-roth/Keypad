@@ -63,11 +63,17 @@ class InstanceSignal(SignalBase):
 
     def disconnect(self, observer):
         if isinstance(observer, types.MethodType):
-            methods = self._observer_methods[observer.__self__]
+            try:
+                methods = self._observer_methods[observer.__self__]
+            except KeyError:
+                return
             try:
                 methods.remove((False, observer.__func__))
             except KeyError:
-                methods.remove((True, observer.__func__))
+                try:
+                    methods.remove((True, observer.__func__))
+                except KeyError:
+                    pass
         else:
             del self._observer_objects[observer]
 
