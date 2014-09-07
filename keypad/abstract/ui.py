@@ -17,7 +17,7 @@ def adjust_font_size(_: object, increment):
 
 @interactive('font_size')
 def font_size(_: object, value=None):
-
+    
     from ..core.nconfig import Config
     from ..options import GeneralSettings
     from ..control.command_line_interaction import writer
@@ -38,13 +38,13 @@ def open_new_editor(win: AbstractWindow):
 def edit(win: AbstractWindow, path: 'Path', line=None, col=None):
     line = int(line) if line is not None else None
     col = int(col) if col is not None else None
-    
-    path = pathlib.Path(os.path.expanduser(str(path)))
+
+    path = pathlib.Path(os.path.expanduser(str(path))).absolute()
     try:
         ed = app().find_editor(path)
     except FileNotFoundError:
         ed = None
-        
+
     if ed is not None:
         ed.activate()
     else:
@@ -63,7 +63,7 @@ def edit(win: AbstractWindow, path: 'Path', line=None, col=None):
             else:
                 raise
         win.add_editor(ed)
-        
+
     if line is not None:
         ed.buffer_controller.selection.move(line=line)
     if col is not None:
@@ -100,7 +100,7 @@ def gui_quit_all(win: AbstractWindow):
 @interactive('next_tab')
 def next_tab(win: AbstractWindow, n=1):
     n = int(n)
-    
+
     if n > 0:
         for _ in range(n):
             win.next_tab()
