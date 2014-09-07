@@ -45,6 +45,7 @@ class MessageBarView(qt.QWidget):
         self._text_box.setFocusPolicy(qt.Qt.NoFocus)
         self._text_box.editingFinished.connect(self._on_editing_finished)
 
+
         self._edit_invalid_stylesheet = '''
             background-color: #FAA;
         '''
@@ -80,7 +81,8 @@ class MessageBarView(qt.QWidget):
 
 
     def _on_text_change(self):
-        self._msg.emit_text_changed(self._text_box.text())
+        if self._msg is not None:
+            self._msg.emit_text_changed(self._text_box.text())
 
 
     def _on_shortcut(self):
@@ -99,13 +101,17 @@ class MessageBarView(qt.QWidget):
             return choice
 
     def _on_close(self):
-        self._msg.done(self._get_result(None))
+        m = self._msg
+        result = self._get_result(None)
         self._show_next()
+        m.done(result)
 
     def _on_click(self):
         b = self.sender()
-        self._msg.done(self._get_result(b.text()))
+        m = self._msg
+        result = self._get_result(b.text())
         self._show_next()
+        m.done(result)
 
     def _on_editing_finished(self):
         if self._default_widget is not None:
@@ -122,6 +128,8 @@ class MessageBarView(qt.QWidget):
                 w.deleteLater()
             self._title.setText('')
             self._widgets.clear()
+            self._text_box.setEnabled(False)
+            self._text_box.setVisible(False)
             self.hide()
 
             if pw is not None:
