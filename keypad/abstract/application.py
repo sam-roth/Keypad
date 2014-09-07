@@ -238,19 +238,42 @@ class AbstractApplication(Responder, metaclass=abc.ABCMeta):
         if sp is not None:
             editor.save(sp)
 
-    def find_editor(self, path):
+    def find_editor(self, path, *, open_if_not_found=False, codec_errors='strict'):
         import os.path
-        path = str(path)
+        import pathlib
+        path = os.path.abspath(str(path))
 
         for editor in self._editors:
             if editor.path is not None and _same_file(path, str(editor.path)):
                 return editor
+        else:
+            if open_if_not_found:
+                if self.windows:
+                    win = self.windows[0]
+                else:
+                    win = self.new_window()
+
+                ed = self.new_editor()
+                win.add_editor(ed)
+
+                ed.load(pathlib.Path(path), codec_errors=codec_errors)
+                
+                return ed
+            else:
+                return None
+
+    def open_editor(self, path, *, codec_errors='strict'):
+        '''
+        Equivalent to `self.find_editor(path, open_if_not_found=True, codec_errors=codec_errors)`.
+        '''
+
+        return self.find_editor(path, open_if_not_found=True, codec_errors=codec_errors)
 
 
     @property
     def editors(self):
         return tuple(self._editors)
-        
+
     @property
     def windows(self):
         return tuple(self._windows)

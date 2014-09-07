@@ -689,11 +689,11 @@ from ..abstract.code import AbstractCodeModel, RelatedName
 @interactive('find_definition')
 def find_definition(bc: BufferController):
     return goto_related(bc, RelatedName.Type.defn)
-    
+
 @interactive('find_declaration')
 def find_definition(bc: BufferController):
     return goto_related(bc, RelatedName.Type.decl)
-    
+
 def goto_related(bc: BufferController, ty):
     if bc.code_model is None:
         return interactive.call_next
@@ -701,7 +701,7 @@ def goto_related(bc: BufferController, ty):
         cm = bc.code_model
         assert isinstance(cm, AbstractCodeModel)
         f = cm.find_related_async(bc.selection.pos, RelatedName.Type.all)
-        
+
         @in_main_thread
         def callback(future):
             results = future.result()
@@ -718,12 +718,12 @@ def goto_related(bc: BufferController, ty):
                     result = results[0]
                 else:
                     raise errors.NameNotFoundError('Could not find name.')
-            
+
             assert isinstance(result, RelatedName)
             y, x = result.pos
             interactive.run('edit', str(result.path), y + 1)
             bc.refresh_view(full=True)
-            
+
         f.add_done_callback(callback)
 
 
@@ -736,7 +736,7 @@ class SimpleCallTip(AbstractCallTip):
     def __init__(self, tip):
         super().__init__()
         self.tip = tip
-        
+
     def to_astring(self, _=None):
         return self.tip
 
@@ -745,10 +745,10 @@ class SimpleCallTip(AbstractCallTip):
 def show_diagnostics(bc: BufferController):
     assert isinstance(bc, BufferController)
 
-    
+
     if bc._diagnostics_controller is None:
         return interactive.call_next
-    
+
     for diag in bc._diagnostics_controller.diagnostics:
         assert isinstance(diag, Diagnostic)
         for f, p1, p2 in diag.ranges:
@@ -787,7 +787,11 @@ def join(bctl: BufferController):
                                indent)
         bctl.selection.text = text
 
+from keypad.util import debug
+
+
 @interactive('rename')
+@debug.nonreentrant
 def rename(bctl: BufferController, name):
     from ..abstract.rewriting import AbstractRewrite
     cm = bctl.code_model
@@ -795,15 +799,26 @@ def rename(bctl: BufferController, name):
         return interactive.call_next
     try:
         for rewrite in cm.rename(bctl.selection.pos, name).result():
+            print(rewrite)
             # TODO: path change
-            # TODO: other files
-            if rewrite.orig_path.absolute() == bctl.path.absolute():
-                pos = bctl.selection.pos
-                with bctl.history.transaction():
-                    rewrite.perform(bctl.buffer)
-                bctl.selection.pos = pos
+            try:
+                if rewrite.orig_path.absolute() == bctl.path.absolute():
+                    this_bctl = bctl
+                else:
+                    this_bctl = app().open_editor(rewrite.orig_path, codec_errors='surrogateescape').buffer_controller
+
+                pos = this_bctl.selection.pos
+                with this_bctl.history.transaction():
+                    rewrite.perform(this_bctl.buffer)
+                this_bctl.selection.pos = pos
+            except RuntimeError as exc:
+                # Try to finish as much as possible.
+                interactive.run('show_error', exc)
+
+
     except NotImplementedError:
         return interactive.call_next
+
 
 @interactive('grename')
 def grename(bctl: BufferController):
@@ -813,7 +828,9 @@ def grename(bctl: BufferController):
         return interactive.call_next
 
     target = app().find_object(asyncmsg.AbstractMessageBarTarget)
-
+    if target is None:
+        return interactive.call_next
+        
 
     def show_message_bar():
         RENAME = 'Rename'
