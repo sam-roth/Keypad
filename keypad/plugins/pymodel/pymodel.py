@@ -276,6 +276,10 @@ class PythonCodeModel(IndentRetainingCodeModel):
             ),
         )
 
+    @property
+    def can_rename(self):
+        return True
+
     def rename(self, pos, name):
         tok_start = self._find_token_start(pos)
         return self.runner.submit(Rename(name,

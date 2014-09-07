@@ -809,19 +809,42 @@ def rename(bctl: BufferController, name):
 def grename(bctl: BufferController):
     from ..abstract import asyncmsg
 
-    RENAME = 'Rename'
-
-    mb = asyncmsg.MessageBar(title='Rename identifier', 
-                             choices=[RENAME],
-                             text_box='')
-
-    @mb.add_callback
-    def callback(choice):
-        option, text = choice
-        if option == RENAME:
-            rename(bctl, text)
+    if bctl.code_model is None or not bctl.code_model.can_rename:
+        return interactive.call_next
 
     target = app().find_object(asyncmsg.AbstractMessageBarTarget)
-    target.show_message_bar(mb)
+
+
+    def show_message_bar():
+        RENAME = 'Rename'
+        mb = asyncmsg.MessageBar(title='Rename identifier',
+                                 choices=[asyncmsg.Button(RENAME, asyncmsg.ButtonKind.ok)],
+                                 text_box='',
+                                 steal_focus=True)
+
+
+        @mb.add_callback
+        def callback(choice):
+            option, text = choice
+            if option == RENAME:
+                rename(bctl, text)
+
+        target.show_message_bar(mb)
+
+    if bctl.is_modified:
+        SAVE_AND_RENAME = 'Save and Rename'
+        mb = asyncmsg.MessageBar(title='The buffer must be saved in order to rename an identifier.',
+                                 choices=[asyncmsg.Button(SAVE_AND_RENAME, asyncmsg.ButtonKind.ok)],
+                                 steal_focus=True)
+
+        @mb.add_callback
+        def callback(choice):
+            if choice == SAVE_AND_RENAME:
+                bctl.save()
+                show_message_bar()
+
+        target.show_message_bar(mb)
+    else:
+        show_message_bar()
 
 

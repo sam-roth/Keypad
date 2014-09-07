@@ -325,6 +325,11 @@ class AbstractCodeModel(Responder, metaclass=ABCMeta):
     def diagnostics_async(self):
         raise NotImplementedError
 
+
+    @property
+    def can_rename(self):
+        return False
+
     def rename(self, pos, name):
         '''
         :refactoring action:
