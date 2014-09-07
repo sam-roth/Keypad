@@ -68,6 +68,11 @@ class MouseEvent:
         self.buttons = buttons
         self.pos = pos
 
+    def __repr__(self):
+        return 'MouseEvent({!r}, {!r}, {!r})'.format(self.kind,
+                                                     self.buttons,
+                                                     self.pos)
+
 
 class AbstractColumnDelegate(metaclass=abc.ABCMeta):
     '''
