@@ -6,9 +6,11 @@ from keypad.core.errors import UserError
 from keypad.core.responder import Responder
 from keypad.core.nconfig import Config, Settings, Field
 
-from .qt_util import *
 from ..core.notification_queue import in_main_thread
 from ..control import interactive
+
+from .qt_util import *
+from .options import QtGuiSettings
 
 import traceback
 import logging
@@ -45,7 +47,6 @@ class CommandLineWidget(Responder, QWidget):
 
         self.__settings = CommandLineViewSettings.from_config(config)
 
-        from .textlayout.widget import CodeView, CodeViewProxy
         from ..control import BufferController
         from ..control.command_line_interaction import CommandLineInteractionMode
         from ..control.command_line_interpreter import CommandLineInterpreter
@@ -53,8 +54,14 @@ class CommandLineWidget(Responder, QWidget):
 
         from ..buffers import Buffer
 
-        self.__view = CodeView(self)
-        self.__proxy = CodeViewProxy(self.__view)
+        if QtGuiSettings.from_config(config).use_experimental_text_view:
+            from .textview import TextViewProxy
+            self.__proxy = TextViewProxy()
+            self.__view = self.__proxy.peer
+        else:
+            from .textlayout.widget import CodeView, CodeViewProxy
+            self.__view = CodeView(self)
+            self.__proxy = CodeViewProxy(self.__view)
         self.__proxy.modelines_visible = False
 
         self.__controller = BufferController(buffer_set=None, 

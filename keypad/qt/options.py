@@ -10,11 +10,18 @@ from ..options import GeneralSettings
 from ..core import (Signal, 
                     Color,
                     Colorscheme,
-                    Config)
+                    Config,
+                    Settings,
+                    Field)
 
 from .qt_util import to_q_color, qcolor_marshaller
 
 CompletionViewOpacity = 1
+
+class QtGuiSettings(Settings):
+    _ns_ = 'qt'
+    
+    use_experimental_text_view = Field(bool, False)
 
 class TextViewSettings(object):
     def __init__(self, scheme=Colorscheme, settings=None):
@@ -34,11 +41,11 @@ class TextViewSettings(object):
         self.font_yoffset = settings.font_yoffset
 
 
-        
+
     def reload_settings(self, *args):
-        
+
         s = self.settings
-        
+
         self.scheme = s.colorscheme()
         fontname, fontsize = s.font_family, s.font_size
         self.double_strike = s.double_strike
@@ -85,7 +92,7 @@ class TextViewSettings(object):
     def reloaded(self):
         pass
         
-    
+
     completion_bgcolor = qcolor_marshaller('q_completion_bgcolor')
     bgcolor = qcolor_marshaller('q_bgcolor')
     fgcolor = qcolor_marshaller('q_fgcolor')
@@ -113,4 +120,4 @@ class TextViewSettings(object):
     def expand_tabs(self, text):
         return text.expandtabs(self.tab_stop)
 
-        
+
