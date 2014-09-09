@@ -17,6 +17,7 @@ class ParagraphDatum:
                  '_overlays',
                  '_overlay_formats',
                  '_bgcolor',
+                 '_tab_stop',
                  'settings',
                  '__weakref__')
 
@@ -34,6 +35,7 @@ class ParagraphDatum:
         self._bgcolor = qt.Qt.white
         self._overlays = ()
         self._overlay_formats = []
+        self._tab_stop = 8
 
     @property
     def carets(self): return self._carets
@@ -65,9 +67,12 @@ class ParagraphDatum:
             self._modified = True
 
     def needs_update(self, line, pos):
-        if self.line is None or self.line is not line or self._dirty:
-            return True
-        if self._valid_pos != pos:
+        fast_path_condition = (self.line is None
+                               or self.line is not line
+                               or self._dirty
+                               or self._valid_pos != pos
+                               or self._tab_stop != self.settings.tab_stop)
+        if fast_path_condition:
             return True
 
         cache = line.caches.get(ParagraphDatum._cache_key)
@@ -83,6 +88,11 @@ class ParagraphDatum:
             self.cartouche = cartouche
 
             self.layout.setAdditionalFormats(formats)
+            if self._tab_stop != self.settings.tab_stop:
+                option = self.layout.textOption()
+                option.setTabStop(self.settings.char_width * self.settings.tab_stop)
+                self.layout.setTextOption(option)
+                self._tab_stop = self.settings.tab_stop
             self._dirty = False
             self._modified = True
             self._valid_pos = pos
@@ -92,15 +102,21 @@ class ParagraphDatum:
             self.bgcolor = bgcolor
 
         bgcolor = self.bgcolor
-        
+
         if not only_if_modified or self._modified or self._dirty:
             painter.fillRect(self.layout.boundingRect(), bgcolor)
 
             with restoring(painter):
                 self.layout.draw(painter, qt.QPointF(0, 0), self._overlay_formats)
+                self._draw_tabs(painter)
                 self._draw_carets(painter)
                 self._draw_cartouche(painter)
             self._modified = False
+
+    def _caret_rect(self, point):
+        w = self.settings.char_width
+        h = self.settings.font_metrics.lineSpacing()
+        return qt.QRectF(qt.QPointF(point.x(), point.y() - h), qt.QSizeF(w, h)).toAlignedRect()
 
     def _draw_carets(self, painter):
         for caret in self.carets:
@@ -128,6 +144,39 @@ class ParagraphDatum:
                     width = x2 - x1
                     height = line.height()
                     painter.drawRect(x1, y1, width, height)
+
+    def index_to_point(self, index):
+        line = self.layout.lineForTextPosition(index)
+        if line.isValid():
+            x, _ = line.cursorToX(index)
+            return qt.QPointF(x, line.rect().bottom())
+        else:
+            return None
+
+    def _draw_tabs(self, painter):
+        if '\t' not in self.line.text:
+            return
+        tab_color = self.settings.q_tab_color
+        tab_glyph = self.settings.tab_glyph
+        descent = self.settings.font_metrics.descent() + 1
+
+        with restoring(painter):
+            painter.setPen(tab_color)
+            painter.setFont(self.settings.q_font)
+
+            for i, ch in enumerate(self.line.text):
+                if ch != '\t': continue
+
+                point = self.index_to_point(i)
+                if point is None: continue
+
+                point.setY(point.y() - descent)
+
+                painter.drawText(point, tab_glyph)
+
+
+
+
 
 _format_handlers = {}
 
