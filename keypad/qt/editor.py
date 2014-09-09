@@ -10,6 +10,7 @@ from .asyncmsg import MessageBarView
 from keypad.core.signal import Signal
 from keypad.api import run_in_main_thread
 from keypad import api
+from .textview import TextViewProxy
 
 class Editor(AbstractEditor, AbstractMessageBarTarget, 
              Autoresponder, QWidget, metaclass=ABCWithQtMeta):
@@ -17,8 +18,11 @@ class Editor(AbstractEditor, AbstractMessageBarTarget,
     def __init__(self, config):
         QWidget.__init__(self)
         self.__config = config.derive()
-        self.__view = CodeView(config=self.__config)
-        self.__prox = CodeViewProxy(self.__view)
+        self.__prox = TextViewProxy(self.__config)
+        self.__view = self.__prox.peer
+        
+#         self.__view = CodeView(config=self.__config)
+#         self.__prox = CodeViewProxy(self.__view)
 
 
         AbstractEditor.__init__(self, self.__prox, self.__config)
