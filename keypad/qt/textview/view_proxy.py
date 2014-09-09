@@ -27,6 +27,7 @@ class _ScrollArea(qt.QAbstractScrollArea):
         self._create_widgets()
         self._init_layout()
 
+        self.setFrameStyle(qt.QFrame.NoFrame)
         self.setFocusProxy(self.primary_view)
         self._settings_change()
 
@@ -62,6 +63,21 @@ class _ScrollArea(qt.QAbstractScrollArea):
     def update_scroll_range(self, *args):
         self.verticalScrollBar().setRange(0, len(self.primary_view.buffer.lines))
 
+class _EventFilter(qt.QObject):
+    def __init__(self, completion_view, primary):
+        super().__init__()
+        self.completion_view = completion_view
+        self.primary = primary
+
+
+    def eventFilter(self, obj, event):
+        if obj is self.completion_view:
+            if event.type() == qt.QEvent.Show:
+                self.primary.simulate_focus = True
+            elif event.type() == qt.QEvent.Hide:
+                self.primary.simulate_focus = False
+
+        return super().eventFilter(obj, event)
 
 class TextViewProxy(AbstractCodeView):
 
@@ -88,6 +104,8 @@ class TextViewProxy(AbstractCodeView):
         self._update_cursor()
         self._buffer_change(self.buffer)
         self.peer.update_scroll_range()
+        self._event_filter = _EventFilter(self._completion_view, self.primary)
+        self._completion_view.installEventFilter(self._event_filter)
 
     def _buffer_change(self, buffer):
         b = self.primary.buffer
@@ -138,11 +156,11 @@ class TextViewProxy(AbstractCodeView):
         should be visible.
         '''
 
-        return False # TODO: implement
+        return self.modeline_view.isVisible()
 
     @modelines_visible.setter
     def modelines_visible(self, value):
-        pass # TODO: implement
+        self.modeline_view.setVisible(value)
 
     @property
     def cursor_type(self):
@@ -281,7 +299,7 @@ class TextViewProxy(AbstractCodeView):
                                      self.completion_view.size())
 
         screen_geom = qt.QApplication.desktop().screenGeometry()
-        
+
         if normal_compl_rect.bottom() > screen_geom.height():
             normal_compl_rect.moveBottomLeft(
                 self.primary.mapToGlobal(

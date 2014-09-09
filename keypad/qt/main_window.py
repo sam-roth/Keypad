@@ -45,7 +45,8 @@ class CommandLineWidget(Responder, QWidget):
 
         self.__settings = CommandLineViewSettings.from_config(config)
 
-        from .textlayout.widget import CodeView, CodeViewProxy
+        from .textview import TextViewProxy
+#         from .textlayout.widget import CodeView, CodeViewProxy
         from ..control import BufferController
         from ..control.command_line_interaction import CommandLineInteractionMode
         from ..control.command_line_interpreter import CommandLineInterpreter
@@ -53,8 +54,10 @@ class CommandLineWidget(Responder, QWidget):
 
         from ..buffers import Buffer
 
-        self.__view = CodeView(self)
-        self.__proxy = CodeViewProxy(self.__view)
+        self.__proxy = TextViewProxy()
+        self.__view = self.__proxy.peer
+#         self.__view = CodeView(self)
+#         self.__proxy = CodeViewProxy(self.__view)
         self.__proxy.modelines_visible = False
 
         self.__controller = BufferController(buffer_set=None, 

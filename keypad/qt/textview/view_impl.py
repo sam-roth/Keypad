@@ -41,6 +41,7 @@ class _CursorBlinker:
         self._state = False
         self._running = False
         self._suppress_next = False
+        self._timer_set = False
 
     @property
     def running(self):
@@ -62,6 +63,7 @@ class _CursorBlinker:
         self.cursor_should_blink(True)
 
     def _on_timeout(self):
+        self._timer_set = False
         if self._running:
             self._state = not self._state
             if self._suppress_next:
@@ -73,11 +75,12 @@ class _CursorBlinker:
             self.cursor_should_blink(self._state)
 
     def _set_timer(self):
-        if self._running:
+        if self._running and not self._timer_set:
             if self._state:
                 qt.QTimer.singleShot(self._on2off, self._on_timeout)
             else:
                 qt.QTimer.singleShot(self._off2on, self._on_timeout)
+            self._timer_set = True
 
 
     def set_parameters(self, period, duty_cycle):
@@ -130,6 +133,7 @@ class ViewImpl(qt.QWidget):
         self._cursor_blinker.cursor_should_blink.connect(self._on_cursor_should_blink)
         self._cursor_blinker.start()
         self._cursors_visible = True
+        self._simulate_focus = False
 
         self.setAttribute(qt.Qt.WA_OpaquePaintEvent, True)
         self.setAttribute(qt.Qt.WA_InputMethodEnabled, True)
@@ -142,6 +146,30 @@ class ViewImpl(qt.QWidget):
         self._text_section = text_section
 
         self._on_settings_reloaded()
+
+    @property
+    def simulate_focus(self):
+        return self._simulate_focus
+
+    @simulate_focus.setter
+    def simulate_focus(self, value):
+        self._simulate_focus = value
+        self._update_cursor_visibility()
+
+    def focusInEvent(self, event):
+        self._update_cursor_visibility()
+        super().focusInEvent(event)
+
+    def focusOutEvent(self, event):
+        self._update_cursor_visibility()
+        super().focusOutEvent(event)
+
+    def _update_cursor_visibility(self):
+        if self.hasFocus() or self.simulate_focus:
+            self._cursor_blinker.start()
+        else:
+            self._cursor_blinker.stop(state=True)
+
 
     def _on_cursor_should_blink(self, on):
         if on != self._cursors_visible:
