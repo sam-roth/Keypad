@@ -1,6 +1,6 @@
 
 from PyQt4 import Qt as qt
-from keypad.abstract.textview import AbstractCodeView, KeyEvent, MouseEvent, MouseEventKind, MouseButton
+from keypad.abstract.textview import AbstractCodeView, KeyEvent, MouseEvent, MouseEventKind, MouseButton, CaretType
 from keypad.buffers import Buffer
 from keypad.qt.qt_util import ending, restoring, to_q_color, marshal_key_event
 from keypad.control import lorem
@@ -31,8 +31,9 @@ class DefaultList(list):
         return self[index]
 
 class _Caret:
-    def __init__(self, pos):
+    def __init__(self, pos, kind=CaretType.bar):
         self.pos = pos
+        self.kind = kind
 
 class _CursorBlinker:
     def __init__(self):
@@ -109,8 +110,8 @@ class ViewImpl(qt.QWidget):
         self.buffer = Buffer()
         option = qt.QTextOption(qt.Qt.AlignLeft)
         option.setWrapMode(qt.QTextOption.WrapAtWordBoundaryOrAnywhere)
-        option.setUseDesignMetrics(True)
-
+#         option.setUseDesignMetrics(True)
+        
         self.option = option
 
         def factory():
@@ -220,14 +221,16 @@ class ViewImpl(qt.QWidget):
         font = self.settings.q_font
         for para in self._paragraph_data:
             para.layout.setFont(font)
+        for line in self.buffer.lines:
+            line.invalidate()
 
         self.refresh()
         self.full_update()
 
 
-    def set_caret(self, token, pos):
+    def set_caret(self, token, pos, kind=CaretType.bar):
         self._cursor_blinker.show_and_suppress_next()
-        self._carets[token] = _Caret(pos)
+        self._carets[token] = _Caret(pos, kind=kind)
         self.refresh()
 
     def unset_caret(self, token):
@@ -463,7 +466,8 @@ class ViewImpl(qt.QWidget):
         pos = self.map_from_point(event.pos())
         if pos is not None:
             line_num, col = pos
-            self.mouse_down_char(line_num, col)
+            if event.buttons() == qt.Qt.LeftButton:
+                self.mouse_down_char(line_num, col)
             self.mouse_event(MouseEvent(MouseEventKind.mouse_down,
                                         event.buttons(),
                                         (line_num, col)))
@@ -488,11 +492,15 @@ class ViewImpl(qt.QWidget):
             else:
                 self.input_method_preedit(event.preeditString())
         elif event.type() == qt.QEvent.ShortcutOverride:
+            if event.key() == qt.Qt.Key_Tab:
+                event.accept()
+                return True
             evt = marshal_key_event(event)
             self.should_override_app_shortcut(evt)
             if evt.is_intercepted:
                 return True
         elif event.type() == qt.QEvent.KeyPress:
+            event.accept()
             self.keyPressEvent(event)
             self.key_press(marshal_key_event(event))
             return True

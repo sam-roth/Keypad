@@ -2,6 +2,7 @@ import weakref
 
 from PyQt4 import Qt as qt
 
+from keypad.abstract.textview import CaretType
 from keypad.core import AttributedString, Color
 from keypad.qt.qt_util import ending, restoring, to_q_color
 from keypad.qt.options import TextViewSettings
@@ -108,6 +109,8 @@ class ParagraphDatum:
 
             with restoring(painter):
                 self.layout.draw(painter, qt.QPointF(0, 0), self._overlay_formats)
+                if self.settings.double_strike:
+                    self.layout.draw(painter, qt.QPointF(0, 0), self._overlay_formats)
                 self._draw_tabs(painter)
                 self._draw_carets(painter)
                 self._draw_cartouche(painter)
@@ -120,10 +123,44 @@ class ParagraphDatum:
 
     def _draw_carets(self, painter):
         for caret in self.carets:
-            self.layout.drawCursor(painter, qt.QPointF(0,0), caret.pos[1], 2)
+            if caret.kind == CaretType.bar:
+                self.layout.drawCursor(painter, qt.QPointF(0,0), caret.pos[1], 2)
+            elif caret.kind == CaretType.block:
+                point = self.index_to_point(caret.pos[1])
+                rect = self._caret_rect(point)
+                descent = self.settings.font_metrics.descent() + 1
+                with restoring(painter):
+                    painter.fillRect(rect, self.settings.q_fgcolor)
+                    if 0 <= caret.pos[1] < len(self.line):
+                        painter.setFont(self.settings.q_font)
+                        ch = self.line.text[caret.pos[1]]
+                        if ch == '\t':
+                            ch = self.settings.tab_glyph
+                            color = self.settings.q_tab_color
+                        else:
+                            color = self.settings.q_bgcolor
+
+                        painter.setPen(color)
+                        painter.drawText(point.x(), point.y() - descent, ch)
+            elif caret.kind == CaretType.box:
+                point = self.index_to_point(caret.pos[1])
+                rect = self._caret_rect(point)
+                rect.adjust(0, 0, -1, -1)
+                
+                with restoring(painter):
+                    painter.setRenderHint(qt.QPainter.Antialiasing, False)
+                    painter.setPen(self.settings.q_fgcolor)
+                    painter.drawRect(rect)
+
 
     def _draw_cartouche(self, painter):
+        "Draws boxes around text, implementing the ``cartouche`` attribute."
+        
         with restoring(painter):
+            # Since we're just drawing rectangles, antialiasing just makes
+            # the lines blurry and doesn't actually remove aliasing.
+            painter.setRenderHint(qt.QPainter.Antialiasing, False)
+
             for start, end, value in self.cartouche:
                 if value is None:
                     continue
@@ -143,7 +180,9 @@ class ParagraphDatum:
 
                     width = x2 - x1
                     height = line.height()
-                    painter.drawRect(x1, y1, width, height)
+
+                    cartouche_rect = qt.QRectF(x1, y1, width, height).toAlignedRect().adjusted(0, 0, -1, -1)
+                    painter.drawRect(cartouche_rect)
 
     def index_to_point(self, index):
         line = self.layout.lineForTextPosition(index)

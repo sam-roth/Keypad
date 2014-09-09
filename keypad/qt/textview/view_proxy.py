@@ -41,19 +41,22 @@ class _ScrollArea(qt.QAbstractScrollArea):
     def _create_widgets(self):
         self.primary_view = ViewImpl(self.settings)
         self.modeline_view = ViewImpl(self.settings, text_section=False)
+        self.modeline_view.setFocusPolicy(qt.Qt.NoFocus)
+        self._popup_menu = qt.QMenu(self.primary_view)
 
 
     def _init_layout(self):
         l = qt.QVBoxLayout(self.viewport())
-        l.setContentsMargins(6, 6, 6, 0)
-        l.setSpacing(2)
+        l.setContentsMargins(6, 6, 6, 6)
+        l.setSpacing(0)
 
         for w in [self.primary_view, self.modeline_view]:
             l.addWidget(w)
 
     def _settings_change(self, *args):
-        stylesheet = 'background: {};'.format(self.settings.scheme.nontext_bg.css_rgba)
+        stylesheet = 'QWidget[is_margin=true]{{ background: {}; }}'.format(self.settings.scheme.nontext_bg.css_rgba)
         self.viewport().setStyleSheet(stylesheet)
+        self.viewport().setProperty('is_margin', True)
 
 
     def scrollContentsBy(self, dx, dy):
@@ -63,11 +66,35 @@ class _ScrollArea(qt.QAbstractScrollArea):
     def update_scroll_range(self, *args):
         self.verticalScrollBar().setRange(0, len(self.primary_view.buffer.lines))
 
+
+    def show_context_menu(self, pos, items, *, auto=True):
+        "Implementation for TextViewProxy.show_context_menu."
+        if auto:
+            screen_pos = qt.QCursor.pos()
+        else:
+            y, x = pos
+            screen_pos = self.primary_view.mapToGlobal(self.primary_view.map_to_point(y, x))
+
+        self._popup_menu.clear()
+
+        for name, callback in items:
+            a = self._popup_menu.addAction(name)
+            a.triggered.connect(callback)
+            self._popup_menu.addAction(a)
+
+        self._popup_menu.popup(screen_pos)
+
+
+
+
+
+
 class _EventFilter(qt.QObject):
     def __init__(self, completion_view, primary):
         super().__init__()
         self.completion_view = completion_view
         self.primary = primary
+        self._popup_menu = None
 
 
     def eventFilter(self, obj, event):
@@ -79,6 +106,10 @@ class _EventFilter(qt.QObject):
 
         return super().eventFilter(obj, event)
 
+
+
+
+
 class TextViewProxy(AbstractCodeView):
 
     def __init__(self, config=Config.root):
@@ -88,6 +119,7 @@ class TextViewProxy(AbstractCodeView):
         self.primary = self.peer.primary_view
         self._cursor_pos = (0, 0)
         self._cursor_visible = True
+        self._cursor_type = CaretType.bar
         self._cursor_caret_key = (id(self), 'primary')
         self._completion_view = CompletionView(self.peer.settings)
         self._completion_view.key_press.connect(self.key_press)
@@ -106,6 +138,23 @@ class TextViewProxy(AbstractCodeView):
         self.peer.update_scroll_range()
         self._event_filter = _EventFilter(self._completion_view, self.primary)
         self._completion_view.installEventFilter(self._event_filter)
+
+    def show_context_menu(self, pos, items, *, auto=True):
+        '''
+        (Optional) Show a context menu with the given items.
+
+        Each item is a pair of its label and a callback.
+
+        The position should be the plane coordinates of a character to
+        which to anchor the menu.
+
+        If `auto` is True, the position for the menu will be chosen automatically
+        if the implementor supports automatic menu positioning, otherwise the `pos`
+        value will be used. `auto` is True by default.
+
+        '''
+
+        self.peer.show_context_menu(pos, items, auto=auto)
 
     def _buffer_change(self, buffer):
         b = self.primary.buffer
@@ -144,9 +193,10 @@ class TextViewProxy(AbstractCodeView):
          .remove_to(Cursor(self.modeline_view.buffer)
                     .last_line().end()))
         c = Cursor(self.modeline_view.buffer)
-        for line in value:
+        for i, line in enumerate(value):
+            if i != 0:
+                c.insert('\n')
             c.insert(line)
-            c.insert('\n')
 
 
     @property
@@ -170,17 +220,18 @@ class TextViewProxy(AbstractCodeView):
         :rtype: CaretType
         '''
 
-        return CaretType.bar # TODO: implement
+        return self._cursor_type
 
     @cursor_type.setter
     def cursor_type(self, value):
-        pass # TODO: implement
+        self._cursor_type = value
+        self._update_cursor()
 
     def _update_cursor(self):
         if self._cursor_pos is None or not self._cursor_visible:
             self.primary.unset_caret(self._cursor_caret_key)
         else:
-            self.primary.set_caret(self._cursor_caret_key, self.cursor_pos)
+            self.primary.set_caret(self._cursor_caret_key, self.cursor_pos, self._cursor_type)
 
     @property
     def cursor_pos(self):
