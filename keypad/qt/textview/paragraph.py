@@ -146,7 +146,7 @@ class ParagraphDatum:
                 point = self.index_to_point(caret.pos[1])
                 rect = self._caret_rect(point)
                 rect.adjust(0, 0, -1, -1)
-                
+
                 with restoring(painter):
                     painter.setRenderHint(qt.QPainter.Antialiasing, False)
                     painter.setPen(self.settings.q_fgcolor)
@@ -155,7 +155,7 @@ class ParagraphDatum:
 
     def _draw_cartouche(self, painter):
         "Draws boxes around text, implementing the ``cartouche`` attribute."
-        
+
         with restoring(painter):
             # Since we're just drawing rectangles, antialiasing just makes
             # the lines blurry and doesn't actually remove aliasing.
@@ -345,7 +345,7 @@ def _attrs_to_formats(text, settings):
             formats.append(frange)
 
             start += len(chunk)
-            
+
         cartouche.append((c_start, start, c_value))
 
         cartouche_tuple = tuple(cartouche)
@@ -369,24 +369,9 @@ def _overlays_to_formats(overlays, settings, text_length):
                 pass
             else:
                 handler(frange.format, k, v, state)
-#         print(text_length, e-s)
         if text_length == e - s:
-#             frange.format.setProperty(qt.QTextFormat.FullWidthSelection, True)
             frange.length += 1
         yield frange
-
-#
-#     for s, e, k, v in sorted(overlays):
-#         try:
-#             handler = _format_handlers[k]
-#         except KeyError:
-#             pass
-#         else:
-#             frange = qt.QTextLayout.FormatRange()
-#             frange.start = s
-#             frange.length = e - s
-#             handler(frange.format, k, v, {'settings':settings})
-#             yield frange
-# 
+        
 
 

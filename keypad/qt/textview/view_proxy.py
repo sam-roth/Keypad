@@ -111,6 +111,9 @@ class _EventFilter(qt.QObject):
 
 
 class TextViewProxy(AbstractCodeView):
+    '''
+    This class implements the AbstractCodeView base class for ViewImpl.
+    '''
 
     def __init__(self, config=Config.root):
         super().__init__()
@@ -289,7 +292,7 @@ class TextViewProxy(AbstractCodeView):
     @property
     def plane_size(self):
         return self.primary.plane_size
-        
+
 
 
     def set_overlays(self, token, overlays):
@@ -319,7 +322,7 @@ class TextViewProxy(AbstractCodeView):
         self.primary.full_update()
 
     @property
-    def completion_view(self): # FIXME: model should be the property, not view
+    def completion_view(self): 
         '''
         :rtype: keypad.abstract.completion.AbstractCompletionView
         '''
@@ -363,56 +366,6 @@ class TextViewProxy(AbstractCodeView):
         self.completion_view.move_(normal_compl_rect.topLeft())
         self.completion_view.show()
 
-
-
-from keypad.api import interactive
-
-@interactive('testview')
-def testview(_: object):
-    view = TextViewProxy()
-
-    from PyQt4 import Qt as qt
-    from keypad.plugins.pymodel import make_python_code_model
-    from keypad.control import BufferController
-    from keypad.control.buffer_controller import lorem
-    from keypad.api import app, run_in_main_thread
-
-
-    view = TextViewProxy()
-    bc = BufferController(None, view, view.buffer, config=Config.root)
-    with bc.history.transaction():
-        bc.replace_from_path('/System/Library/Frameworks/Kernel.framework/Versions/A/Headers/stdint.h')
-
-    view.peer.show()
-    view.peer.raise_()
-    view.peer.setMinimumSize(300, 300)
-
-    def later():
-        for win in app().windows:
-            win.close()
-
-    run_in_main_thread(later)
-
-def main():
-    from PyQt4 import Qt as qt
-    from keypad.plugins.pymodel import PythonCodeModelPlugin
-    from keypad.control import BufferController
-    from keypad.control.buffer_controller import lorem
-
-    app = qt.QApplication([])
-
-    view = TextViewProxy()
-    bc = BufferController(None, view, view.buffer, config=Config.root)
-    bc.replace_from_path('/System/Library/Frameworks/Kernel.framework/Versions/A/Headers/stdint.h')
-    view.update()
-
-
-    view.primary.show()
-    view.primary.raise_()
-
-    app.exec()
-
-if __name__ == '__main__':
-    main()
+        
 
 

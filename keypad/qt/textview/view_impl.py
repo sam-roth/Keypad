@@ -1,16 +1,16 @@
 
+import collections.abc
+
 from PyQt4 import Qt as qt
-from keypad.abstract.textview import AbstractCodeView, KeyEvent, MouseEvent, MouseEventKind, MouseButton, CaretType
+
+from keypad.abstract.textview import (AbstractCodeView, KeyEvent, MouseEvent, 
+                                      MouseEventKind, MouseButton, CaretType)
 from keypad.buffers import Buffer
 from keypad.qt.qt_util import ending, restoring, to_q_color, marshal_key_event
 from keypad.control import lorem
 from keypad.core import AttributedString, Color, Signal
 from keypad.api import run_in_main_thread
 from keypad.options import GeneralSettings
-
-
-
-import collections.abc
 
 from .paragraph import ParagraphDatum
 
@@ -98,6 +98,10 @@ class _CursorBlinker:
 
 
 class ViewImpl(qt.QWidget):
+    '''
+    This class implements a single pane of the text view. It does not
+    include scroll bars or modelines.
+    '''
     def __init__(self, settings, *, text_section=True):
         '''
         :type settings: keypad.qt.options.TextViewSettings
@@ -110,8 +114,7 @@ class ViewImpl(qt.QWidget):
         self.buffer = Buffer()
         option = qt.QTextOption(qt.Qt.AlignLeft)
         option.setWrapMode(qt.QTextOption.WrapAtWordBoundaryOrAnywhere)
-#         option.setUseDesignMetrics(True)
-        
+
         self.option = option
 
         def factory():
@@ -154,6 +157,10 @@ class ViewImpl(qt.QWidget):
 
     @simulate_focus.setter
     def simulate_focus(self, value):
+        '''
+        Make the cursor blink as if the view were in focus. This is used
+        when user input is delegated to the completion view.
+        '''
         self._simulate_focus = value
         self._update_cursor_visibility()
 
@@ -280,10 +287,8 @@ class ViewImpl(qt.QWidget):
                     painter.fillRect(self.rect(), background)
 
                 for i, datum in enumerate(self._paragraph_data[:self._valid_line_count]):
-#                     line_bg = background if not datum.carets else to_q_color(self.settings.scheme.cur_line_bg)
                     datum.draw(painter, 
                                only_if_modified=partial)
-#                                bgcolor=line_bg)
 
                 r = self.rect()
                 if self._paragraph_data and self._valid_line_count != 0:
@@ -406,9 +411,6 @@ class ViewImpl(qt.QWidget):
 
         self._valid_line_count = i + 1
 
-#         self.partial_update()
-
-
     def _paragraph_at_y(self, y):
         # use binary search to find paragraph
         lo = 0
@@ -454,7 +456,7 @@ class ViewImpl(qt.QWidget):
                 if r.top() <= point.y() < r.bottom():
                     col = line.xToCursor(point.x())
                     return line_num, col
-                    
+
             if layout.lineCount() > 0:
                 col = layout.lineAt(layout.lineCount() - 1).xToCursor(point.x())
                 return line_num, col
@@ -500,8 +502,10 @@ class ViewImpl(qt.QWidget):
             if evt.is_intercepted:
                 return True
         elif event.type() == qt.QEvent.KeyPress:
+            # Key press events must be handled here, as opposed to
+            # keyPressEvent(), because Qt intercepts the tab key in the
+            # superclass implementation of event().
             event.accept()
-            self.keyPressEvent(event)
             self.key_press(marshal_key_event(event))
             return True
 
