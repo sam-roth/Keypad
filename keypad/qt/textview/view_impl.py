@@ -409,7 +409,7 @@ class ViewImpl(qt.QWidget):
     def _paragraph_at_y(self, y):
         # use binary search to find paragraph
         lo = 0
-        hi = len(self._paragraph_data)
+        hi = self._valid_line_count - 1
         while True:
             mid = (hi + lo) // 2
             r = self._paragraph_data[mid].layout.boundingRect()
@@ -417,7 +417,8 @@ class ViewImpl(qt.QWidget):
                 # found
                 return mid
             elif hi - lo <= 1:
-                return None
+                # map positions after the end to the last line to take advantage of Fitt's law
+                return self._valid_line_count - 1
             elif y < r.top():
                 hi = mid
             else:
@@ -435,7 +436,7 @@ class ViewImpl(qt.QWidget):
             else:
                 point_y = line.position().y()
                 point_x, _ = line.cursorToX(x, qt.QTextLine.Trailing)
-                
+
                 return qt.QPointF(point_x, point_y)
 
     def map_from_point(self, point):
@@ -450,6 +451,11 @@ class ViewImpl(qt.QWidget):
                 if r.top() <= point.y() < r.bottom():
                     col = line.xToCursor(point.x())
                     return line_num, col
+                    
+            if layout.lineCount() > 0:
+                col = layout.lineAt(layout.lineCount() - 1).xToCursor(point.x())
+                return line_num, col
+
         return None
 
     def mousePressEvent(self, event):
