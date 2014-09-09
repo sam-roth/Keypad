@@ -3,14 +3,15 @@
 from keypad.abstract.editor import AbstractEditor
 from keypad.abstract.asyncmsg import AbstractMessageBarTarget
 from keypad.abstract.application import app
-from .textlayout.widget import CodeView, CodeViewProxy
-from .qt_util import *
-from .find import FindWidget
-from .asyncmsg import MessageBarView
 from keypad.core.signal import Signal
 from keypad.api import run_in_main_thread
 from keypad import api
+from .textlayout.widget import CodeView, CodeViewProxy
+from .asyncmsg import MessageBarView
+from .qt_util import *
+from .find import FindWidget
 from .textview import TextViewProxy
+from .options import QtGuiSettings
 
 class Editor(AbstractEditor, AbstractMessageBarTarget, 
              Autoresponder, QWidget, metaclass=ABCWithQtMeta):
@@ -18,11 +19,14 @@ class Editor(AbstractEditor, AbstractMessageBarTarget,
     def __init__(self, config):
         QWidget.__init__(self)
         self.__config = config.derive()
-        self.__prox = TextViewProxy(self.__config)
-        self.__view = self.__prox.peer
-        
-#         self.__view = CodeView(config=self.__config)
-#         self.__prox = CodeViewProxy(self.__view)
+
+
+        if QtGuiSettings.from_config(self.__config).use_experimental_text_view:
+            self.__prox = TextViewProxy(self.__config)
+            self.__view = self.__prox.peer
+        else:
+            self.__view = CodeView(config=self.__config)
+            self.__prox = CodeViewProxy(self.__view)
 
 
         AbstractEditor.__init__(self, self.__prox, self.__config)
