@@ -3,6 +3,7 @@ from PyQt4 import Qt as qt
 from keypad.abstract.textview import AbstractCodeView, CaretType
 from keypad.qt.completion_view import CompletionView
 from keypad.qt.options import TextViewSettings
+from keypad.qt.call_tip_view import CallTipView
 
 from keypad.core import Config
 from keypad.options import GeneralSettings
@@ -126,6 +127,7 @@ class TextViewProxy(AbstractCodeView):
         self._cursor_caret_key = (id(self), 'primary')
         self._completion_view = CompletionView(self.peer.settings)
         self._completion_view.key_press.connect(self.key_press)
+        self._call_tip_view = CallTipView(self.peer.settings)
 
         self.primary.mouse_down_char.connect(self.mouse_down_char)
         self.primary.mouse_event.connect(self.mouse_event)
@@ -332,11 +334,28 @@ class TextViewProxy(AbstractCodeView):
 
     @property
     def call_tip_model(self):
-        pass
+        return self._call_tip_view
 
     @call_tip_model.setter
     def call_tip_model(self, value):
-        pass
+        self._call_tip_view.model = value
+
+        fm = self.peer.settings.font_metrics
+        line_height = fm.lineSpacing()
+
+        p = self.primary.map_to_point(*self.cursor_pos)
+
+        if p is None:
+            return
+
+        x = p.x()
+        y = p.y()
+        
+        rect = qt.QRect()
+        rect.setSize(self._call_tip_view.size())
+        rect.moveBottomLeft(self.primary.mapToGlobal(qt.QPoint(x, y - line_height)))
+
+        self._call_tip_view.move(rect.topLeft())
 
 
     def show_completions(self):
