@@ -29,7 +29,7 @@ import warnings
 
 class SelectionImpl(BacktabMixin, Selection):
     pass
-
+    
 
 _matching_delim = {
     '{': '}',
@@ -281,12 +281,8 @@ class BufferController(Tagged, Responder):
 
         Requires an active history transaction.
         '''
-        with pathlib.Path(path).open('r', encoding='utf-8', errors=codec_errors) as f:
-            def gen():
-                for line in f:
-                    yield line.rstrip('\n')
-                    
-            self.buffer.insert_lines(self.buffer.end_pos, gen())
+        self.buffer.append_from_path(path, codec_errors=codec_errors)
+
 
     def replace_from_path(self, path, create_new=False, *, codec_errors='strict'):
         '''
@@ -789,35 +785,47 @@ def join(bctl: BufferController):
 
 from keypad.util import debug
 
+def raise_error(exc):
+    raise exc
+
+def perform_rewrites(bctl, rewrites, *, on_error=raise_error):
+    for rewrite in rewrites:
+        # TODO: path change
+        try:
+            if rewrite.orig_path.absolute() == bctl.path.absolute():
+                this_bctl = bctl
+            else:
+                this_bctl = app().open_editor(rewrite.orig_path, codec_errors='surrogateescape').buffer_controller
+
+            pos = this_bctl.selection.pos
+            with this_bctl.history.transaction():
+                rewrite.perform(this_bctl.buffer)
+            this_bctl.selection.pos = pos
+        except RuntimeError as exc:
+            on_error(exc)
+
+def show_error_handler(exc):
+    interactive.run('show_error', exc)
 
 @interactive('rename')
-@debug.nonreentrant
 def rename(bctl: BufferController, name):
     from ..abstract.rewriting import AbstractRewrite
     cm = bctl.code_model
     if cm is None:
         return interactive.call_next
+
     try:
-        for rewrite in cm.rename(bctl.selection.pos, name).result():
-            print(rewrite)
-            # TODO: path change
-            try:
-                if rewrite.orig_path.absolute() == bctl.path.absolute():
-                    this_bctl = bctl
-                else:
-                    this_bctl = app().open_editor(rewrite.orig_path, codec_errors='surrogateescape').buffer_controller
-
-                pos = this_bctl.selection.pos
-                with this_bctl.history.transaction():
-                    rewrite.perform(this_bctl.buffer)
-                this_bctl.selection.pos = pos
-            except RuntimeError as exc:
-                # Try to finish as much as possible.
-                interactive.run('show_error', exc)
-
-
+        rewrites_future = cm.rename(bctl.selection.pos, name)
     except NotImplementedError:
         return interactive.call_next
+
+    @in_main_thread
+    def on_completion(f):
+        perform_rewrites(bctl,
+                         f.result(),
+                         on_error=show_error_handler)
+
+    rewrites_future.add_done_callback(on_completion)
 
 
 @interactive('grename')
