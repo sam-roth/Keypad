@@ -1,6 +1,6 @@
 
 copyright = '''
-Stem Text Editor
+KeyPad Text Editor
 Copyright (C) 2014 Sam Roth
 
 This program is free software: you can redistribute it and/or modify
