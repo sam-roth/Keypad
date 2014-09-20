@@ -6,6 +6,9 @@ import abc
 import pathlib
 import difflib
 
+from keypad.buffers import Buffer
+from keypad.core import Signal
+
 _default = object()
 
 class AbstractRewrite(metaclass=abc.ABCMeta):
@@ -47,6 +50,17 @@ class AbstractRewrite(metaclass=abc.ABCMeta):
         modifying the buffer.
         '''
 
+
+def _make_diff(old, new, fromfile, tofile):
+    diff = difflib.unified_diff(old.splitlines(),
+                                new.splitlines(),
+                                fromfile=str(fromfile),
+                                tofile=str(tofile),
+                                lineterm='')
+
+    return '\n'.join(diff)
+
+
 class ReplaceFileRewrite(AbstractRewrite):
     '''
     The simplest rewrite: Replace the entire file's contents.
@@ -80,12 +94,99 @@ class ReplaceFileRewrite(AbstractRewrite):
         begin.insert(self._contents)
 
     def diff(self, buffer):
-        diff = difflib.unified_diff(buffer.text.splitlines(),
-                                    self._contents.splitlines(),
-                                    fromfile=str(self.orig_path),
-                                    tofile=str(self.new_path),
-                                    lineterm='')
+        return _make_diff(buffer.text,
+                          self._contents,
+                          self.orig_path,
+                          self.new_path)
 
-        return '\n'.join(diff)
+#         diff = difflib.unified_diff(buffer.text.splitlines(),
+#                                     self._contents.splitlines(),
+#                                     fromfile=str(self.orig_path),
+#                                     tofile=str(self.new_path),
+#                                     lineterm='')
+#
+#         return '\n'.join(diff)
+class ModificationRewrite(AbstractRewrite):
+    '''
+    Rewrite that performs a saved list of
+    `~keypad.buffers.buffer.TextModification`s.
 
+    Use a `RewriteBuilder` to create an instance of this class.
+    '''
+
+    def __init__(self, mods, diff, new_path, orig_path, *,
+                 _use_RewriteBuilder_to_create_this=False):
+
+        if not _use_RewriteBuilder_to_create_this:
+            raise RuntimeError('Use RewriteBuilder to create an instance of '
+                               'this class')
+
+        self._mods = mods
+        self._diff = diff
+        self._new_path = new_path
+        self._orig_path = orig_path
+
+    @property
+    def new_path(self):
+        return self._new_path
+
+    @property
+    def orig_path(self):
+        return self._orig_path
+
+    def diff(self, buffer):
+        return self._diff
+
+    def perform(self, buffer):
+        for mod in self._mods:
+            buffer.execute(mod)
+
+
+
+
+
+
+class RewriteBuilder(Buffer):
+    '''
+    Buffer subclass that generates a ModificationRewrite as changes are
+    made.
+    '''
+    def __init__(self, buffer, path=None):
+        '''
+        :type buffer: keypad.buffers.Buffer
+        '''
+        super().__init__()
+
+        self._orig_text = buffer.text
+        self._mods = []
+
+        self.insert((0, 0), self._orig_text)
+        self.text_modified.connect(self._on_text_modified)
+        self.path = path
+
+
+    def _on_text_modified(self, modification):
+        '''
+        :type modification: keypad.buffers.buffer.TextModification
+        '''
+        self._mods.append(modification)
+
+    @classmethod
+    def from_path(cls, path, *, codec_errors='strict'):
+        buff = Buffer()
+        buff.append_from_path(path, codec_errors=codec_errors)
+        return cls(buff, path)
+
+    @classmethod
+    def from_text(cls, text, path=None):
+        buff = Buffer.from_text(text)
+        return cls(buff, path)
+
+    def build(self):
+        return ModificationRewrite(self._mods,
+                                   _make_diff(self._orig_text, self.text, self.path, self.path),
+                                   self.path,
+                                   self.path,
+                                   _use_RewriteBuilder_to_create_this=True)
+        
 

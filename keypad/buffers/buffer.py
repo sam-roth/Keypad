@@ -66,6 +66,20 @@ class Buffer(object):
         This signal may help make view implementations more efficient.
         '''
 
+    def append_from_path(self, path, *, codec_errors='strict'):
+        '''
+        Append this buffer with the contents of the file located at `path`
+        decoded using UTF-8.
+        '''
+        import pathlib
+
+        with pathlib.Path(path).open('r', encoding='utf-8', errors=codec_errors) as f:
+            def gen():
+                for line in f:
+                    yield line.rstrip('\n')
+
+            self.insert_lines(self.end_pos, gen())
+
 
     @property
     def lines(self):
