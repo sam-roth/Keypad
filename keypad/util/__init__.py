@@ -18,5 +18,6 @@ from .core import (ImmutableListView,
 from .wrap import (paragraph_fill,
                    common_indent,
                    strip_indent,
+                   add_indent,
                    ParagraphWrapper)
 

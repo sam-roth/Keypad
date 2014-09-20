@@ -40,7 +40,9 @@ def common_indent(text):
 
 def strip_indent(text, indent):
     return re.sub(r'(?m)^' + indent, '', text)
-    
+
+def add_indent(text, indent):
+    return '\n'.join(indent + line for line in text.splitlines()) + '\n'
 
 class ParagraphWrapper(textwrap.TextWrapper):
     def wrap(self, text):
