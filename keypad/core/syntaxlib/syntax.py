@@ -4,7 +4,7 @@ from .syntaxlib import AbstractTokenizer, Tokenizer, TokenizerEvent
 from keypad.util import time_limited
 class SyntaxHighlighter(object):
 
-    def __init__(self, name, lexer, base_attrs):
+    def __init__(self, name, lexer, base_attrs, *, lexcat_override=None):
         if isinstance(lexer, AbstractTokenizer):
             self._tokenizer = lexer
         else:
@@ -16,12 +16,16 @@ class SyntaxHighlighter(object):
         self._token_stack_key   = name + '.' + 'token_stack'
 
         self._base_attrs = base_attrs
+        self._lexcat_override = lexcat_override
 
 
     def highlight_buffer(self, buff):
+        lexcat_override = self._lexcat_override
         self._tokenizer.reset()
         state = self._tokenizer.save()
         token_stack = []
+        sentinel = object()
+
         # TODO: start on modified line
         for i, line in time_limited(enumerate(buff.lines), ms=100):
             line_start_state = line.caches.get(self._start_state_key) 
@@ -59,6 +63,27 @@ class SyntaxHighlighter(object):
 
                 for start, end, attrs in reversed(attr_ranges):
                     line.set_attributes(start, end, **attrs)
+
+                # Apply overriden lexcats.
+                if lexcat_override:
+                    overrides = []
+                    i = 0
+                    start = None
+                    value = None
+
+                    for chunk, deltas in line.iterchunks():
+                        lc = deltas.get(lexcat_override, sentinel)
+                        if lc is not sentinel:
+                            if start is not None:
+                                overrides.append((start, i, value))
+                                start = None
+                            if lc is not None:
+                                start = i
+                                value = lc
+                        i += len(chunk)
+
+                    for start, end, value in overrides:
+                        line.set_attributes(start, end, lexcat=value)
 
                 token_stack = next_line_token_stack
 
