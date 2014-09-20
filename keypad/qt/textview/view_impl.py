@@ -396,7 +396,7 @@ class ViewImpl(qt.QWidget):
                 datum_carets.append(carets.pop())
 
             while overlay_end and overlay_end[-1][1][0] == self.first_line + i:
-                current_overlays.remove(overlay_end.pop())
+                current_overlays.discard(overlay_end.pop())
 
             datum.bgcolor = background if not datum_carets else to_q_color(self.settings.scheme.cur_line_bg)
             datum.carets = datum_carets if cursors_visible else []

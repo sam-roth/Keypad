@@ -57,7 +57,12 @@ class ParagraphDatum:
         if value_tuple != self._overlays:
             self._modified = True
             self._overlays = value_tuple
-            self._overlay_formats = list(_overlays_to_formats(value_tuple, self.settings, len(self.line)))
+            if self.line is not None:
+                line_len = len(self.line)
+            else:
+                line_len = 0
+                
+            self._overlay_formats = list(_overlays_to_formats(value_tuple, self.settings, line_len))
 
     @property
     def bgcolor(self): return self._bgcolor
@@ -372,6 +377,6 @@ def _overlays_to_formats(overlays, settings, text_length):
         if text_length == e - s:
             frange.length += 1
         yield frange
-        
+
 
 
