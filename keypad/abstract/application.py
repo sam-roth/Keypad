@@ -88,6 +88,10 @@ class AbstractApplication(Responder, metaclass=abc.ABCMeta):
     def editor_created(self, editor):
         pass
 
+    @Signal
+    def editor_closed(self, editor):
+        pass
+
     def message_box(self, parent, 
                      text, choices,
                      accept=0, reject=-1, kind=None):
@@ -179,6 +183,8 @@ class AbstractApplication(Responder, metaclass=abc.ABCMeta):
             self._editors.remove(editor)
         except KeyError:
             pass
+        else:
+            self.editor_closed(editor)
 
     def new_editor(self):
         '''
