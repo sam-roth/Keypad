@@ -4,9 +4,10 @@ Find/Replace UI for Qt.
 This UI is not necessary for using find and replace: You may use the :find and
 :substitute commands instead.
 '''
+import re
 from PyQt4 import Qt as qt
 from keypad import api
-import re
+from . import qt_util
 
 class FindWidget(qt.QWidget):
     def __init__(self, parent=None):
@@ -57,7 +58,22 @@ class FindWidget(qt.QWidget):
 
         self.setFocusProxy(self._edit)
 
+        self.setProperty('find_widget_panel', True)
+        stylesheet = '''
+        QWidget[find_widget_panel=true] {
+            border-top: 1px solid palette(dark);
+        }
+        '''
+        self.setStyleSheet(stylesheet)
+        
 
+    def paintEvent(self, event):
+        # provide support for stylesheets
+        opt = qt.QStyleOption()
+        opt.init(self)
+        painter = qt.QPainter(self)
+        with qt_util.ending(painter):
+            self.style().drawPrimitive(qt.QStyle.PE_Widget, opt, painter, self)
 
     def eventFilter(self, obj, event):
         if obj is self._edit:

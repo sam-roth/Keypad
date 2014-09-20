@@ -53,6 +53,24 @@ class MessageBarView(qt.QWidget):
 
         self.hide()
 
+        self.setProperty('message_bar_panel', True)
+        stylesheet = '''
+        QWidget[message_bar_panel=true] {
+            border-bottom: 1px solid palette(dark);
+        }
+        '''
+        self.setStyleSheet(stylesheet)
+        
+
+    def paintEvent(self, event):
+        # provide support for stylesheets
+        opt = qt.QStyleOption()
+        opt.init(self)
+        painter = qt.QPainter(self)
+        with qt_util.ending(painter):
+            self.style().drawPrimitive(qt.QStyle.PE_Widget, opt, painter, self)
+
+
 
     def _add_text_box(self):
         if self._text_box is None:
