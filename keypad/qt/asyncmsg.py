@@ -26,7 +26,7 @@ class MessageBarView(qt.QWidget):
         self._layout = qt.QHBoxLayout(self)
         self._msg = None
         self._title = qt.QLabel(self)
-        self._text_box = qt.QLineEdit(self)
+        self._text_box = None
 
         self._close_button = qt.QToolButton(self)
         self._close_button.setIcon(self.style().standardIcon(qt.QStyle.SP_TitleBarCloseButton))
@@ -37,14 +37,6 @@ class MessageBarView(qt.QWidget):
         self._layout.addWidget(self._close_button)
         self._layout.addWidget(self._title)
         self._layout.addStretch()
-        self._layout.addWidget(self._text_box)
-
-        self._text_box.setEnabled(False)
-        self._text_box.hide()
-        self._text_box.textEdited.connect(self._on_text_change)
-        self._text_box.setFocusPolicy(qt.Qt.NoFocus)
-        self._text_box.editingFinished.connect(self._on_editing_finished)
-
 
         self._edit_invalid_stylesheet = '''
             background-color: #FAA;
@@ -62,6 +54,21 @@ class MessageBarView(qt.QWidget):
         self.hide()
 
 
+    def _add_text_box(self):
+        if self._text_box is None:
+            self._text_box = qt.QLineEdit(self)
+            self._text_box.textEdited.connect(self._on_text_change)
+            self._text_box.setFocusPolicy(qt.Qt.NoFocus)
+            self._text_box.editingFinished.connect(self._on_editing_finished)
+            self._layout.insertWidget(3, self._text_box)
+
+
+    def _remove_text_box(self):
+        if self._text_box is not None:
+            self._text_box.deleteLater()
+            self._text_box = None
+
+
     def keyPressEvent(self, event):
         if event.key() == qt.Qt.Key_Escape:
             event.accept()
@@ -71,10 +78,12 @@ class MessageBarView(qt.QWidget):
 
     def _on_is_valid_changed(self):
         is_valid = self._msg.is_valid
-        if is_valid:
-            self._text_box.setStyleSheet('')
-        else:
-            self._text_box.setStyleSheet(self._edit_invalid_stylesheet)
+
+        if self._text_box is not None:
+            if is_valid:
+                self._text_box.setStyleSheet('')
+            else:
+                self._text_box.setStyleSheet(self._edit_invalid_stylesheet)
 
         for w in self._widgets:
             w.setEnabled(is_valid)
@@ -89,7 +98,7 @@ class MessageBarView(qt.QWidget):
         self._activate()
 
     def _activate(self):
-        if self._text_box.isVisible():
+        if self._text_box is not None:
             self._text_box.setFocus()
         elif self._widgets:
             self._widgets[0].setFocus()
@@ -128,8 +137,7 @@ class MessageBarView(qt.QWidget):
                 w.deleteLater()
             self._title.setText('')
             self._widgets.clear()
-            self._text_box.setEnabled(False)
-            self._text_box.setVisible(False)
+            self._remove_text_box()
             self.hide()
 
             if pw is not None:
@@ -151,11 +159,11 @@ class MessageBarView(qt.QWidget):
 
         self._title.setText(msg.title)
 
-        has_text_box = msg.text_box is not None
-        self._text_box.setVisible(has_text_box)
-        self._text_box.setEnabled(has_text_box)
-        self._text_box.setFocusPolicy(qt.Qt.StrongFocus if has_text_box else qt.Qt.NoFocus)
-        self._text_box.setText(msg.text_box or '')
+        if msg.text_box is not None:
+            self._add_text_box()
+            self._text_box.setText(msg.text_box)
+        else:
+            self._remove_text_box()
 
         for choice in msg.choices:
             b = qt.QPushButton(self)
