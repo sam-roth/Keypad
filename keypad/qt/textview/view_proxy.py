@@ -256,6 +256,9 @@ class TextViewProxy(AbstractCodeView):
         :param value: A tuple of (y, x) indicating the new cursor position.
         '''
 
+        if value is None or self.cursor_pos is None or value[0] != self.cursor_pos[0]:
+            self.call_tip_model = None
+
         self._cursor_pos = value
         self._update_cursor()
 
