@@ -6,8 +6,7 @@
 serious at this point.**
 
 
-Keypad is a text editor written in Python with a flexible plugin system. It was formerly 
-known as Stem.
+Keypad is a text editor written in Python with a flexible plugin system.
 
 ## Design Principles
 
